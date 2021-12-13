@@ -1,0 +1,1 @@
+# gnome-shell-extension-another-window-session-manager
