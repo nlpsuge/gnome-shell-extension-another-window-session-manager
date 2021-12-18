@@ -36,51 +36,48 @@ function enable() {
             // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
             const pid = metaWindow.get_pid();
             const input_cmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,command'];
-            const proc = subprocessLauncher.spawnv(input_cmd);
-            proc.communicate_utf8_async(null, null, (proc, asyncResult) => {
-                try {
-                    const result = proc.communicate_utf8_finish(asyncResult);
-                    
-                    const sessionConfigObject = new SessionConfig.SessionConfigObject();
+            try {
+                const proc = subprocessLauncher.spawnv(input_cmd);
+                const result = proc.communicate_utf8(null, null);
+                                    
+                const sessionConfigObject = new SessionConfig.SessionConfigObject();
 
-                    setFieldsFromProcess(proc, result, sessionConfigObject);
+                setFieldsFromProcess(proc, result, sessionConfigObject);
 
-                    sessionConfigObject.window_id_the_int_type = metaWindow.get_id();
-                    if (metaWindow.is_always_on_all_workspaces()) {
-                        sessionConfigObject.desktop_number = -1;
-                    } else {
-                        const workspace = metaWindow.get_workspace();
-                        sessionConfigObject.desktop_number = workspace.index();
-                    }
-                    sessionConfigObject.pid = pid;
-                    sessionConfigObject.username = GLib.get_user_name();
-                    const frameRect = metaWindow.get_frame_rect();
-                    let window_position = sessionConfigObject.window_position;
-                    window_position.provider = 'Meta';
-                    window_position.x_offset = frameRect.x;
-                    window_position.y_offset = frameRect.y;
-                    window_position.width = frameRect.width;
-                    window_position.height = frameRect.height;
-                    sessionConfigObject.client_machine_name = GLib.get_host_name();
-                    sessionConfigObject.window_title = metaWindow.get_title();
-                    sessionConfigObject.app_name = appName;
-                    sessionConfigObject.windows_count = n_windows;
-                    sessionConfigObject.desktop_file_id = desktopFileId;
-                    let window_state = sessionConfigObject.window_state;
-                    // See: ui/windowMenu.js:L80
-                    window_state.is_sticky = metaWindow.is_on_all_workspaces();
-                    window_state.is_above = metaWindow.is_above();
-
-                    sessionConfig.x_session_config_objects.push(sessionConfigObject);
-
-                    log('sessionConfig', JSON.stringify(sessionConfig));
-                    
-                    
-                } catch (e) {
-                    logError(e, `Failed to build sessionConfigObject`);
+                sessionConfigObject.window_id_the_int_type = metaWindow.get_id();
+                if (metaWindow.is_always_on_all_workspaces()) {
+                    sessionConfigObject.desktop_number = -1;
+                } else {
+                    const workspace = metaWindow.get_workspace();
+                    sessionConfigObject.desktop_number = workspace.index();
                 }
+                sessionConfigObject.pid = pid;
+                sessionConfigObject.username = GLib.get_user_name();
+                const frameRect = metaWindow.get_frame_rect();
+                let window_position = sessionConfigObject.window_position;
+                window_position.provider = 'Meta';
+                window_position.x_offset = frameRect.x;
+                window_position.y_offset = frameRect.y;
+                window_position.width = frameRect.width;
+                window_position.height = frameRect.height;
+                sessionConfigObject.client_machine_name = GLib.get_host_name();
+                sessionConfigObject.window_title = metaWindow.get_title();
+                sessionConfigObject.app_name = appName;
+                sessionConfigObject.windows_count = n_windows;
+                sessionConfigObject.desktop_file_id = desktopFileId;
+                let window_state = sessionConfigObject.window_state;
+                // See: ui/windowMenu.js:L80
+                window_state.is_sticky = metaWindow.is_on_all_workspaces();
+                window_state.is_above = metaWindow.is_above();
 
-            });
+                sessionConfig.x_session_config_objects.push(sessionConfigObject);
+
+                log('sessionConfig', JSON.stringify(sessionConfig));
+                
+                
+            } catch (e) {
+                logError(e, `Failed to build sessionConfigObject`);
+            }
         }
 
         // Save open windows
