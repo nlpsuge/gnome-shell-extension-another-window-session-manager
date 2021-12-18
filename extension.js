@@ -3,6 +3,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const SessionConfig = Me.imports.model.sessionConfig;
+const FileUtils = Me.imports.utils.fileUtils;
 
 let windowTracker;
 let defaultAppSystem;
@@ -15,16 +16,16 @@ function enable() {
                 Gio.SubprocessFlags.STDERR_PIPE)});
     defaultAppSystem = Shell.AppSystem.get_default(); 
     const runningShellApps = defaultAppSystem.get_running();
+    const sessionConfig = new SessionConfig.SessionConfig();
+    sessionConfig.session_name = 'defaultSession';
+    sessionConfig.session_create_time = new Date().toLocaleString();
+    
     for (const runningShellApp of runningShellApps) {
         const desktopFileId = runningShellApp.get_id();
         log(desktopFileId);
         const desktopAppInfo = runningShellApp.get_app_info();
         const desktopAppInfoCommandline = desktopAppInfo?.get_commandline();
         log(desktopAppInfoCommandline);
-
-        const sessionConfig = new SessionConfig.SessionConfig();
-        sessionConfig.session_name = 'defaultSession';
-        sessionConfig.session_create_time = new Date().toLocaleString();
 
         const appName = runningShellApp.get_name();
         // TODO Not reliable, the result can be wrong?
@@ -72,7 +73,6 @@ function enable() {
 
                 sessionConfig.x_session_config_objects.push(sessionConfigObject);
 
-                log('sessionConfig', JSON.stringify(sessionConfig));
                 
                 
             } catch (e) {
@@ -80,13 +80,51 @@ function enable() {
             }
         }
 
-        // Save open windows
-                        
-
-        // saved Notification
-
     }
 
+    // Save open windows
+    const sessionConfigJson = JSON.stringify(sessionConfig);
+
+    log(`Saving open windows: ${sessionConfigJson}`);
+    
+    const sessions_path = FileUtils.get_sessions_path();
+    const session_file_path = GLib.build_filenamev([sessions_path, sessionConfig.session_name]);
+    const session_file = Gio.File.new_for_path(session_file_path)
+    if (GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
+        const session_file_backup_path = GLib.build_filenamev([sessions_path, 'backups']);
+        if (GLib.mkdir_with_parents(session_file_backup_path, 0o744) === 0) {
+            const session_file_backup = GLib.build_filenamev([session_file_backup_path, sessionConfig.session_name + '.backup-' + new Date().getTime()]);
+            session_file.copy(
+                Gio.File.new_for_path(session_file_backup), 
+                Gio.FileCopyFlags.OVERWRITE,
+                null,
+                null);
+        }
+        
+    }
+
+    // https://gjs.guide/guides/gio/file-operations.html#saving-content
+    // https://github.com/ewlsh/unix-permissions-cheat-sheet/blob/master/README.md#octal-notation
+    // https://askubuntu.com/questions/472812/why-is-777-assigned-to-chmod-to-permit-everything-on-a-file
+    // 0o stands for octal 
+    // 0o744 => rwx r-- r--
+    if (GLib.mkdir_with_parents(session_file.get_parent().get_path(), 0o744) === 0) {
+        let [success, tag] = session_file.replace_contents(
+            sessionConfigJson,
+            null,
+            false,
+            Gio.FileCreateFlags.REPLACE_DESTINATION,
+            null
+            );
+        
+        if (success) {
+            log(`Open windows session saved as '${sessionConfig.session_name}' located in '${sessions_path}'!`);
+            // TODO saved Notification
+
+        }
+        
+    }
+    
 }
 
 function setFieldsFromProcess(proc, result, sessionConfigObject) {
