@@ -77,7 +77,7 @@ function enable() {
                     
                     
                 } catch (e) {
-                    logError(e, `Failed to query process ${pid} info via ps`);
+                    logError(e, `Failed to build sessionConfigObject`);
                 }
 
             });
