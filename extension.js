@@ -43,7 +43,7 @@ function enable() {
                     
                     const sessionConfigObject = new SessionConfig.SessionConfigObject();
 
-                    setProcessInfo(proc, result, sessionConfigObject);
+                    setFieldsFromProcess(proc, result, sessionConfigObject);
 
                     sessionConfigObject.window_id_the_int_type = metaWindow.get_id();
                     if (metaWindow.is_always_on_all_workspaces()) {
@@ -92,7 +92,7 @@ function enable() {
 
 }
 
-function setProcessInfo(proc, result, sessionConfigObject) {
+function setFieldsFromProcess(proc, result, sessionConfigObject) {
     let [, stdout, stderr] = result;
     let status = proc.get_exit_status();
     if (status === 0 && stdout) {
