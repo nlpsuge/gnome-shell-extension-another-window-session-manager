@@ -82,22 +82,29 @@ function enable() {
     }
 
     // Save open windows
+    const success = save2File(sessionConfig);
+    if (success) {
+        // TODO saved Notification
+    }
+}
+
+function save2File(sessionConfig) {
     const sessionConfigJson = JSON.stringify(sessionConfig);
-    
+
     const sessions_path = FileUtils.get_sessions_path();
     const session_file_path = GLib.build_filenamev([sessions_path, sessionConfig.session_name]);
-    const session_file = Gio.File.new_for_path(session_file_path)
+    const session_file = Gio.File.new_for_path(session_file_path);
     if (GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
         const session_file_backup_path = GLib.build_filenamev([sessions_path, 'backups']);
         if (GLib.mkdir_with_parents(session_file_backup_path, 0o744) === 0) {
             const session_file_backup = GLib.build_filenamev([session_file_backup_path, sessionConfig.session_name + '.backup-' + new Date().getTime()]);
             session_file.copy(
-                Gio.File.new_for_path(session_file_backup), 
+                Gio.File.new_for_path(session_file_backup),
                 Gio.FileCopyFlags.OVERWRITE,
                 null,
                 null);
         }
-        
+
     }
 
     // https://gjs.guide/guides/gio/file-operations.html#saving-content
@@ -112,16 +119,15 @@ function enable() {
             false,
             Gio.FileCreateFlags.REPLACE_DESTINATION,
             null
-            );
-        
+        );
+
         if (success) {
             log(`Open windows session saved as '${sessionConfig.session_name}' located in '${sessions_path}'!`);
-            // TODO saved Notification
-
         }
-        
+        return success;
     }
-    
+
+    return false;
 }
 
 function setFieldsFromProcess(proc, result, sessionConfigObject) {
