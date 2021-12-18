@@ -39,26 +39,11 @@ function enable() {
             const proc = subprocessLauncher.spawnv(input_cmd);
             proc.communicate_utf8_async(null, null, (proc, asyncResult) => {
                 try {
-                    let [, stdout, stderr] = proc.communicate_utf8_finish(asyncResult);
+                    const result = proc.communicate_utf8_finish(asyncResult);
                     
                     const sessionConfigObject = new SessionConfig.SessionConfigObject();
 
-                    let status = proc.get_exit_status();
-                    if (status === 0 && stdout) {
-                        stdout = stdout.trim();
-                        log(`Got stdout ${stdout} by ${pid} via ${input_cmd}`);
-                        const stdoutArr = stdout.split(' ').filter(a => a);
-                        sessionConfigObject.process_create_time = stdoutArr.slice(0, 5).join(' ');
-                        sessionConfigObject.cpu_percent = stdoutArr.slice(5, 6).join();
-                        sessionConfigObject.memory_percent = stdoutArr.slice(6, 7).join();
-                        sessionConfigObject.cmd = stdoutArr.slice(7);
-                    } else {
-                        log(`Failed to query process ${pid} info via ps. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`);
-                        sessionConfigObject.process_create_time = null;
-                        sessionConfigObject.cpu_percent = null;
-                        sessionConfigObject.memory_percent = null;
-                        sessionConfigObject.cmd = null;
-                    }
+                    setProcessInfo(proc, result, sessionConfigObject);
 
                     sessionConfigObject.window_id_the_int_type = metaWindow.get_id();
                     if (metaWindow.is_always_on_all_workspaces()) {
@@ -105,6 +90,26 @@ function enable() {
 
     }
 
+}
+
+function setProcessInfo(proc, result, sessionConfigObject) {
+    let [, stdout, stderr] = result;
+    let status = proc.get_exit_status();
+    if (status === 0 && stdout) {
+        stdout = stdout.trim();
+        log(`Got stdout ${stdout}`);
+        const stdoutArr = stdout.split(' ').filter(a => a);
+        sessionConfigObject.process_create_time = stdoutArr.slice(0, 5).join(' ');
+        sessionConfigObject.cpu_percent = stdoutArr.slice(5, 6).join();
+        sessionConfigObject.memory_percent = stdoutArr.slice(6, 7).join();
+        sessionConfigObject.cmd = stdoutArr.slice(7);
+    } else {
+        log(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`);
+        sessionConfigObject.process_create_time = null;
+        sessionConfigObject.cpu_percent = null;
+        sessionConfigObject.memory_percent = null;
+        sessionConfigObject.cmd = null;
+    }
 }
 
 function disable() {
