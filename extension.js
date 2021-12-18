@@ -22,7 +22,6 @@ function enable() {
     
     for (const runningShellApp of runningShellApps) {
         const desktopFileId = runningShellApp.get_id();
-        log(desktopFileId);
         const desktopAppInfo = runningShellApp.get_app_info();
         const desktopAppInfoCommandline = desktopAppInfo?.get_commandline();
         log(desktopAppInfoCommandline);
@@ -84,8 +83,6 @@ function enable() {
 
     // Save open windows
     const sessionConfigJson = JSON.stringify(sessionConfig);
-
-    log(`Saving open windows: ${sessionConfigJson}`);
     
     const sessions_path = FileUtils.get_sessions_path();
     const session_file_path = GLib.build_filenamev([sessions_path, sessionConfig.session_name]);
@@ -132,7 +129,6 @@ function setFieldsFromProcess(proc, result, sessionConfigObject) {
     let status = proc.get_exit_status();
     if (status === 0 && stdout) {
         stdout = stdout.trim();
-        log(`Got stdout ${stdout}`);
         const stdoutArr = stdout.split(' ').filter(a => a);
         sessionConfigObject.process_create_time = stdoutArr.slice(0, 5).join(' ');
         sessionConfigObject.cpu_percent = stdoutArr.slice(5, 6).join();
