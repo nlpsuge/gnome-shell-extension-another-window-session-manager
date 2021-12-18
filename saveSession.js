@@ -8,18 +8,16 @@ const FileUtils = Me.imports.utils.fileUtils;
 var SaveSession = class {
 
     constructor() {
-        windowTracker = null;
-        defaultAppSystem = null;
-        subprocessLauncher = null;
+        this._windowTracker = Shell.WindowTracker.get_default();
+        this._subprocessLauncher = new Gio.SubprocessLauncher({
+            flags: (Gio.SubprocessFlags.STDOUT_PIPE |
+                    Gio.SubprocessFlags.STDERR_PIPE)});
+        this._defaultAppSystem = Shell.AppSystem.get_default();
     }
 
     saveSession() {
-        this.windowTracker = Shell.WindowTracker.get_default();
-        this.subprocessLauncher = new Gio.SubprocessLauncher({
-            flags: (Gio.SubprocessFlags.STDOUT_PIPE |
-                    Gio.SubprocessFlags.STDERR_PIPE)});
-        this.defaultAppSystem = Shell.AppSystem.get_default(); 
-        const runningShellApps = this.defaultAppSystem.get_running();
+        
+        const runningShellApps = this._defaultAppSystem.get_running();
         const sessionConfig = new SessionConfig.SessionConfig();
         sessionConfig.session_name = 'defaultSession';
         sessionConfig.session_create_time = new Date().toLocaleString();
@@ -41,12 +39,12 @@ var SaveSession = class {
                 const pid = metaWindow.get_pid();
                 const input_cmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,command'];
                 try {
-                    const proc = this.subprocessLauncher.spawnv(input_cmd);
+                    const proc = this._subprocessLauncher.spawnv(input_cmd);
                     const result = proc.communicate_utf8(null, null);
                                         
                     const sessionConfigObject = new SessionConfig.SessionConfigObject();
 
-                    setFieldsFromProcess(proc, result, sessionConfigObject);
+                    this._setFieldsFromProcess(proc, result, sessionConfigObject);
 
                     sessionConfigObject.window_id_the_int_type = metaWindow.get_id();
                     if (metaWindow.is_always_on_all_workspaces()) {
@@ -86,7 +84,7 @@ var SaveSession = class {
         }
 
         // Save open windows
-        const success = save2File(sessionConfig);
+        const success = this.save2File(sessionConfig);
         if (success) {
             // TODO saved Notification
         }
@@ -134,7 +132,7 @@ var SaveSession = class {
         return false;
     }
 
-    setFieldsFromProcess(proc, result, sessionConfigObject) {
+    _setFieldsFromProcess(proc, result, sessionConfigObject) {
         let [, stdout, stderr] = result;
         let status = proc.get_exit_status();
         if (status === 0 && stdout) {
@@ -154,14 +152,14 @@ var SaveSession = class {
     }
 
     destroy() {
-        if (this.windowTracker) {
-            this.windowTracker = null;
+        if (this._windowTracker) {
+            this._windowTracker = null;
         }
-        if (this.defaultAppSystem) {
-            this.defaultAppSystem = null;
+        if (this._defaultAppSystem) {
+            this._defaultAppSystem = null;
         }
-        if (this.subprocessLauncher) {
-            this.subprocessLauncher = null;
+        if (this._subprocessLauncher) {
+            this._subprocessLauncher = null;
         }
     }
 
