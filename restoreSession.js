@@ -59,6 +59,7 @@ var RestoreSession = class {
                         if (shell_app) {
                             if (this._restoredApps.has(shell_app)) {
                                 launched = true;
+                                running = true;
                             }
 
                             if (!launched) {
@@ -72,6 +73,9 @@ var RestoreSession = class {
                                     launched = true;
                                     running = true;
                                 }
+                            }
+
+                            if (!launched) {
                                 launched = shell_app.launch(
                                     // 0 for current event timestamp
                                     0, 
