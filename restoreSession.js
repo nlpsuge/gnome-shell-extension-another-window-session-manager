@@ -36,20 +36,16 @@ var RestoreSession = class {
         const session_file = Gio.File.new_for_path(session_file_path);
         let [success, contents] = session_file.load_contents(null);
         if (success) {
-            let session_config;
-            // Fix Gnome 3 crash due to: Some code called array.toString() on a Uint8Array instance. Previously this would have interpreted the bytes of the array as a string, but that is nonstandard. In the future this will return the bytes as comma-separated digits. For the time being, the old behavior has been preserved, but please fix your code anyway to explicitly call ByteArray.toString(array).
-            if (contents instanceof Uint8Array) {
-                const contentsConverted = imports.byteArray.toString(contents);
-                session_config = JSON.parse(contentsConverted);
-            } else {
-                // Unreachable code
-                session_config = JSON.parse(contents);
+            let session_config = this._getSessionConfigJsonObj(contents);
+            
+            const session_config_objects = session_config.x_session_config_objects;
+            if (!session_config_objects) {
+                log(`Session details not found: ${session_file_path}`);
+                return;
             }
 
             let running_apps = this._defaultAppSystem.get_running();
-
             let count = 0;
-            const session_config_objects = session_config.x_session_config_objects;
             for (const session_config_object of session_config_objects) {
                 count ++;
                 const app_name = session_config_object.app_name;
@@ -66,35 +62,35 @@ var RestoreSession = class {
 
                             if (this._app_is_running(shell_app, running_apps)) {
                                 log(`${app_name} is running, skipping`)
-                                continue;
+                                launched = true;
                             }
 
-                            launched = shell_app.launch(
-                                // 0 for current event timestamp
-                                0, 
-                                -1,
-                                this._getProperGpuPref(shell_app));
+                            if (!launched) {
+                                launched = shell_app.launch(
+                                    // 0 for current event timestamp
+                                    0, 
+                                    -1,
+                                    this._getProperGpuPref(shell_app));
+                                if (launched) {
+                                    log(`${app_name} launched!`);
+                                }
+                            }
                         } 
-                    } 
-
-                    if (launched) {
-                        log(`${app_name} launched!`);
-                        continue;
-                    }
-
-                    const cmd = session_config_object.cmd;
-                    if (cmd) {
-                        Util.trySpawnCommandLine(cmd);
-                        launched = true;
-                        log(`${app_name} launched via ${cmd}!`);
                     } else {
-                        // TODO try to launch via app_info be search the app name?
-                        let errorMsg = `Empty command line for ${app_name}`;
-                        logError(errorMsg);
-                        global.notify_error(errorMsg);
+    
+                        const cmd = session_config_object.cmd;
+                        if (cmd) {
+                            Util.trySpawnCommandLine(cmd);
+                            launched = true;
+                            log(`${app_name} launched via ${cmd}!`);
+                        } else {
+                            // TODO try to launch via app_info be search the app name?
+                            let errorMsg = `Empty command line for ${app_name}`;
+                            logError(errorMsg);
+                            global.notify_error(errorMsg);
+                        }
                     }
-                    
-                    
+                                        
                 } catch (e) {
                     logError(e, `Failed to restore ${app_name}`);
                     if (!launched) {
@@ -105,6 +101,26 @@ var RestoreSession = class {
         }
 
        
+    }
+
+    _getSessionConfigJsonObj(contents) {
+        let session_config;
+        // Fix Gnome 3 crash due to: Some code called array.toString() on a Uint8Array instance. Previously this would have interpreted the bytes of the array as a string, but that is nonstandard. In the future this will return the bytes as comma-separated digits. For the time being, the old behavior has been preserved, but please fix your code anyway to explicitly call ByteArray.toString(array).
+        if (contents instanceof Uint8Array) {
+            const contentsConverted = imports.byteArray.toString(contents);
+            session_config = JSON.parse(contentsConverted);
+        } else {
+            // Unreachable code
+            session_config = JSON.parse(contents);
+        }
+        return session_config;
+    }
+
+    _createEnoughWorkspace(workspaceNumber) {
+        let workspaceManager = global.workspace_manager;
+        for (let i = workspaceManager.n_workspaces; i <= workspaceNumber; i++) {
+            workspaceManager.append_new_workspace(false, 0);
+        }
     }
 
     _app_is_running(app, running_apps) {
