@@ -45,6 +45,7 @@ var RestoreSession = class {
                 return;
             }
 
+            // running_apps can be empty even if there are apps running when gnome-shell starting
             let running_apps = this._defaultAppSystem.get_running();
             let count = 0;
             for (const session_config_object of session_config_objects) {
