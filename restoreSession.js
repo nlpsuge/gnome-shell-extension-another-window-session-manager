@@ -11,14 +11,14 @@ const FileUtils = Me.imports.utils.fileUtils;
 var RestoreSession = class {
 
     constructor() {
-        this.session_name = 'defaultSession';
+        this.sessionName = 'defaultSession';
         this._defaultAppSystem = Shell.AppSystem.get_default();
         this._restoredApps = new Map();
     }
 
     restoreSession() {
         const sessions_path = FileUtils.get_sessions_path();
-        const session_file_path = GLib.build_filenamev([sessions_path, this.session_name]);
+        const session_file_path = GLib.build_filenamev([sessions_path, this.sessionName]);
         if (!GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
             logError(`Session file not found: ${session_file_path}`);
             return;
@@ -65,7 +65,7 @@ var RestoreSession = class {
                                 running_apps = this._defaultAppSystem.get_running();
                             }
 
-                            if (this._app_is_running(shell_app, running_apps)) {
+                            if (this._appIsRunning(shell_app, running_apps)) {
                                 log(`${app_name} is running, skipping`)
                                 launched = true;
                             }
@@ -112,7 +112,7 @@ var RestoreSession = class {
 
     _autoMoveWindows(shellApp) {
         const windows = shellApp.get_windows();
-        
+
     }
 
     _getSessionConfigJsonObj(contents) {
@@ -135,7 +135,7 @@ var RestoreSession = class {
         }
     }
 
-    _app_is_running(app, running_apps) {
+    _appIsRunning(app, running_apps) {
         for (const running_app of running_apps) {
             if (running_app.get_id() === app.get_id() && 
                     running_app.get_state() === Shell.AppState.RUNNING) {
