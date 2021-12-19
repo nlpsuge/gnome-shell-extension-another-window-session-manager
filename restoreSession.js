@@ -11,7 +11,7 @@ const FileUtils = Me.imports.utils.fileUtils;
 var RestoreSession = class {
 
     constructor() {
-        this.sessionName = 'defaultSession';
+        this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
         this._restoredApps = new Map();
     }
@@ -33,7 +33,7 @@ var RestoreSession = class {
         }
     }
 
-    restoreSessionFromPath (session_file_path) {
+    restoreSessionFromPath(session_file_path) {
         const session_file = Gio.File.new_for_path(session_file_path);
         let [success, contents] = session_file.load_contents(null);
         if (success) {

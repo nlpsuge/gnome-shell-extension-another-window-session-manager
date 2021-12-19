@@ -19,7 +19,7 @@ var SaveSession = class {
         
         const runningShellApps = this._defaultAppSystem.get_running();
         const sessionConfig = new SessionConfig.SessionConfig();
-        sessionConfig.session_name = 'defaultSession';
+        sessionConfig.session_name = FileUtils.default_sessionName;
         sessionConfig.session_create_time = new Date().toLocaleString();
         
         for (const runningShellApp of runningShellApps) {
