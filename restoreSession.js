@@ -46,8 +46,12 @@ var RestoreSession = class {
                 session_config = JSON.parse(contents);
             }
 
+            let running_apps = this._defaultAppSystem.get_running();
+
+            let count = 0;
             const session_config_objects = session_config.x_session_config_objects;
             for (const session_config_object of session_config_objects) {
+                count ++;
                 const app_name = session_config_object.app_name;
                 let launched = false;
                 try {
@@ -55,14 +59,26 @@ var RestoreSession = class {
                     if (desktop_file_id) {
                         const shell_app = this._defaultAppSystem.lookup_app(desktop_file_id)
                         if (shell_app) {
+                            // get latest running apps every 3 cycles
+                            if (count % 3 === 0) {
+                                running_apps = this._defaultAppSystem.get_running();
+                            }
+
+                            if (this._app_is_running(shell_app, running_apps)) {
+                                log(`${app_name} is running, skipping`)
+                                continue;
+                            }
+
                             launched = shell_app.launch(
-                                global.get_current_time(), 
-                                -1, 
+                                // 0 for current event timestamp
+                                0, 
+                                -1,
                                 this._getProperGpuPref(shell_app));
                         } 
                     } 
 
                     if (launched) {
+                        log(`${app_name} launched!`);
                         continue;
                     }
 
@@ -70,6 +86,7 @@ var RestoreSession = class {
                     if (cmd) {
                         Util.trySpawnCommandLine(cmd);
                         launched = true;
+                        log(`${app_name} launched via ${cmd}!`);
                     } else {
                         // TODO try to launch via app_info be search the app name?
                         let errorMsg = `Empty command line for ${app_name}`;
@@ -88,6 +105,16 @@ var RestoreSession = class {
         }
 
        
+    }
+
+    _app_is_running(app, running_apps) {
+        for (const running_app of running_apps) {
+            if (running_app.get_id() === app.get_id() && 
+                    running_app.get_state() === Shell.AppState.RUNNING) {
+                return true;
+            }    
+        }
+        return false;
     }
 
     _getProperGpuPref(shell_app) {
