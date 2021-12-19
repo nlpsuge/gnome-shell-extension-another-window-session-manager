@@ -146,6 +146,24 @@ var RestoreSession = class {
                     log(`Auto move the window '${title}' to workspace ${desktop_number} for ${shellApp.get_name()}`);
                     this._createEnoughWorkspace(desktop_number);
                     open_window.change_workspace_by_index(desktop_number, false);
+                    
+                    // window state
+                    const window_state = saved_window_session.window_state;
+                    if (window_state.is_above) {
+                        open_window.make_above();
+                    }
+                    if (window_state.is_sticky) {
+                        open_window.stick();
+                    }
+                    // window geometry
+                    // const window_position = saved_window_session.window_position;
+                    // const x = window_position.x_offset;
+                    // const y = window_position.y_offset;
+                    // const width = window_position.width;
+                    // const height = window_position.height;
+                    // window_position.provider == 'Meta';
+
+
                     saved_window_session.moved = true;
                 }
             }
