@@ -13,6 +13,7 @@ var RestoreSession = class {
     constructor() {
         this.session_name = 'defaultSession';
         this._defaultAppSystem = Shell.AppSystem.get_default();
+        this._restoredApps = new Map();
     }
 
     restoreSession() {
@@ -55,6 +56,10 @@ var RestoreSession = class {
                     if (desktop_file_id) {
                         const shell_app = this._defaultAppSystem.lookup_app(desktop_file_id)
                         if (shell_app) {
+                            if (this._restoredApps.has(shell_app)) {
+                                continue;
+                            }
+
                             // get latest running apps every 3 cycles
                             if (count % 3 === 0) {
                                 running_apps = this._defaultAppSystem.get_running();
@@ -73,6 +78,8 @@ var RestoreSession = class {
                                     this._getProperGpuPref(shell_app));
                                 if (launched) {
                                     log(`${app_name} launched!`);
+                                    const windows_change_id = shell_app.connect('windows-changed', this._autoMoveWindows.bind(this));
+                                    this._restoredApps.set(shell_app, windows_change_id);
                                 }
                             }
                         } 
@@ -101,6 +108,11 @@ var RestoreSession = class {
         }
 
        
+    }
+
+    _autoMoveWindows(shellApp) {
+        const windows = shellApp.get_windows();
+        
     }
 
     _getSessionConfigJsonObj(contents) {
@@ -148,7 +160,17 @@ var RestoreSession = class {
     }
 
     destroy() {
+        if (this._restoredApps) {
+            for (const [app, windows_change_id] of this._restoredApps) {
+                app.disconnect(windows_change_id);
+            }
+            this._restoredApps.clear();
+            this._restoredApps = null;
+        }
 
+        if (this._defaultAppSystem) {
+            this._defaultAppSystem = null;
+        }
     }
 
 }
