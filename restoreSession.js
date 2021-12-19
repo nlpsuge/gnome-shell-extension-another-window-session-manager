@@ -51,35 +51,47 @@ var RestoreSession = class {
                 count ++;
                 const app_name = session_config_object.app_name;
                 let launched = false;
+                let running = false;
                 try {
                     const desktop_file_id = session_config_object.desktop_file_id;
                     if (desktop_file_id) {
                         const shell_app = this._defaultAppSystem.lookup_app(desktop_file_id)
                         if (shell_app) {
                             if (this._restoredApps.has(shell_app)) {
-                                continue;
-                            }
-
-                            // get latest running apps every 3 cycles
-                            if (count % 3 === 0) {
-                                running_apps = this._defaultAppSystem.get_running();
-                            }
-
-                            if (this._appIsRunning(shell_app, running_apps)) {
-                                log(`${app_name} is running, skipping`)
                                 launched = true;
                             }
 
                             if (!launched) {
+                                // get latest running apps every 3 cycles
+                                if (count % 3 === 0) {
+                                    running_apps = this._defaultAppSystem.get_running();
+                                }
+
+                                if (this._appIsRunning(shell_app, running_apps)) {
+                                    log(`${app_name} is running, skipping`)
+                                    launched = true;
+                                    running = true;
+                                }
                                 launched = shell_app.launch(
                                     // 0 for current event timestamp
                                     0, 
                                     -1,
                                     this._getProperGpuPref(shell_app));
-                                if (launched) {
+                            }
+
+                            if (launched) {
+                                if (!running) {
                                     log(`${app_name} launched!`);
+                                }
+                                const existingShellAppData = this._restoredApps.get(shell_app);
+                                if (existingShellAppData) {
+                                    existingShellAppData.session_config_objects.push(session_config_object);
+                                } else {
                                     const windows_change_id = shell_app.connect('windows-changed', this._autoMoveWindows.bind(this));
-                                    this._restoredApps.set(shell_app, windows_change_id);
+                                    this._restoredApps.set(shell_app, {
+                                        windows_change_id: windows_change_id,
+                                        saved_window_sessions: [session_config_object]
+                                    });
                                 }
                             }
                         } 
@@ -111,8 +123,28 @@ var RestoreSession = class {
     }
 
     _autoMoveWindows(shellApp) {
-        const windows = shellApp.get_windows();
-
+        const shellAppData = this._restoredApps.get(shellApp);
+        const saved_window_sessions = shellAppData.saved_window_sessions
+        const open_windows = shellApp.get_windows();
+        for (const saved_window_session of saved_window_sessions) {
+            for (const open_window of open_windows) {
+                const title = open_window.get_title();
+                if (!saved_window_session.moved && (saved_window_session.windows_count === 1 || title === saved_window_session.window_title)) {
+                    const desktop_number = saved_window_session.desktop_number;
+                    const open_window_workspace = open_window.get_workspace();
+                    if (open_window_workspace.index() === desktop_number) {
+                        log(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
+                        saved_window_session.moved = true;
+                        continue;
+                    }
+                    
+                    log(`Auto move the window '${title}' to workspace ${desktop_number} for ${shellApp.get_name()}`);
+                    this._createEnoughWorkspace(desktop_number);
+                    open_window.change_workspace_by_index(desktop_number, false);
+                    saved_window_session.moved = true;
+                }
+            }
+        }
     }
 
     _getSessionConfigJsonObj(contents) {
@@ -161,8 +193,8 @@ var RestoreSession = class {
 
     destroy() {
         if (this._restoredApps) {
-            for (const [app, windows_change_id] of this._restoredApps) {
-                app.disconnect(windows_change_id);
+            for (const [app, v] of this._restoredApps) {
+                app.disconnect(v.windows_change_id);
             }
             this._restoredApps.clear();
             this._restoredApps = null;
