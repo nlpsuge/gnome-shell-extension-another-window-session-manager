@@ -128,48 +128,86 @@ var RestoreSession = class {
     }
 
     _autoMoveWindows(shellApp) {
-        log(`windows-changed triggered for ${shellApp.get_name()}`);
+        // Debug
+        // log(`windows-changed triggered for ${shellApp.get_name()}`);
+        const interestingWindows = this._getAutoMoveInterestingWindows(shellApp);
+
+        if (!interestingWindows.length) {
+            // Debug
+            // log(`No interesting windows for ${shellApp.get_name()}`);
+            return;
+        }
+
+        for (const interestingWindow of interestingWindows) {
+            const open_window = interestingWindow.open_window;
+            const saved_window_session = interestingWindow.saved_window_session;
+            const title = open_window.get_title();
+            const desktop_number = saved_window_session.desktop_number;
+
+            log(`Auto move the window '${title}' to workspace ${desktop_number} for ${shellApp.get_name()}`);
+            this._createEnoughWorkspace(desktop_number);
+            open_window.change_workspace_by_index(desktop_number, false);
+            
+            // window state
+            const window_state = saved_window_session.window_state;
+            if (window_state.is_above) {
+                open_window.make_above();
+            }
+            if (window_state.is_sticky) {
+                open_window.stick();
+            }
+            // TODO window geometry
+            const window_position = saved_window_session.window_position;
+            const x = window_position.x_offset;
+            const y = window_position.y_offset;
+            const width = window_position.width;
+            const height = window_position.height;
+            if (window_position.provider == 'Meta') {
+                open_window.move_resize_frame(true, x, y, width, height);
+            }
+
+            saved_window_session.moved = true;
+        }
+    }
+
+    _getAutoMoveInterestingWindows(shellApp) {
         const shellAppData = this._restoredApps.get(shellApp);
-        const saved_window_sessions = shellAppData.saved_window_sessions
+        let saved_window_sessions = shellAppData.saved_window_sessions
+        saved_window_sessions = saved_window_sessions.filter(saved_window_session => {
+            return !saved_window_session.moved;
+        });
+
+        if (!saved_window_sessions.length) {
+            return [];
+        }
+
+        let autoMoveInterestingWindows = [];
         const open_windows = shellApp.get_windows();
-        for (const saved_window_session of saved_window_sessions) {
-            for (const open_window of open_windows) {
+        saved_window_sessions.forEach(saved_window_session => {
+            open_windows.forEach(open_window => {
                 const title = open_window.get_title();
-                if (!saved_window_session.moved && (saved_window_session.windows_count === 1 || title === saved_window_session.window_title)) {
-                    const desktop_number = saved_window_session.desktop_number;
-                    const open_window_workspace = open_window.get_workspace();
-                    if (open_window_workspace.index() === desktop_number) {
+                const windows_count = saved_window_session.windows_count;
+                const open_window_workspace_index = open_window.get_workspace().index();
+                const desktop_number = saved_window_session.desktop_number;
+                
+                if (windows_count === 1 || title === saved_window_session.window_title) {
+                    if (open_window_workspace_index === desktop_number) {
                         log(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
                         saved_window_session.moved = true;
-                        continue;
+                        return;
                     }
                     
-                    log(`Auto move the window '${title}' to workspace ${desktop_number} for ${shellApp.get_name()}`);
-                    this._createEnoughWorkspace(desktop_number);
-                    open_window.change_workspace_by_index(desktop_number, false);
-                    
-                    // window state
-                    const window_state = saved_window_session.window_state;
-                    if (window_state.is_above) {
-                        open_window.make_above();
-                    }
-                    if (window_state.is_sticky) {
-                        open_window.stick();
-                    }
-                    // TODO window geometry
-                    const window_position = saved_window_session.window_position;
-                    const x = window_position.x_offset;
-                    const y = window_position.y_offset;
-                    const width = window_position.width;
-                    const height = window_position.height;
-                    if (window_position.provider == 'Meta') {
-                        open_window.move_resize_frame(true, x, y, width, height);
-                    }
-    
-                    saved_window_session.moved = true;
+                    autoMoveInterestingWindows.push({
+                        open_window: open_window,
+                        saved_window_session: saved_window_session
+                    });    
                 }
-            }
-        }
+    
+            });
+
+        });
+
+        return autoMoveInterestingWindows;
     }
 
     _getSessionConfigJsonObj(contents) {
