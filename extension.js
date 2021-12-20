@@ -14,10 +14,10 @@ function enable() {
     // _saveSession.saveSession();
 
     _restoreSession = new RestoreSession.RestoreSession();
-    // _restoreSession.restoreSession();
+    _restoreSession.restoreSession();
     
     _closeSession = new CloseSession.CloseSession();
-    _closeSession.closeWindows();
+    // _closeSession.closeWindows();
 
 }
 

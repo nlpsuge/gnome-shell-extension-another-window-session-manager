@@ -90,7 +90,7 @@ var RestoreSession = class {
                                 }
                                 const existingShellAppData = this._restoredApps.get(shell_app);
                                 if (existingShellAppData) {
-                                    existingShellAppData.session_config_objects.push(session_config_object);
+                                    existingShellAppData.saved_window_sessions.push(session_config_object);
                                 } else {
                                     const windows_change_id = shell_app.connect('windows-changed', this._autoMoveWindows.bind(this));
                                     this._restoredApps.set(shell_app, {
@@ -128,6 +128,7 @@ var RestoreSession = class {
     }
 
     _autoMoveWindows(shellApp) {
+        log(`windows-changed triggered for ${shellApp.get_name()}`);
         const shellAppData = this._restoredApps.get(shellApp);
         const saved_window_sessions = shellAppData.saved_window_sessions
         const open_windows = shellApp.get_windows();
@@ -155,15 +156,16 @@ var RestoreSession = class {
                     if (window_state.is_sticky) {
                         open_window.stick();
                     }
-                    // window geometry
-                    // const window_position = saved_window_session.window_position;
-                    // const x = window_position.x_offset;
-                    // const y = window_position.y_offset;
-                    // const width = window_position.width;
-                    // const height = window_position.height;
-                    // window_position.provider == 'Meta';
-
-
+                    // TODO window geometry
+                    const window_position = saved_window_session.window_position;
+                    const x = window_position.x_offset;
+                    const y = window_position.y_offset;
+                    const width = window_position.width;
+                    const height = window_position.height;
+                    if (window_position.provider == 'Meta') {
+                        open_window.move_resize_frame(true, x, y, width, height);
+                    }
+    
                     saved_window_session.moved = true;
                 }
             }
