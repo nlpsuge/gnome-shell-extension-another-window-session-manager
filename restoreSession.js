@@ -99,10 +99,13 @@ var RestoreSession = class {
                                     });
                                 }
                             } else {
-                                logError(`Failed to restore ${app_name}`);
-                                global.notify_error(`Failed to restore ${app_name}`, 'Reason: unknown.');
+                                logError(`Failed to restore ${app_name}. Reason: cannot find ${desktop_file_id}.`);
+                                global.notify_error(`Failed to restore ${app_name}`, `Reason: cannot find ${desktop_file_id}.`);
                             }
-                        } 
+                        } else {
+                            logError(`Failed to restore ${app_name}. Reason: unknown.`);
+                            global.notify_error(`Failed to restore ${app_name}`, 'Reason: unknown.');
+                        }
                     } else {
     
                         const cmd = session_config_object.cmd;
