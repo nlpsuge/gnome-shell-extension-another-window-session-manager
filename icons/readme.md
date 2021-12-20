@@ -1,0 +1,1 @@
+This .svg file is download at https://iconduck.com/icons/47805/restore
