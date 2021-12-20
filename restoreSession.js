@@ -98,6 +98,9 @@ var RestoreSession = class {
                                         saved_window_sessions: [session_config_object]
                                     });
                                 }
+                            } else {
+                                logError(`Failed to restore ${app_name}`);
+                                global.notify_error(`Failed to restore ${app_name}`, 'Reason: unknown.');
                             }
                         } 
                     } else {
@@ -111,10 +114,10 @@ var RestoreSession = class {
                             // TODO try to launch via app_info be search the app name?
                             let errorMsg = `Empty command line for ${app_name}`;
                             logError(errorMsg);
-                            global.notify_error(errorMsg);
+                            global.notify_error(errorMsg, 'Empty command line');
                         }
                     }
-                                        
+
                 } catch (e) {
                     logError(e, `Failed to restore ${app_name}`);
                     if (!launched) {
