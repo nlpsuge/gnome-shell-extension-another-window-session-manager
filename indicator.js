@@ -1,5 +1,5 @@
 
-const { GObject, St, Gio, GLib, Clutter } = imports.gi;
+const { GObject, St, Gio, GLib, Clutter, Gtk } = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -7,7 +7,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const PanelMenu = imports.ui.panelMenu;
 
 const FileUtils = Me.imports.utils.fileUtils;
-const SessionItem = Me.imports.sessionItem;
+const SessionRows = Me.imports.sessionRows;
 
 
 var AwsIndicator = GObject.registerClass(
@@ -49,29 +49,7 @@ class AwsIndicator extends PanelMenu.Button {
             return;
         }
 
-        // Debug
-        log('List all sessions to add session items');
-        let index = 0;
-        FileUtils.listAllSessions(null, false, (file, info) => {
-            if (info.get_file_type() === Gio.FileType.REGULAR) {
-                let parent = file.get_parent();
-                let parentPath;
-                // https://gjs-docs.gnome.org/gio20~2.66p/gio.file#method-get_parent
-                // If the this represents the root directory of the file system, then null will be returned.
-                if (parent === null) {
-                    // Impossible in the case
-                    parentPath = '/';
-                } else {
-                    parentPath = parent.get_path();
-                }
-                const filePath = file.get_path();
-                // Debug
-                log(`Processing ${filePath} under ${parentPath}`);
-                index++;
-                let item = new SessionItem.SessionItem(info.get_name(), filePath, index);
-                this.menu.addMenuItem(item, index);
-            }
-        });
+        this.menu.addMenuItem(new SessionRows.SessionRows());
         
     }
 

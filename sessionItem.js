@@ -5,11 +5,11 @@ const PopupMenu = imports.ui.popupMenu;
 var SessionItem = GObject.registerClass(
 class SessionItem extends PopupMenu.PopupMenuItem {
     
-    _init(filename, filepath, index) {
+    _init(fileInfo, filepath, index) {
         // Initialize this component, so we can use this.label etc
         super._init("");
 
-        this._filename = filename;
+        this._filename = fileInfo.get_name();
         this._filepath = filepath;
         this._index =  index;
 
