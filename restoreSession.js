@@ -45,9 +45,7 @@ var RestoreSession = class {
                 return;
             }
 
-            let count = 0;
             for (const session_config_object of session_config_objects) {
-                count ++;
                 const app_name = session_config_object.app_name;
                 let launched = false;
                 let running = false;
