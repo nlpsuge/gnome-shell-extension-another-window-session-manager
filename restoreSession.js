@@ -45,8 +45,6 @@ var RestoreSession = class {
                 return;
             }
 
-            // running_apps can be empty even if there are apps running when gnome-shell starting
-            let running_apps = this._defaultAppSystem.get_running();
             let count = 0;
             for (const session_config_object of session_config_objects) {
                 count ++;
@@ -58,32 +56,7 @@ var RestoreSession = class {
                     if (desktop_file_id) {
                         const shell_app = this._defaultAppSystem.lookup_app(desktop_file_id)
                         if (shell_app) {
-                            if (this._restoredApps.has(shell_app)) {
-                                launched = true;
-                                running = true;
-                            }
-
-                            if (!launched) {
-                                // get latest running apps every 3 cycles
-                                if (count % 3 === 0) {
-                                    running_apps = this._defaultAppSystem.get_running();
-                                }
-
-                                if (this._appIsRunning(shell_app, running_apps)) {
-                                    log(`${app_name} is running, skipping`)
-                                    launched = true;
-                                    running = true;
-                                }
-                            }
-
-                            if (!launched) {
-                                launched = shell_app.launch(
-                                    // 0 for current event timestamp
-                                    0, 
-                                    -1,
-                                    this._getProperGpuPref(shell_app));
-                            }
-
+                            [launched, running] = this.launch(shell_app);
                             if (launched) {
                                 if (!running) {
                                     log(`${app_name} launched!`);
@@ -131,6 +104,24 @@ var RestoreSession = class {
         }
 
        
+    }
+
+    launch(shellApp) {
+        if (this._restoredApps.has(shellApp)) {
+            return [true, true];
+        }
+
+        if (this._appIsRunning(shellApp)) {
+            log(`${shellApp.get_name()} is running, skipping`)
+            return [true, true];
+        }
+
+        const launched = shellApp.launch(
+            // 0 for current event timestamp
+            0, 
+            -1,
+            this._getProperGpuPref(shellApp));
+        return [launched, false];
     }
 
     _autoMoveWindows(shellApp) {
@@ -236,7 +227,9 @@ var RestoreSession = class {
         }
     }
 
-    _appIsRunning(app, running_apps) {
+    _appIsRunning(app) {
+        // Running apps can be empty even if there are apps running when gnome-shell starting
+        const running_apps = this._defaultAppSystem.get_running();
         for (const running_app of running_apps) {
             if (running_app.get_id() === app.get_id() && 
                     running_app.get_state() === Shell.AppState.RUNNING) {
