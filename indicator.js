@@ -64,11 +64,10 @@ class AwsIndicator extends PanelMenu.Button {
                 } else {
                     parentPath = parent.get_path();
                 }
-                const filePath = file.get_path();
                 // Debug
-                log(`Processing ${filePath} under ${parentPath}`);
+                log(`Processing ${file.get_path()} under ${parentPath}`);
                 index++;
-                let item = new SessionItem.SessionItem(info.get_name(), filePath, index);
+                let item = new SessionItem.SessionItem(info, file);
                 this.menu.addMenuItem(item, index);
             }
         });
