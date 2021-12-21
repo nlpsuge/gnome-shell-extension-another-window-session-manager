@@ -1,5 +1,5 @@
 
-const { GObject, St, Gio, GLib } = imports.gi;
+const { GObject, St, Gio, GLib, Clutter } = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -7,6 +7,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const PanelMenu = imports.ui.panelMenu;
 
 const FileUtils = Me.imports.utils.fileUtils;
+const SessionItem = Me.imports.sessionItem;
 
 
 var AwsIndicator = GObject.registerClass(
@@ -25,21 +26,31 @@ class AwsIndicator extends PanelMenu.Button {
             style_class: 'popup-menu-icon'
         });
         this.add_child(icon);
+        this.buttonText = new St.Label({
+            text: _("Loading..."),
+            y_align: Clutter.ActorAlign.CENTER
+        });
+        this.add_child(this.buttonText);
 
         this._addSessionItems();
 
         this.connect('destroy', this._onDestroy.bind(this));
-        // TODO Not work
-        this.menu.open(true);
+        // Open menu
+        // this.menu.open(true);
+        // Toggle menu
+        // this.menu.toggle();
 
     }
 
     _addSessionItems() {
-        const sessions_path = GLib.build_filenamev([this._sessions_path]);
-        if (GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
+        if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
+            // TOTO Empty session
+            log(`${this._sessions_path} not found!`);
             return;
         }
 
+        // Debug
+        log('List all sessions to add session items');
         let index = 0;
         FileUtils.listAllSessions(null, false, (file, info) => {
             if (info.get_file_type() === Gio.FileType.REGULAR) {
@@ -57,7 +68,7 @@ class AwsIndicator extends PanelMenu.Button {
                 // Debug
                 log(`Processing ${filePath} under ${parentPath}`);
                 index++;
-                let item = new sessionItem.SessionItem(info.get_name(), filePath, index);
+                let item = new SessionItem.SessionItem(info.get_name(), filePath, index);
                 this.menu.addMenuItem(item, index);
             }
         });

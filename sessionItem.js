@@ -1,4 +1,4 @@
-const { GObject } = imports.gi;
+const { GObject, St } = imports.gi;
 
 const PopupMenu = imports.ui.popupMenu;
 
@@ -6,12 +6,16 @@ var SessionItem = GObject.registerClass(
 class SessionItem extends PopupMenu.PopupMenuItem {
     
     _init(filename, filepath, index) {
+        // Initialize this component, so we can use this.label etc
+        super._init("");
+
         this._filename = filename;
         this._filepath = filepath;
         this._index =  index;
 
-        
-        this.setIndex(index);
+        this.label.set_x_expand(true);
+        this.label.clutter_text.set_text(filename);
+
         this.add_child(new St.Bin({
             x_align: St.Align.END,
 
