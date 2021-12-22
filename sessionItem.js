@@ -19,7 +19,7 @@ class SessionItem extends PopupMenu.PopupMenuItem {
         this._modification_time = 'Unknown';
         const modification_date_time = fileInfo.get_modification_date_time();
         if (modification_date_time) {
-            this._modification_time = modification_date_time.format('%Y-%m-%d %T');
+            this._modification_time = modification_date_time.to_local().format('%Y-%m-%d %T');
         }
 
         this.label.set_x_expand(true);
