@@ -1,0 +1,30 @@
+.aws-item-separator {
+    border-radius: 32px;
+    padding: 4px;
+    border: 1px solid #282c2c;
+}
+
+.aws-item-separator > StIcon {
+    icon-size: 14px;
+}
+
+/**
+Add highlight effect when hover over the buttons in the item
+
+Based on https://gitlab.com/bartl/todo-txt-gnome-shell-extension/-/blob/master/stylesheet.css
+*/
+.aws-item-button {
+    border-radius: 32px;
+    padding: 4px;
+    border: 1px solid #282c2c;
+}
+
+.aws-item-button:hover, .aws-item-button:focus {
+    background-color: rgba(255,255,255,0.2);
+    border: none;
+    padding: 5px;
+}
+
+.aws-item-button > StIcon {
+    icon-size: 14px;
+}

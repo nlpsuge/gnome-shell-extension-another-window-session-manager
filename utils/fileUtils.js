@@ -8,6 +8,20 @@ var sessions_path = GLib.build_filenamev([config_path_base, 'sessions']);
 function get_sessions_path() {
     return sessions_path;
 }
+
+function getJsonObj(contents) {
+    let session_config;
+    // Fix Gnome 3 crash due to: Some code called array.toString() on a Uint8Array instance. Previously this would have interpreted the bytes of the array as a string, but that is nonstandard. In the future this will return the bytes as comma-separated digits. For the time being, the old behavior has been preserved, but please fix your code anyway to explicitly call ByteArray.toString(array).
+    if (contents instanceof Uint8Array) {
+        const contentsConverted = imports.byteArray.toString(contents);
+        session_config = JSON.parse(contentsConverted);
+    } else {
+        // Unreachable code
+        session_config = JSON.parse(contents);
+    }
+    return session_config;
+}
+
 function listAllSessions(sessionPath, recursion, callback) {
     if (!sessionPath) {
         sessionPath = get_sessions_path();
@@ -22,7 +36,9 @@ function listAllSessions(sessionPath, recursion, callback) {
     let fileEnumerator;
     try {
         fileEnumerator = sessionPathFile.enumerate_children(
-            [Gio.FILE_ATTRIBUTE_STANDARD_NAME, Gio.FILE_ATTRIBUTE_STANDARD_TYPE].join(','),
+            [Gio.FILE_ATTRIBUTE_STANDARD_NAME, 
+                Gio.FILE_ATTRIBUTE_STANDARD_TYPE, 
+                Gio.FILE_ATTRIBUTE_TIME_MODIFIED].join(','),
             Gio.FileQueryInfoFlags.NONE,
             null);
     } catch(e) {
