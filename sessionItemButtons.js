@@ -15,12 +15,26 @@ class SessionItemButtons extends GObject.Object {
     }
 
     addButtons(sessionItem) {
+        const saveButton = this._addButton(sessionItem, 'save-symbolic.svg');
+        saveButton.connect('clicked', this._onClickSave.bind(this));
+
+        const restoreButton = this._addButton(sessionItem, 'restore-symbolic.svg');
+        restoreButton.connect('clicked', this._onClickRestore.bind(this));
+
+        const moveButton = this._addButton(sessionItem, 'move-symbolic.svg');
+        moveButton.connect('clicked', this._onClickMove.bind(this));
+
+        const closeButton = this._addButton(sessionItem, 'close-symbolic.svg');
+        closeButton.connect('clicked', this._onClickClose.bind(this));
+    }
+
+    _addButton(sessionItem, iconSymbolic) {
         let icon = new St.Icon({
-            gicon: IconFinder.find('close-symbolic.svg'),
+            gicon: IconFinder.find(iconSymbolic),
             style_class: 'system-status-icon'
         });
 
-        let deleteButton = new St.Button({
+        let button = new St.Button({
             style_class: 'aws-item-button',
             can_focus: true,
             child: icon,
@@ -30,13 +44,30 @@ class SessionItemButtons extends GObject.Object {
             track_hover: true
         });
 
-        sessionItem.actor.add_child(deleteButton);
-
-        deleteButton.connect('clicked', this._onClickDelete.bind(this));
+        sessionItem.actor.add_child(button);
+        return button;
     }
 
-    _onClickDelete(menuItem, event) {
-        log('Deleting');
+    _onClickSave(menuItem, event) {
+        log('Closing');
+        log(menuItem);
+        log(event);
+    }
+    
+    _onClickRestore(menuItem, event) {
+        log('Restoring');
+        log(menuItem);
+        log(event);
+    }
+    
+    _onClickMove(menuItem, event) {
+        log('Moving');
+        log(menuItem);
+        log(event);
+    }
+
+    _onClickClose(menuItem, event) {
+        log('Closing');
         log(menuItem);
         log(event);
     }
