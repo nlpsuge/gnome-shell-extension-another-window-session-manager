@@ -5,6 +5,10 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const IconFinder = Me.imports.iconFinder;
 
+const SaveSession = Me.imports.saveSession;
+const RestoreSession = Me.imports.restoreSession;
+const CloseSession = Me.imports.closeSession;
+
 
 var SessionItemButtons = GObject.registerClass(
 class SessionItemButtons extends GObject.Object {
@@ -12,6 +16,9 @@ class SessionItemButtons extends GObject.Object {
     _init() {
         super._init();
 
+        // TODO Nullify created object?
+        this._saveSession = new SaveSession.SaveSession();
+        this._closeSession = new CloseSession.CloseSession();
     }
 
     addButtons(sessionItem) {
@@ -85,26 +92,24 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _onClickSave(menuItem, event) {
-        log('Closing');
-        log(menuItem);
-        log(event);
+        this._saveSession.saveSession();
     }
     
     _onClickRestore(menuItem, event) {
-        log('Restoring');
-        log(menuItem);
-        log(event);
+        // Using _restoredApps to hold restored apps so we create new instance every time for now
+        const _restoreSession = new RestoreSession.RestoreSession();
+        _restoreSession.restoreSession();
     }
     
+    // TODO Move windows
     _onClickMove(menuItem, event) {
         log('Moving');
         log(menuItem);
         log(event);
+
     }
 
     _onClickClose(menuItem, event) {
-        log('Closing');
-        log(menuItem);
-        log(event);
+        this._closeSession.closeWindows();
     }
 });
