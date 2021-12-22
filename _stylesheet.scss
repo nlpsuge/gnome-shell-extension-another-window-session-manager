@@ -1,0 +1,15 @@
+$osd_fg_color: #eeeeec;
+$osd_bg_color: #2e3436;
+
+.window-close-dup {
+    background-color: $osd_bg_color;
+    color: $osd_fg_color;
+  
+  
+    &:hover {
+      background-color: lighten($osd_bg_color, 15%);
+    }
+  
+  
+  }
+  

@@ -2,6 +2,11 @@ const { GObject, St, Clutter } = imports.gi;
 
 const PopupMenu = imports.ui.popupMenu;
 
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+
+const SessionItemButtons = Me.imports.sessionItemButtons;
+
 var SessionItem = GObject.registerClass(
 class SessionItem extends PopupMenu.PopupMenuItem {
     
@@ -20,33 +25,12 @@ class SessionItem extends PopupMenu.PopupMenuItem {
         this.label.set_x_expand(true);
         this.label.clutter_text.set_text(this._filename);
 
-        let icon = new St.Icon({
-            icon_name: 'edit-delete-symbolic',
-            style_class: 'system-status-icon'
-        });
-
-        let deleteButton = new St.Button({
-            style_class: 'ci-action-btn',
-            can_focus: true,
-            child: icon,
-            x_align: Clutter.ActorAlign.END,
-            x_expand: false,
-            y_expand: true
-        });
-        deleteButton.set_label('Close');
-
-        this.actor.add_child(deleteButton);
-
-        deleteButton.connect('clicked', this._onClickDelete.bind(this));
-
+        this._sessionItemButtons = new SessionItemButtons.SessionItemButtons();
+        this._sessionItemButtons.addButtons(this);
 
     }
 
-    _onClickDelete(menuItem, event) {
-        log('Deleting');
-        log(menuItem);
-        log(event);
-    }
+   
     
 });
 
