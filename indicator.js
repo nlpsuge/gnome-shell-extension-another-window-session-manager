@@ -8,6 +8,7 @@ const PanelMenu = imports.ui.panelMenu;
 
 const FileUtils = Me.imports.utils.fileUtils;
 const SessionItem = Me.imports.sessionItem;
+const SearchSession = Me.imports.searchSession;
 
 
 var AwsIndicator = GObject.registerClass(
@@ -32,7 +33,9 @@ class AwsIndicator extends PanelMenu.Button {
         });
         this.add_child(this.buttonText);
 
-        this._addSessionItems();
+        this._createMenu();
+
+        this.menu.connect('open-state-changed', this._onOpenStateChanged.bind(this));
 
         this.connect('destroy', this._onDestroy.bind(this));
         // Open menu
@@ -40,6 +43,21 @@ class AwsIndicator extends PanelMenu.Button {
         // Toggle menu
         // this.menu.toggle();
 
+    }
+
+    _onOpenStateChanged(menu, state) {
+        log(`open menu ${state}`);
+        if (state) {
+            this._searchSession.reset();
+        }
+    }
+
+    _createMenu() {
+        this._searchSession = new SearchSession.SearchSession();
+        this.menu.addMenuItem(this._searchSession);
+
+
+        this._addSessionItems();
     }
 
     _addSessionItems() {
