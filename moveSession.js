@@ -140,11 +140,10 @@ var MoveSession = class {
         }
     }
 
-
-    
-
-    destory() {
-
+    destroy() {
+        if (this._defaultAppSystem) {
+            this._defaultAppSystem = null;
+        }
     }
 
 }
