@@ -24,8 +24,29 @@ class SessionItemButtons extends GObject.Object {
         const moveButton = this._addButton(sessionItem, 'move-symbolic.svg');
         moveButton.connect('clicked', this._onClickMove.bind(this));
 
+        this._addSeparator(sessionItem);
+
         const closeButton = this._addButton(sessionItem, 'close-symbolic.svg');
         closeButton.connect('clicked', this._onClickClose.bind(this));
+    }
+
+    _addSeparator(sessionItem) {
+        let icon = new St.Icon({
+            gicon: IconFinder.find('separator-symbolic.svg'),
+            style_class: 'system-status-icon'
+        });
+
+        let button = new St.Button({
+            style_class: 'aws-item-separator',
+            can_focus: false,
+            child: icon,
+            x_align: Clutter.ActorAlign.END,
+            x_expand: false,
+            y_expand: false,
+            track_hover: false
+        });
+
+        sessionItem.actor.add_child(button);
     }
 
     _addButton(sessionItem, iconSymbolic) {
