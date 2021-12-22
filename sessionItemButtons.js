@@ -21,6 +21,7 @@ class SessionItemButtons extends GObject.Object {
 
         // TODO Nullify created object?
         this._saveSession = new SaveSession.SaveSession();
+        this._moveSession = new MoveSession.MoveSession();
         this._closeSession = new CloseSession.CloseSession();
     }
 
@@ -104,12 +105,8 @@ class SessionItemButtons extends GObject.Object {
         _restoreSession.restoreSession(this.sessionItem._filename);
     }
     
-    // TODO Move windows
     _onClickMove(menuItem, event) {
-        log('Moving');
-        log(menuItem);
-        log(event);
-
+        this._moveSession.moveWindows(this.sessionItem._filename);
     }
 
     _onClickClose(menuItem, event) {
