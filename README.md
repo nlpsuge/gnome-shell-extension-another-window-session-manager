@@ -1,7 +1,9 @@
 # gnome-shell-extension-another-window-session-manager
 Close and save open windows. And restore saved windows sessions.
 
-It supports both X.org and Wayland!
+Most importantly, It supports both X.org and Wayland!
+
+This project is in early development, I'm planing to add some other features, but it basicly works now.
 
 # Screenshot
 ![image](https://user-images.githubusercontent.com/2271720/147125378-3563923e-108a-435b-b9e7-a1c24ba9104b.png)
@@ -27,7 +29,7 @@ Front left to right:
 
 # limitation
 - It denpends on St(Shell Toolkits) and Shell APIs so heavily
-
+- ...
 
 # TODO
 1. - Save open windows
