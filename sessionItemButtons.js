@@ -21,7 +21,7 @@ class SessionItemButtons extends GObject.Object {
         });
 
         let deleteButton = new St.Button({
-            style_class: 'ci-action-btn',
+            style_class: 'aws-item-button',
             can_focus: true,
             child: icon,
             x_align: Clutter.ActorAlign.END,
