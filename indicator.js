@@ -46,7 +46,6 @@ class AwsIndicator extends PanelMenu.Button {
     }
 
     _onOpenStateChanged(menu, state) {
-        log(`open menu ${state}`);
         if (state) {
             this._searchSession.reset();
         }

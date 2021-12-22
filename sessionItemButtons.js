@@ -7,6 +7,7 @@ const IconFinder = Me.imports.iconFinder;
 
 const SaveSession = Me.imports.saveSession;
 const RestoreSession = Me.imports.restoreSession;
+const MoveSession = Me.imports.moveSession;
 const CloseSession = Me.imports.closeSession;
 
 
