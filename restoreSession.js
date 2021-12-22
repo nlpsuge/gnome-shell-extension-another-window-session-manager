@@ -16,9 +16,13 @@ var RestoreSession = class {
         this._restoredApps = new Map();
     }
 
-    restoreSession() {
+    restoreSession(sessionName) {
+        if (!sessionName) {
+            sessionName = this.sessionName;
+        }
+        
         const sessions_path = FileUtils.get_sessions_path();
-        const session_file_path = GLib.build_filenamev([sessions_path, this.sessionName]);
+        const session_file_path = GLib.build_filenamev([sessions_path, sessionName]);
         if (!GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
             logError(`Session file not found: ${session_file_path}`);
             return;

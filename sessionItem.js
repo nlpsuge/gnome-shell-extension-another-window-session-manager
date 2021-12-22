@@ -25,8 +25,8 @@ class SessionItem extends PopupMenu.PopupMenuItem {
         this.label.set_x_expand(true);
         this.label.clutter_text.set_text(this._filename);
 
-        this._sessionItemButtons = new SessionItemButtons.SessionItemButtons();
-        this._sessionItemButtons.addButtons(this);
+        this._sessionItemButtons = new SessionItemButtons.SessionItemButtons(this);
+        this._sessionItemButtons.addButtons();
 
     }
 
