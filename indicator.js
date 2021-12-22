@@ -71,7 +71,7 @@ class AwsIndicator extends PanelMenu.Button {
         // Debug
         log('List all sessions to add session items');
         let index = 0;
-        // TODO Sort by modification time
+        // TODO Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator
         FileUtils.listAllSessions(null, false, (file, info) => {
             if (info.get_file_type() === Gio.FileType.REGULAR) {
                 let parent = file.get_parent();
