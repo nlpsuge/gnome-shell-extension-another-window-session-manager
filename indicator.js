@@ -9,6 +9,7 @@ const PanelMenu = imports.ui.panelMenu;
 const FileUtils = Me.imports.utils.fileUtils;
 const SessionItem = Me.imports.sessionItem;
 const SearchSession = Me.imports.searchSession;
+const IconFinder = Me.imports.iconFinder;
 
 
 var AwsIndicator = GObject.registerClass(
@@ -21,9 +22,8 @@ class AwsIndicator extends PanelMenu.Button {
         // TODO backup path
 
         // Add an icon
-        let iconPath = `${Me.path}/icons/restore-symbolic.svg`;
         let icon = new St.Icon({
-            gicon: Gio.icon_new_for_string(`${iconPath}`),
+            gicon: IconFinder.find('restore-symbolic.svg'),
             style_class: 'popup-menu-icon'
         });
         this.add_child(icon);
