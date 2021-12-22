@@ -60,6 +60,7 @@ class AwsIndicator extends PanelMenu.Button {
         this._addSessionItems();
     }
 
+    // TODO monitor files changes? Refresh items when open menu? 
     _addSessionItems() {
         if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
             // TOTO Empty session
@@ -70,6 +71,7 @@ class AwsIndicator extends PanelMenu.Button {
         // Debug
         log('List all sessions to add session items');
         let index = 0;
+        // TODO Sort by modification time
         FileUtils.listAllSessions(null, false, (file, info) => {
             if (info.get_file_type() === Gio.FileType.REGULAR) {
                 let parent = file.get_parent();
