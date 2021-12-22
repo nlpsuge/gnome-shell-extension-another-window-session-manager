@@ -22,7 +22,9 @@ function listAllSessions(sessionPath, recursion, callback) {
     let fileEnumerator;
     try {
         fileEnumerator = sessionPathFile.enumerate_children(
-            [Gio.FILE_ATTRIBUTE_STANDARD_NAME, Gio.FILE_ATTRIBUTE_STANDARD_TYPE].join(','),
+            [Gio.FILE_ATTRIBUTE_STANDARD_NAME, 
+                Gio.FILE_ATTRIBUTE_STANDARD_TYPE, 
+                Gio.FILE_ATTRIBUTE_TIME_MODIFIED].join(','),
             Gio.FileQueryInfoFlags.NONE,
             null);
     } catch(e) {

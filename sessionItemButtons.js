@@ -15,6 +15,10 @@ class SessionItemButtons extends GObject.Object {
     }
 
     addButtons(sessionItem) {
+        this._addTags(sessionItem);
+        
+        this._addSeparator(sessionItem);
+
         const saveButton = this._addButton(sessionItem, 'save-symbolic.svg');
         saveButton.connect('clicked', this._onClickSave.bind(this));
 
@@ -28,6 +32,16 @@ class SessionItemButtons extends GObject.Object {
 
         const closeButton = this._addButton(sessionItem, 'close-symbolic.svg');
         closeButton.connect('clicked', this._onClickClose.bind(this));
+    }
+
+    _addTags(sessionItem) {
+        let button = new St.Button({
+            x_align: Clutter.ActorAlign.END,
+        });
+
+        button.set_label(sessionItem._modification_time);
+        sessionItem.actor.add_child(button);
+
     }
 
     _addSeparator(sessionItem) {
