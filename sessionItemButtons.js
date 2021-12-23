@@ -96,7 +96,7 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _onClickSave(menuItem, event) {
-        this._saveSession.saveSession();
+        this._saveSession.saveSession(this.sessionItem._filename);
     }
     
     _onClickRestore(menuItem, event) {
@@ -110,6 +110,7 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _onClickClose(menuItem, event) {
+        // TODO Close specified windows in the session?
         this._closeSession.closeWindows();
     }
 });

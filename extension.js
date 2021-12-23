@@ -3,9 +3,6 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const Main = imports.ui.main;
 
-const SaveSession = Me.imports.saveSession;
-const RestoreSession = Me.imports.restoreSession;
-const CloseSession = Me.imports.closeSession;
 const Indicator = Me.imports.indicator;
 
 let _indicator;
