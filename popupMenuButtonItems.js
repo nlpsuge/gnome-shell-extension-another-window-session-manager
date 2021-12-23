@@ -98,7 +98,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
                 let sessionName = entry.get_text();
                 if (sessionName) {
                     // '  ' is truthy
-                    if (sessionName.trim() === '') {
+                    if (!sessionName.trim()) {
                         sessionName = FileUtils.default_sessionName;
                     }
                 } else {
