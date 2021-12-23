@@ -97,21 +97,22 @@ class SessionItemButtons extends GObject.Object {
         return button;
     }
 
-    _onClickSave(menuItem, event) {
+    _onClickSave(button, event) {
         this._saveSession.saveSession(this.sessionItem._filename);
     }
     
-    _onClickRestore(menuItem, event) {
+    _onClickRestore(button, event) {
         // Using _restoredApps to hold restored apps so we create new instance every time for now
         const _restoreSession = new RestoreSession.RestoreSession();
         _restoreSession.restoreSession(this.sessionItem._filename);
     }
     
-    _onClickMove(menuItem, event) {
+    _onClickMove(button, event) {
+        log(menuItem);
         this._moveSession.moveWindows(this.sessionItem._filename);
     }
 
-    _onClickClose(menuItem, event) {
+    _onClickClose(button, event) {
         // TODO Close specified windows in the session?
         this._closeSession.closeWindows();
     }
