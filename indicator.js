@@ -5,11 +5,13 @@ const { GObject, St, Gio, GLib, Clutter } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
+const PopupMenu = imports.ui.popupMenu;
 const PanelMenu = imports.ui.panelMenu;
 
 const FileUtils = Me.imports.utils.fileUtils;
 const SessionItem = Me.imports.sessionItem;
 const SearchSession = Me.imports.searchSession;
+const PopupMenuButtonItems = Me.imports.popupMenuButtonItems;
 const IconFinder = Me.imports.iconFinder;
 
 
@@ -19,6 +21,8 @@ class AwsIndicator extends PanelMenu.Button {
     _init() {
         super._init(0.0, "Another Window Session Manager");
         
+        this._itemIndex = 0;
+
         this._sessions_path = FileUtils.sessions_path;
         // TODO backup path
 
@@ -53,11 +57,23 @@ class AwsIndicator extends PanelMenu.Button {
     }
 
     _createMenu() {
+        this._addButtonItems();
+        
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(), this._itemIndex++);
+
         this._searchSession = new SearchSession.SearchSession();
-        this.menu.addMenuItem(this._searchSession);
-
-
+        this.menu.addMenuItem(this._searchSession, this._itemIndex++);
+        
         this._addSessionItems();
+    }
+
+    _addButtonItems() {
+        this._popupMenuButtonItems = new PopupMenuButtonItems.PopupMenuButtonItems();
+        const buttonItems = this._popupMenuButtonItems.buttonItems;
+        buttonItems.forEach(item => {
+            this.menu.addMenuItem(item, this._itemIndex++);
+        });
+
     }
 
     // TODO monitor files changes? Refresh items when open menu? 
@@ -70,7 +86,6 @@ class AwsIndicator extends PanelMenu.Button {
 
         // Debug
         log('List all sessions to add session items');
-        let index = 0;
         // TODO Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator
         FileUtils.listAllSessions(null, false, (file, info) => {
             if (info.get_file_type() === Gio.FileType.REGULAR) {
@@ -86,9 +101,8 @@ class AwsIndicator extends PanelMenu.Button {
                 }
                 // Debug
                 log(`Processing ${file.get_path()} under ${parentPath}`);
-                index++;
                 let item = new SessionItem.SessionItem(info, file);
-                this.menu.addMenuItem(item, index);
+                this.menu.addMenuItem(item, this._itemIndex++);
             }
         });
         
