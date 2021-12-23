@@ -97,6 +97,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             if (symbol == Clutter.KEY_Return || symbol == Clutter.KEY_KP_Enter || symbol == Clutter.KEY_ISO_Enter) {
                 let sessionName = entry.get_text();
                 if (sessionName) {
+                    // '  ' is truthy
                     if (sessionName.trim() === '') {
                         sessionName = FileUtils.default_sessionName;
                     }
