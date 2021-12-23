@@ -1,3 +1,5 @@
+'use strict';
+
 class WindowState {
     // If always on visible workspace
     is_sticky; // bool

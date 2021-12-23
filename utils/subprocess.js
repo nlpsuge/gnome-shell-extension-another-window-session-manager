@@ -1,3 +1,5 @@
+'use strict';
+
 const Gio = imports.gi.Gio;
 
 var Subprocess = class Subprocess {

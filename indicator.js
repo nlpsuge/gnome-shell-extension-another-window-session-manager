@@ -1,3 +1,4 @@
+'use strict';
 
 const { GObject, St, Gio, GLib, Clutter } = imports.gi;
 

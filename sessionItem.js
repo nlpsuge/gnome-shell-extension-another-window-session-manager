@@ -1,3 +1,5 @@
+'use strict';
+
 const { GObject, St, Clutter } = imports.gi;
 
 const PopupMenu = imports.ui.popupMenu;

@@ -1,3 +1,5 @@
+'use strict';
+
 const { Shell, Gio, GLib } = imports.gi;
 const Util = imports.misc.util;
 

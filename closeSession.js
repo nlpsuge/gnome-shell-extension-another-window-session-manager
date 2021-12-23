@@ -1,3 +1,5 @@
+'use strict';
+
 const { Shell } = imports.gi;
 
 var CloseSession = class {

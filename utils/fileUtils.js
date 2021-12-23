@@ -1,3 +1,5 @@
+'use strict';
+
 const { Gio, GLib } = imports.gi
 
 var default_sessionName = 'defaultSession';
