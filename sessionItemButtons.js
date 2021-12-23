@@ -108,7 +108,6 @@ class SessionItemButtons extends GObject.Object {
     }
     
     _onClickMove(button, event) {
-        log(menuItem);
         this._moveSession.moveWindows(this.sessionItem._filename);
     }
 
