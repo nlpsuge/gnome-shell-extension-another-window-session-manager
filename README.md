@@ -6,7 +6,7 @@ Most importantly, It supports both X.org and Wayland!
 This project is in early development, I'm planing to add some other features, but it basicly works now.
 
 # Screenshot
-![image](https://user-images.githubusercontent.com/2271720/147125378-3563923e-108a-435b-b9e7-a1c24ba9104b.png)
+![image](https://user-images.githubusercontent.com/2271720/147270198-637aa754-5c3c-4015-bd1c-9816f76ea979.png)
 
 
 # Features
