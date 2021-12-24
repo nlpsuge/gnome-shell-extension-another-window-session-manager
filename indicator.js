@@ -2,6 +2,8 @@
 
 const { GObject, St, Gio, GLib, Clutter } = imports.gi;
 
+const Mainloop = imports.mainloop;
+
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -57,7 +59,9 @@ class AwsIndicator extends PanelMenu.Button {
     _onOpenStateChanged(menu, state) {
         if (state) {
             this._searchSession.reset();
+            Mainloop.idle_add(() => this._searchSession._entry.grab_key_focus());
         }
+        super._onOpenStateChanged(menu, state);
     }
 
     _createMenu() {
