@@ -238,6 +238,26 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         });
         this.actor.add_child(this.saveCurrentSessionEntry);
 
+        this._clearIcon = new St.Icon({
+            // style_class: 'search-entry-icon',
+            icon_name: 'edit-clear-symbolic'
+        });
+
+        clutterText.connect('text-changed', this._onTextChanged.bind(this));
+
+    }
+
+    _onTextChanged() {
+        this.saveCurrentSessionEntry.set_secondary_icon(this._clearIcon);
+        this.saveCurrentSessionEntry.connect('secondary-icon-clicked', this.reset.bind(this));
+
+    }
+
+    reset() {
+        this.saveCurrentSessionEntry.grab_key_focus();
+        this.saveCurrentSessionEntry.set_text('');
+        let text = this.saveCurrentSessionEntry.get_clutter_text();
+        text.set_cursor_visible(true);
     }
 
 });
