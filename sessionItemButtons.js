@@ -41,10 +41,10 @@ class SessionItemButtons extends GObject.Object {
         const moveButton = this._addButton('move-symbolic.svg');
         moveButton.connect('clicked', this._onClickMove.bind(this));
 
-        this._addSeparator();
+        // this._addSeparator();
 
-        const closeButton = this._addButton('close-symbolic.svg');
-        closeButton.connect('clicked', this._onClickClose.bind(this));
+        // const closeButton = this._addButton('close-symbolic.svg');
+        // closeButton.connect('clicked', this._onClickClose.bind(this));
     }
 
     _addTags() {
