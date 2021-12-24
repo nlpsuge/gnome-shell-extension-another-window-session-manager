@@ -77,7 +77,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this._createButton(iconSymbolic);
         this._addConfirm();
         this._addYesOrNoButtons();
-        this._addClosing();
+        this._addClosingPrompt();
 
         this._hideConfirm();
 
@@ -135,7 +135,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
     }
 
-    _addClosing() {
+    _addClosingPrompt() {
         this.closingLabel = new St.Label({
             style_class: 'confirm-before-operate',
             text: 'Closing open windows ...',
