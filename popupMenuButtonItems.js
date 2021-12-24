@@ -81,7 +81,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
         this._hideConfirm();
 
-        this.timeline = this._createTimeLine();
+        this._timeline = this._createTimeLine();
 
     }
 
@@ -114,13 +114,13 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
             // Set the actor the timeline is associated with to make sure Clutter.Timeline works normally.
             // Set the actor in new Clutter.Timeline don't work
-            this.timeline.set_actor(this.closingLabel);
-            this.timeline.connect('new-frame', (_timeline, _frame) => {
+            this._timeline.set_actor(this.closingLabel);
+            this._timeline.connect('new-frame', (_timeline, _frame) => {
                 this.closingLabel.show();
             });
-            this.timeline.start();
-            this.timeline.connect('completed', () => {
-                this.timeline.stop();
+            this._timeline.start();
+            this._timeline.connect('completed', () => {
+                this._timeline.stop();
                 this.closingLabel.hide();
             });
 
@@ -150,7 +150,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.actor.add_child(closeButton);
         closeButton.connect('clicked', (button, event) => {
             // In case someone hide close button again when this.closingLabel is still showing
-            this.timeline.stop();
+            this._timeline.stop();
             this.closingLabel.hide();
 
             this.confirmLabel.show();
@@ -167,6 +167,17 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
             x_align: Clutter.ActorAlign.CENTER,
         });
         this.actor.add_child(this.confirmLabel);
+    }
+
+    destroy() {
+        // TODO　Nullify others created objects?
+
+        // TODO Also disconnect new-frame and completed?
+        if (this._timeline) {
+            this._timeline.stop();
+            this._timeline = null;
+        }
+
     }
 
 });
