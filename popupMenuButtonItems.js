@@ -102,8 +102,9 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     _addConfirm() {
         this.confirmLabel = new St.Label({
             style_class: 'confirm-before-operate',
-            text: 'Are you sure to close all open windows?',
-            x_expand: true
+            text: 'Are you sure to close open windows?',
+            x_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
         });
         this.actor.add_child(this.confirmLabel);
     }
