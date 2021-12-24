@@ -8,6 +8,8 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const SaveSession = Me.imports.saveSession;
+const CloseSession = Me.imports.closeSession;
+
 const IconFinder = Me.imports.iconFinder;
 const FileUtils = Me.imports.utils.fileUtils;
 
@@ -68,15 +70,36 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.confirmLabel;
         this.yesButton;
         this.noButton;
+        this.closingLabel;
+
+        this.closeSession = new CloseSession.CloseSession();
 
         this._createButton(iconSymbolic);
         this._addConfirm();
         this._addYesOrNoButtons();
+        this._addClosing();
 
+        this._hideConfirm();
+
+        this.timeline = this._createTimeLine();
+
+    }
+
+    _createTimeLine() {
+        // Set actor when using
+        const timeline = new Clutter.Timeline({
+            // 1.5s
+            duration: 1500,
+            repeat_count: 0,
+        });
+        return timeline;
+    }
+
+    _hideConfirm() {
         this.confirmLabel.hide();
         this.yesButton.hide();
         this.noButton.hide();
-
+        this.closingLabel.hide();
     }
 
     _addYesOrNoButtons() {
@@ -84,15 +107,52 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.noButton = super.createButton('edit-undo-symbolic');
         this.yesButton.add_style_class_name('confirm-before-operate');
         this.noButton.add_style_class_name('confirm-before-operate');
+        
+        this.yesButton.connect('clicked', () => {
+            this.closeSession.closeWindows();
+            this._hideConfirm();
+
+            // Set the actor the timeline is associated with to make sure Clutter.Timeline works normally.
+            // Set the actor in new Clutter.Timeline don't work
+            this.timeline.set_actor(this.closingLabel);
+            this.timeline.connect('new-frame', (_timeline, _frame) => {
+                this.closingLabel.show();
+            });
+            this.timeline.start();
+            this.timeline.connect('completed', () => {
+                this.timeline.stop();
+                this.closingLabel.hide();
+            });
+
+        });
+
+        this.noButton.connect('clicked', () => {
+            this._hideConfirm();
+        });
+
         this.actor.add_child(this.yesButton);
         this.actor.add_child(this.noButton);
 
+    }
+
+    _addClosing() {
+        this.closingLabel = new St.Label({
+            style_class: 'confirm-before-operate',
+            text: 'Closing open windows ...',
+            x_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        this.actor.add_child(this.closingLabel);
     }
 
     _createButton(iconSymbolic) {
         const closeButton = super.createButton(iconSymbolic);
         this.actor.add_child(closeButton);
         closeButton.connect('clicked', (button, event) => {
+            // In case someone hide close button again when this.closingLabel is still showing
+            this.timeline.stop();
+            this.closingLabel.hide();
+
             this.confirmLabel.show();
             this.yesButton.show();
             this.noButton.show();
