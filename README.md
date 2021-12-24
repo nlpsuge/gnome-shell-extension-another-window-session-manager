@@ -33,13 +33,13 @@ After confirm to close:
 
 ## Icon descpription
 Front left to right:
-| Icon                                                         | Description                                                             |
+| Icon                                                         | Description                                                  |
 |--------------------------------------------------------------|--------------------------------------------------------------|
 | <img src=icons/save-symbolic.svg width="14" height="14">     | Save open windows as a sesson, which name is the item's name |
 | <img src=icons/restore-symbolic.svg width="14" height="14">  | Restore the saved sesson using the item's name               |
 | <img src=icons/move-symbolic.svg width="14" height="14">     | Move the open windows using the item's name                  |
-| ~~<img src=icons/close-symbolic.svg width="14" height="14">~~    | ~~Close the current open windows~~                               |
 
+<img src=icons/close-symbolic.svg width="14" height="14">: Close the current open windows
 
 # limitation
 - It denpends on St(Shell Toolkits) and Shell APIs so heavily
