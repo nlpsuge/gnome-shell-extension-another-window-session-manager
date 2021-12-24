@@ -12,7 +12,7 @@ const FileUtils = Me.imports.utils.fileUtils;
 const SessionItem = Me.imports.sessionItem;
 const SearchSession = Me.imports.searchSession;
 const PopupMenuButtonItems = Me.imports.popupMenuButtonItems;
-const IconFinder = Me.imports.iconFinder;
+const IconFinder = Me.imports.utils.iconFinder;
 
 
 var AwsIndicator = GObject.registerClass(

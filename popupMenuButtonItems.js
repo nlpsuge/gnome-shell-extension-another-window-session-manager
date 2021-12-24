@@ -10,7 +10,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const SaveSession = Me.imports.saveSession;
 const CloseSession = Me.imports.closeSession;
 
-const IconFinder = Me.imports.iconFinder;
+const IconFinder = Me.imports.utils.iconFinder;
 const FileUtils = Me.imports.utils.fileUtils;
 
 var PopupMenuButtonItems = GObject.registerClass(

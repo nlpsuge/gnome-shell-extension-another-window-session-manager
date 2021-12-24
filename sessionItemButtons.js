@@ -5,7 +5,7 @@ const { GObject, St, Clutter } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const IconFinder = Me.imports.iconFinder;
+const IconFinder = Me.imports.utils.iconFinder;
 
 const SaveSession = Me.imports.saveSession;
 const RestoreSession = Me.imports.restoreSession;
