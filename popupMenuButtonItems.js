@@ -21,9 +21,10 @@ class PopupMenuButtonItems extends GObject.Object {
     }
 
     addButtonItems() {
+        const popupMenuButtonItemClose = new PopupMenuButtonItemClose('close-symbolic.svg');
         const popupMenuButtonItemSave = new PopupMenuButtonItemSave('save-symbolic.svg');
         
-
+        this.buttonItems.push(popupMenuButtonItemClose);
         this.buttonItems.push(popupMenuButtonItemSave);
     }
 
@@ -37,7 +38,7 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
         super._init('');
     }
 
-    addButton(iconSymbolic) {
+    createButton(iconSymbolic) {
         let icon = new St.Icon({
             gicon: IconFinder.find(iconSymbolic),
             style_class: 'system-status-icon'
@@ -53,9 +54,58 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
             track_hover: true
         });
 
-        this.actor.add_child(button);
-
         return button;
+    }
+
+});
+
+
+var PopupMenuButtonItemClose = GObject.registerClass(
+class PopupMenuButtonItemClose extends PopupMenuButtonItem {
+
+    _init(iconSymbolic) {
+        super._init();
+        this.confirmLabel;
+        this.yesButton;
+        this.noButton;
+
+        this._createButton(iconSymbolic);
+        this._addConfirm();
+        this._addYesOrNoButtons();
+
+        this.confirmLabel.hide();
+        this.yesButton.hide();
+        this.noButton.hide();
+
+    }
+
+    _addYesOrNoButtons() {
+        this.yesButton = super.createButton('emblem-ok-symbolic');
+        this.noButton = super.createButton('edit-undo-symbolic');
+        this.yesButton.add_style_class_name('confirm-before-operate');
+        this.noButton.add_style_class_name('confirm-before-operate');
+        this.actor.add_child(this.yesButton);
+        this.actor.add_child(this.noButton);
+
+    }
+
+    _createButton(iconSymbolic) {
+        const closeButton = super.createButton(iconSymbolic);
+        this.actor.add_child(closeButton);
+        closeButton.connect('clicked', (button, event) => {
+            this.confirmLabel.show();
+            this.yesButton.show();
+            this.noButton.show();
+        });
+    }
+
+    _addConfirm() {
+        this.confirmLabel = new St.Label({
+            style_class: 'confirm-before-operate',
+            text: 'Are you sure to close all open windows?',
+            x_expand: true
+        });
+        this.actor.add_child(this.confirmLabel);
     }
 
 });
@@ -67,7 +117,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     _init(iconSymbolic) {
         super._init();
         this.saveCurrentSessionEntry;
-        this._addButton(iconSymbolic);
+        this._createButton(iconSymbolic);
         this._addEntry();
         // Hide this St.Entry, only shown when user click saveButton.
         this.saveCurrentSessionEntry.hide();
@@ -76,8 +126,9 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
     }
 
-    _addButton(iconSymbolic) {
-        const saveButton = super.addButton(iconSymbolic);
+    _createButton(iconSymbolic) {
+        const saveButton = super.createButton(iconSymbolic);
+        this.actor.add_child(saveButton);
         saveButton.connect('clicked', (button, event) => {
             this.saveCurrentSessionEntry.show();
             this.saveCurrentSessionEntry.grab_key_focus();
