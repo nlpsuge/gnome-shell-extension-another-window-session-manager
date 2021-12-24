@@ -59,6 +59,16 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
         return button;
     }
 
+    createTimeLine() {
+        // Set actor when using
+        const timeline = new Clutter.Timeline({
+            // 1.5s
+            duration: 1500,
+            repeat_count: 0,
+        });
+        return timeline;
+    }
+
 });
 
 
@@ -81,18 +91,8 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
         this._hideConfirm();
 
-        this._timeline = this._createTimeLine();
+        this._timeline = this.createTimeLine();
 
-    }
-
-    _createTimeLine() {
-        // Set actor when using
-        const timeline = new Clutter.Timeline({
-            // 1.5s
-            duration: 1500,
-            repeat_count: 0,
-        });
-        return timeline;
     }
 
     _hideConfirm() {
@@ -196,6 +196,20 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
         this._saveSession = new SaveSession.SaveSession();
 
+        this._timeline = this.createTimeLine();
+
+        this.savingLabel;
+        this._addSavingPrompt();
+
+    }
+
+    _addSavingPrompt() {
+        this.savingLabel = new St.Label({
+            style_class: 'confirm-before-operate',
+            x_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        this.actor.add_child(this.savingLabel);
     }
 
     _createButton(iconSymbolic) {
@@ -234,6 +248,17 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
                 entry.set_text('');
 
                 this.saveCurrentSessionEntry.hide();
+
+                this.savingLabel.set_text(`Saving open windows as '${sessionName}' ...`);
+                this._timeline.set_actor(this.savingLabel);
+                this._timeline.connect('new-frame', (_timeline, _frame) => {
+                    this.savingLabel.show();
+                });
+                this._timeline.start();
+                this._timeline.connect('completed', () => {
+                    this._timeline.stop();
+                    this.savingLabel.hide();
+                });
             }
         });
         this.actor.add_child(this.saveCurrentSessionEntry);
