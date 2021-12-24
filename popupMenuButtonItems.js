@@ -8,6 +8,8 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const SaveSession = Me.imports.saveSession;
+const CloseSession = Me.imports.closeSession;
+
 const IconFinder = Me.imports.iconFinder;
 const FileUtils = Me.imports.utils.fileUtils;
 
@@ -21,9 +23,10 @@ class PopupMenuButtonItems extends GObject.Object {
     }
 
     addButtonItems() {
+        const popupMenuButtonItemClose = new PopupMenuButtonItemClose('close-symbolic.svg');
         const popupMenuButtonItemSave = new PopupMenuButtonItemSave('save-symbolic.svg');
         
-
+        this.buttonItems.push(popupMenuButtonItemClose);
         this.buttonItems.push(popupMenuButtonItemSave);
     }
 
@@ -37,7 +40,7 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
         super._init('');
     }
 
-    addButton(iconSymbolic) {
+    createButton(iconSymbolic) {
         let icon = new St.Icon({
             gicon: IconFinder.find(iconSymbolic),
             style_class: 'system-status-icon'
@@ -53,9 +56,128 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
             track_hover: true
         });
 
-        this.actor.add_child(button);
-
         return button;
+    }
+
+});
+
+
+var PopupMenuButtonItemClose = GObject.registerClass(
+class PopupMenuButtonItemClose extends PopupMenuButtonItem {
+
+    _init(iconSymbolic) {
+        super._init();
+        this.confirmLabel;
+        this.yesButton;
+        this.noButton;
+        this.closingLabel;
+
+        this.closeSession = new CloseSession.CloseSession();
+
+        this._createButton(iconSymbolic);
+        this._addConfirm();
+        this._addYesOrNoButtons();
+        this._addClosing();
+
+        this._hideConfirm();
+
+        this._timeline = this._createTimeLine();
+
+    }
+
+    _createTimeLine() {
+        // Set actor when using
+        const timeline = new Clutter.Timeline({
+            // 1.5s
+            duration: 1500,
+            repeat_count: 0,
+        });
+        return timeline;
+    }
+
+    _hideConfirm() {
+        this.confirmLabel.hide();
+        this.yesButton.hide();
+        this.noButton.hide();
+        this.closingLabel.hide();
+    }
+
+    _addYesOrNoButtons() {
+        this.yesButton = super.createButton('emblem-ok-symbolic');
+        this.noButton = super.createButton('edit-undo-symbolic');
+        this.yesButton.add_style_class_name('confirm-before-operate');
+        this.noButton.add_style_class_name('confirm-before-operate');
+        
+        this.yesButton.connect('clicked', () => {
+            this.closeSession.closeWindows();
+            this._hideConfirm();
+
+            // Set the actor the timeline is associated with to make sure Clutter.Timeline works normally.
+            // Set the actor in new Clutter.Timeline don't work
+            this._timeline.set_actor(this.closingLabel);
+            this._timeline.connect('new-frame', (_timeline, _frame) => {
+                this.closingLabel.show();
+            });
+            this._timeline.start();
+            this._timeline.connect('completed', () => {
+                this._timeline.stop();
+                this.closingLabel.hide();
+            });
+
+        });
+
+        this.noButton.connect('clicked', () => {
+            this._hideConfirm();
+        });
+
+        this.actor.add_child(this.yesButton);
+        this.actor.add_child(this.noButton);
+
+    }
+
+    _addClosing() {
+        this.closingLabel = new St.Label({
+            style_class: 'confirm-before-operate',
+            text: 'Closing open windows ...',
+            x_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        this.actor.add_child(this.closingLabel);
+    }
+
+    _createButton(iconSymbolic) {
+        const closeButton = super.createButton(iconSymbolic);
+        this.actor.add_child(closeButton);
+        closeButton.connect('clicked', (button, event) => {
+            // In case someone hide close button again when this.closingLabel is still showing
+            this._timeline.stop();
+            this.closingLabel.hide();
+
+            this.confirmLabel.show();
+            this.yesButton.show();
+            this.noButton.show();
+        });
+    }
+
+    _addConfirm() {
+        this.confirmLabel = new St.Label({
+            style_class: 'confirm-before-operate',
+            text: 'Are you sure to close open windows?',
+            x_expand: true,
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        this.actor.add_child(this.confirmLabel);
+    }
+
+    destroy() {
+        // TODO　Nullify others created objects?
+
+        // TODO Also disconnect new-frame and completed?
+        if (this._timeline) {
+            this._timeline.stop();
+            this._timeline = null;
+        }
+
     }
 
 });
@@ -67,7 +189,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     _init(iconSymbolic) {
         super._init();
         this.saveCurrentSessionEntry;
-        this._addButton(iconSymbolic);
+        this._createButton(iconSymbolic);
         this._addEntry();
         // Hide this St.Entry, only shown when user click saveButton.
         this.saveCurrentSessionEntry.hide();
@@ -76,8 +198,9 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
     }
 
-    _addButton(iconSymbolic) {
-        const saveButton = super.addButton(iconSymbolic);
+    _createButton(iconSymbolic) {
+        const saveButton = super.createButton(iconSymbolic);
+        this.actor.add_child(saveButton);
         saveButton.connect('clicked', (button, event) => {
             this.saveCurrentSessionEntry.show();
             this.saveCurrentSessionEntry.grab_key_focus();
