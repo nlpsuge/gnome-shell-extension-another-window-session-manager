@@ -7,7 +7,7 @@ const PopupMenu = imports.ui.popupMenu;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const SessionItemButtons = Me.imports.sessionItemButtons;
+const SessionItemButtons = Me.imports.ui.sessionItemButtons;
 
 var SessionItem = GObject.registerClass(
 class SessionItem extends PopupMenu.PopupMenuItem {

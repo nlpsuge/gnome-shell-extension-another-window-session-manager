@@ -9,9 +9,9 @@ const PopupMenu = imports.ui.popupMenu;
 const PanelMenu = imports.ui.panelMenu;
 
 const FileUtils = Me.imports.utils.fileUtils;
-const SessionItem = Me.imports.sessionItem;
-const SearchSession = Me.imports.searchSession;
-const PopupMenuButtonItems = Me.imports.popupMenuButtonItems;
+const SessionItem = Me.imports.ui.sessionItem;
+const SearchSession = Me.imports.ui.searchSession;
+const PopupMenuButtonItems = Me.imports.ui.popupMenuButtonItems;
 const IconFinder = Me.imports.utils.iconFinder;
 
 
