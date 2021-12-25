@@ -94,7 +94,7 @@ var RestoreSession = class {
                             launched = true;
                             log(`${app_name} launched via ${cmdString}!`);
                         } else {
-                            // TODO try to launch via app_info be search the app name?
+                            // TODO try to launch via app_info by searching the app name?
                             let errorMsg = `Empty command line for ${app_name}`;
                             logError(errorMsg);
                             global.notify_error(errorMsg, `Invalid command line: ${cmd}`);
