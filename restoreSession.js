@@ -18,6 +18,7 @@ var RestoreSession = class {
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
         this._restoredApps = new Map();
+        this._moveSession = new MoveSession.MoveSession();
     }
 
     restoreSession(sessionName) {
@@ -136,8 +137,7 @@ var RestoreSession = class {
         // log(`windows-changed triggered for ${shellApp.get_name()}`);
         const shellAppData = this._restoredApps.get(shellApp);
         let saved_window_sessions = shellAppData.saved_window_sessions
-        const moveSession = new MoveSession.MoveSession();
-        moveSession.moveWindowsByShellApp(shellApp, saved_window_sessions);
+        this._moveSession.moveWindowsByShellApp(shellApp, saved_window_sessions);
     }
 
     _appIsRunning(app) {
@@ -177,6 +177,10 @@ var RestoreSession = class {
 
         if (this._defaultAppSystem) {
             this._defaultAppSystem = null;
+        }
+
+        if (this._moveSession) {
+            this._moveSession = null;
         }
     }
 
