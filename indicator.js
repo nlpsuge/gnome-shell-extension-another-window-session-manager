@@ -29,6 +29,8 @@ class AwsIndicator extends PanelMenu.Button {
 
         this.monitor = null;
 
+        this._sessionsMenuSection = null;
+
         // TODO backup path
 
         // Add an icon
@@ -73,6 +75,8 @@ class AwsIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(), this._itemIndex++);
 
         this._searchSession = new SearchSession.SearchSession();
+        const searchEntryText = this._searchSession._entry.get_clutter_text()
+        searchEntryText.connect('text-changed', this._onSearch.bind(this));
         this.menu.addMenuItem(this._searchSession, this._itemIndex++);
         
         this._addSessionItems();
@@ -190,6 +194,23 @@ class AwsIndicator extends PanelMenu.Button {
         // of this._sessionsMenuSection._getMenuItems() when the performance
         // is a problem to be resolved, it's a more complex implement.
         this._addSessionItems();
+    }
+
+    _onSearch() {
+        let searchText = this._searchSession._entry.text;
+        if (!(searchText && searchText.trim())) {
+            const menuItems = this._sessionsMenuSection._getMenuItems();
+            for (const menuItem of menuItems) {
+                menuItem.actor.visible = true;
+            }
+        } else {
+            const menuItems = this._sessionsMenuSection._getMenuItems();
+            searchText = searchText.toLowerCase().trim();
+            for (const menuItem of menuItems) {
+                const sessionName = menuItem._filename.toLowerCase();
+                menuItem.actor.visible = new RegExp(searchText).test(sessionName);
+            }
+        }
     }
 
     _onDestroy() {
