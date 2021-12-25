@@ -80,6 +80,8 @@ class AwsIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(this._searchSession, this._itemIndex++);
         
         this._addSessionItems();
+
+        this.add_style_class_name('saveSessionEntry');
     }
 
     _addButtonItems() {

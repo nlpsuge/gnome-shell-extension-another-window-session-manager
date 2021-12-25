@@ -1,3 +1,7 @@
+.saveSessionEntry {
+    min-width: 120em;
+}
+
 .session-menu-section {
     max-height:600px;
 }
