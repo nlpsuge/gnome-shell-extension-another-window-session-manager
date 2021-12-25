@@ -109,7 +109,7 @@ class AwsIndicator extends PanelMenu.Button {
             style_class: 'session-menu-section',
             overlay_scrollbars: true
         });
-        scrollView.actor.add_actor(this._sessionsMenuSection.actor);
+        scrollView.add_actor(this._sessionsMenuSection.actor);
         this._scrollableSessionsMenuSection.actor.add_actor(scrollView);
 
         this.menu.addMenuItem(this._scrollableSessionsMenuSection);
