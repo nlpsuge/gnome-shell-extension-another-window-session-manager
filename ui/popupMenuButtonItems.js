@@ -287,7 +287,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     _addEntry() {
         this.saveCurrentSessionEntry = new St.Entry({
             name: 'saveCurrentSession',
-            hint_text: "Type name to save current session, default is defaultSession",
+            hint_text: "Type a session name, default is defaultSession",
             track_hover: true,
             can_focus: true
         });
