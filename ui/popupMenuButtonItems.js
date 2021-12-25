@@ -47,7 +47,7 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
     /**
      * Hide both Yes and No buttons by default
      */
-    createYesOrNoButtons() {
+    createYesAndNoButtons() {
         this.yesButton = this.createButton('emblem-ok-symbolic');
         this.noButton = this.createButton('edit-undo-symbolic');
         this.yesButton.add_style_class_name('confirm-before-operate');
@@ -111,7 +111,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
         this._createButton(iconSymbolic);
         this._addConfirm();
-        this._addYesOrNoButtons();
+        this._addYesAndNoButtons();
         this._addClosingPrompt();
 
         this._hideConfirm();
@@ -133,8 +133,8 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.closingLabel.hide();
     }
 
-    _addYesOrNoButtons() {
-        super.createYesOrNoButtons();
+    _addYesAndNoButtons() {
+        super.createYesAndNoButtons();
         
         this.yesButton.connect('clicked', () => {
             this.closeSession.closeWindows();
@@ -223,7 +223,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this._addEntry();
         // Hide this St.Entry, only shown when user click saveButton.
         this.saveCurrentSessionEntry.hide();
-        this._addYesOrNoButtons();
+        this._addYesAndNoButtons();
 
         this._saveSession = new SaveSession.SaveSession();
 
@@ -236,8 +236,8 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
     }
 
-    _addYesOrNoButtons() {
-        super.createYesOrNoButtons();
+    _addYesAndNoButtons() {
+        super.createYesAndNoButtons();
         
         this.yesButton.connect('clicked', this._onClickedYes.bind(this));
         this.noButton.connect('clicked', () => {
