@@ -221,6 +221,11 @@ class AwsIndicator extends PanelMenu.Button {
             this.monitor.cancel();
             this.monitor = null;
         }
+
+        if (this._sessions_path) {
+            this._sessions_path = null;
+        }
+        
     }
 
 });
