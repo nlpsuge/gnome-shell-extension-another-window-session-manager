@@ -6,7 +6,9 @@ var CloseSession = class {
     constructor() {
         this._skip_app_with_multiple_windows = true;
         this._defaultAppSystem = Shell.AppSystem.get_default();
-        this.whitelist = ['org.gnome.Terminal.desktop'];
+        // TODO Put into Settings
+        // All apps in the whitelist should be closed safely, no worrying about lost data
+        this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop'];
     }
 
     closeWindows() {
