@@ -72,6 +72,7 @@ var RestoreSession = class {
                                 if (existingShellAppData) {
                                     existingShellAppData.saved_window_sessions.push(session_config_object);
                                 } else {
+                                    // TODO Better to listen Meta.Workspace::window-added(Meta.Window), so we can also know a window added by running the command line in the case of there is no desktop_file_id at all?
                                     const windows_change_id = shell_app.connect('windows-changed', this._autoMoveWindows.bind(this));
                                     this._restoredApps.set(shell_app, {
                                         windows_change_id: windows_change_id,
