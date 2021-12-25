@@ -92,6 +92,17 @@ class AwsIndicator extends PanelMenu.Button {
             return;
         }
 
+        this._sessionsMenuSection = new PopupMenu.PopupMenuSection();
+        this._scrollableSessionsMenuSection = new PopupMenu.PopupMenuSection();
+        let scrollView = new St.ScrollView({
+            style_class: 'session-menu-section',
+            overlay_scrollbars: true
+        });
+        scrollView.actor.add_actor(this._sessionsMenuSection.actor);
+        this._scrollableSessionsMenuSection.actor.add_actor(scrollView);
+
+        this.menu.addMenuItem(this._scrollableSessionsMenuSection);
+
         // Debug
         log('List all sessions to add session items');
         // TODO Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator
@@ -102,7 +113,7 @@ class AwsIndicator extends PanelMenu.Button {
                 // https://gjs-docs.gnome.org/gio20~2.66p/gio.file#method-get_parent
                 // If the this represents the root directory of the file system, then null will be returned.
                 if (parent === null) {
-                    // Impossible in the case
+                    // Impossible, who puts sessions under the /?
                     parentPath = '/';
                 } else {
                     parentPath = parent.get_path();
@@ -110,7 +121,7 @@ class AwsIndicator extends PanelMenu.Button {
                 // Debug
                 log(`Processing ${file.get_path()} under ${parentPath}`);
                 let item = new SessionItem.SessionItem(info, file);
-                this.menu.addMenuItem(item, this._itemIndex++);
+                this._sessionsMenuSection.addMenuItem(item, this._itemIndex++);
             }
         });
         
