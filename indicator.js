@@ -105,7 +105,8 @@ class AwsIndicator extends PanelMenu.Button {
 
         // Debug
         log('List all sessions to add session items');
-        // TODO Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator
+
+        let sessionFileInfos = [];
         FileUtils.listAllSessions(null, false, (file, info) => {
             if (info.get_file_type() === Gio.FileType.REGULAR) {
                 let parent = file.get_parent();
@@ -120,10 +121,36 @@ class AwsIndicator extends PanelMenu.Button {
                 }
                 // Debug
                 log(`Processing ${file.get_path()} under ${parentPath}`);
-                let item = new SessionItem.SessionItem(info, file);
-                this._sessionsMenuSection.addMenuItem(item, this._itemIndex++);
+                sessionFileInfos.push({
+                    info: info,
+                    file: file
+                });
+
             }
         });
+
+        // Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator
+        sessionFileInfos.sort((sessionFileInfo1, sessionFileInfo2) => {
+            const info1 = sessionFileInfo1.info;
+            const modification_date_time1 = info1.get_modification_date_time();
+            const info2 = sessionFileInfo2.info;
+            const modification_date_time2 = info2.get_modification_date_time();
+
+            if (!modification_date_time1 || !modification_date_time2) {
+                return false;
+            }
+
+            // https://gjs-docs.gnome.org/glib20~2.66.1/glib.datetime#function-compare
+            // -1, 0 or 1 if dt1 is less than, equal to or greater than dt2.
+            return modification_date_time1.compare(modification_date_time2) === -1;
+        });
+
+        for (const sessionFileInfo of sessionFileInfos) {
+            const info = sessionFileInfo.info;
+            const file = sessionFileInfo.file;
+            let item = new SessionItem.SessionItem(info, file);
+            this._sessionsMenuSection.addMenuItem(item, this._itemIndex++);
+        }
         
     }
 
