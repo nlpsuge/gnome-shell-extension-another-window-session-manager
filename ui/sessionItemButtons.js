@@ -48,6 +48,8 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _addTags() {
+        // TODO Make the modification time align left
+
         let button = new St.Button({
             x_align: Clutter.ActorAlign.END,
         });
