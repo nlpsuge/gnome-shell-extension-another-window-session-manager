@@ -89,14 +89,15 @@ var RestoreSession = class {
     
                         const cmd = session_config_object.cmd;
                         if (cmd) {
-                            Util.trySpawnCommandLine(cmd);
+                            const cmdString = cmd.join(' ');
+                            Util.trySpawnCommandLine(cmdString);
                             launched = true;
-                            log(`${app_name} launched via ${cmd}!`);
+                            log(`${app_name} launched via ${cmdString}!`);
                         } else {
                             // TODO try to launch via app_info be search the app name?
                             let errorMsg = `Empty command line for ${app_name}`;
                             logError(errorMsg);
-                            global.notify_error(errorMsg, 'Empty command line');
+                            global.notify_error(errorMsg, `Invalid command line: ${cmd}`);
                         }
                     }
 

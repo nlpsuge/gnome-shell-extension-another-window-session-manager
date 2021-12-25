@@ -25,12 +25,12 @@ var SaveSession = class {
         sessionConfig.session_create_time = new Date().toLocaleString();
         
         for (const runningShellApp of runningShellApps) {
+            const appName = runningShellApp.get_name();
             const desktopFileId = runningShellApp.get_id();
             const desktopAppInfo = runningShellApp.get_app_info();
             const desktopAppInfoCommandline = desktopAppInfo?.get_commandline();
-            log(desktopAppInfoCommandline);
+            log(`Saving application ${appName} :  ${desktopAppInfoCommandline}`);
 
-            const appName = runningShellApp.get_name();
             // TODO Not reliable, the result can be wrong?
             const n_windows = runningShellApp.get_n_windows();
 
@@ -68,7 +68,15 @@ var SaveSession = class {
                     sessionConfigObject.window_title = metaWindow.get_title();
                     sessionConfigObject.app_name = appName;
                     sessionConfigObject.windows_count = n_windows;
-                    sessionConfigObject.desktop_file_id = desktopFileId;
+                    if (desktopAppInfo) {
+                        sessionConfigObject.desktop_file_id = desktopFileId;
+                    } else {
+                        // No app info associated with this application, we just set an empty string
+                        // Shell.App does have an id like window:22, but it's useless for restoring
+                        // If desktop_file_id is '', launch this application via command line
+                        sessionConfigObject.desktop_file_id = '';
+                    }
+                    
                     let window_state = sessionConfigObject.window_state;
                     // See: ui/windowMenu.js:L80
                     window_state.is_sticky = metaWindow.is_on_all_workspaces();
