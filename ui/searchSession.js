@@ -43,6 +43,8 @@ class SearchSession extends PopupMenu.PopupBaseMenuItem {
             icon_name: 'edit-clear-symbolic'
         });
 
+        this._entry.set_secondary_icon(this._clearIcon);
+        this._secondaryIconClickedId = this._entry.connect('secondary-icon-clicked', this.reset.bind(this));
     }
 
     reset() {
@@ -53,8 +55,13 @@ class SearchSession extends PopupMenu.PopupBaseMenuItem {
     }
     
     _onTextChanged() {
-        this._entry.set_secondary_icon(this._clearIcon);
-        this._entry.connect('secondary-icon-clicked', this.reset.bind(this));
+        this._clearIcon.show();
+    }
 
+    destroy() {
+        if (this._secondaryIconClickedId) {
+            this._entry.disconnect(this._secondaryIconClickedId);
+            this._secondaryIconClickedId = null;
+        }
     }
 });

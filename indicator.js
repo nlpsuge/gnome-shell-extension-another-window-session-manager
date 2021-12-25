@@ -64,6 +64,7 @@ class AwsIndicator extends PanelMenu.Button {
     _onOpenStateChanged(menu, state) {
         if (state) {
             this._searchSession.reset();
+            this._searchSession._clearIcon.hide();
             Mainloop.idle_add(() => this._searchSession._entry.grab_key_focus());
         }
         super._onOpenStateChanged(menu, state);
