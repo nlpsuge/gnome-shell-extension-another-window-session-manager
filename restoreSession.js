@@ -88,6 +88,7 @@ var RestoreSession = class {
                             global.notify_error(`Failed to restore ${app_name}`, 'Reason: unknown.');
                         }
                     } else {
+                        // TODO check running state to skip running apps
     
                         const cmd = session_config_object.cmd;
                         if (cmd) {
