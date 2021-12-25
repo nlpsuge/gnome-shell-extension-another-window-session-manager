@@ -17,7 +17,7 @@ function enable() {
 
 function disable() {
     if (_indicator) {
-        _indicator.destroy();
+        _indicator._onDestroy();
         _indicator = null;
     }
     

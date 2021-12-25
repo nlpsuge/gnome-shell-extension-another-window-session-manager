@@ -225,6 +225,8 @@ class AwsIndicator extends PanelMenu.Button {
         if (this._sessions_path) {
             this._sessions_path = null;
         }
+
+        this.destroy();
         
     }
 
