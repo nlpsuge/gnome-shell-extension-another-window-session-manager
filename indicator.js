@@ -26,6 +26,9 @@ class AwsIndicator extends PanelMenu.Button {
         this._itemIndex = 0;
 
         this._sessions_path = FileUtils.sessions_path;
+
+        this.monitor = null;
+
         // TODO backup path
 
         // Add an icon
@@ -84,12 +87,16 @@ class AwsIndicator extends PanelMenu.Button {
 
     }
 
-    // TODO monitor files changes? Refresh items when open menu? 
     _addSessionItems() {
         if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
             // TOTO Empty session
             log(`${this._sessions_path} not found!`);
             return;
+        }
+
+        // Create only one monitor
+        if (!this.monitor) {
+            this._addSessionFolderMonitor(this._sessions_path);
         }
 
         this._sessionsMenuSection = new PopupMenu.PopupMenuSection();
@@ -163,9 +170,33 @@ class AwsIndicator extends PanelMenu.Button {
         
     }
 
+    /**
+     * monitor files changes, recreate items when necessary.
+     * 
+     */
+    _addSessionFolderMonitor(sessionPath) {
+        const sessionPathFile = Gio.File.new_for_path(sessionPath);
+        this.monitor = sessionPathFile.monitor(Gio.FileMonitorFlags.WATCH_MOVES, null);
+        this.monitor.connect('changed', this._sessionPathChanged.bind(this));
+    }
+
+    // https://gjs-docs.gnome.org/gio20~2.66p/gio.filemonitor#signal-changed
+    _sessionPathChanged(file, otherFile, eventType) {
+        this._sessionsMenuSection.removeAll();
+        // It probably is a problem when there is large amount session files,
+        // say thousands of them, but who creates that much?
+        // 
+        // Can use Gio.FileMonitorEvent to modify the results 
+        // of this._sessionsMenuSection._getMenuItems() when the performance
+        // is a problem to be resolved, it's a more complex implement.
+        this._addSessionItems();
+    }
+
     _onDestroy() {
-        log('Destroying...');
-        
+        if (this.monitor) {
+            this.monitor.cancel();
+            this.monitor = null;
+        }
     }
 
 });
