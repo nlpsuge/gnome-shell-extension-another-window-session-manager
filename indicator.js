@@ -130,19 +130,28 @@ class AwsIndicator extends PanelMenu.Button {
         });
 
         // Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator
+        // The latest on the top, if a file has no modification time put it on the bottom
         sessionFileInfos.sort((sessionFileInfo1, sessionFileInfo2) => {
             const info1 = sessionFileInfo1.info;
-            const modification_date_time1 = info1.get_modification_date_time();
+            let modification_date_time1 = info1.get_modification_date_time();
             const info2 = sessionFileInfo2.info;
-            const modification_date_time2 = info2.get_modification_date_time();
+            let modification_date_time2 = info2.get_modification_date_time();
 
-            if (!modification_date_time1 || !modification_date_time2) {
-                return false;
+            if (!modification_date_time1 && !modification_date_time2) {
+                return 0;
+            }
+
+            if (!modification_date_time1 && modification_date_time2) {
+                return 1;
+            }
+
+            if (modification_date_time1 && !modification_date_time2) {
+                return -1;
             }
 
             // https://gjs-docs.gnome.org/glib20~2.66.1/glib.datetime#function-compare
             // -1, 0 or 1 if dt1 is less than, equal to or greater than dt2.
-            return modification_date_time1.compare(modification_date_time2) === -1;
+            return modification_date_time2.compare(modification_date_time1);
         });
 
         for (const sessionFileInfo of sessionFileInfos) {
