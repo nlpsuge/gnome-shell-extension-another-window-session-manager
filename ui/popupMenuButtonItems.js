@@ -23,6 +23,7 @@ class PopupMenuButtonItems extends GObject.Object {
     }
 
     addButtonItems() {
+        // TODO Add label and make the item clickable so user don't need to click the icon whose size is too small to find to click?
         const popupMenuButtonItemClose = new PopupMenuButtonItemClose('close-symbolic.svg');
         const popupMenuButtonItemSave = new PopupMenuButtonItemSave('save-symbolic.svg');
         
