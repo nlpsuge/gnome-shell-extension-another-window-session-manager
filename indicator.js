@@ -198,6 +198,8 @@ class AwsIndicator extends PanelMenu.Button {
     }
 
     _onSearch() {
+        this._searchSession._clearIcon.show();
+        
         let searchText = this._searchSession._entry.text;
         if (!(searchText && searchText.trim())) {
             const menuItems = this._sessionsMenuSection._getMenuItems();

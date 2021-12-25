@@ -31,11 +31,6 @@ class SearchSession extends PopupMenu.PopupBaseMenuItem {
             icon_name:'edit-find-symbolic'
         }));
 
-        this._entry.get_clutter_text().connect(
-            'text-changed',
-            this._onTextChanged.bind(this)
-        );
-
         this.add_child(this._entry);
 
         this._clearIcon = new St.Icon({
@@ -52,10 +47,6 @@ class SearchSession extends PopupMenu.PopupBaseMenuItem {
         this._entry.set_text('');
         let text = this._entry.get_clutter_text();
         text.set_cursor_visible(true);
-    }
-    
-    _onTextChanged() {
-        this._clearIcon.show();
     }
 
     destroy() {
