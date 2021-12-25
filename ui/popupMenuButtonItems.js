@@ -39,6 +39,31 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
 
     _init() {
         super._init('');
+
+        this.yesButton = null;
+        this.noButton = null;
+    }
+
+    /**
+     * Hide both Yes and No buttons by default
+     */
+    createYesOrNoButtons() {
+        this.yesButton = this.createButton('emblem-ok-symbolic');
+        this.noButton = this.createButton('edit-undo-symbolic');
+        this.yesButton.add_style_class_name('confirm-before-operate');
+        this.noButton.add_style_class_name('confirm-before-operate');
+        this.yesButton.hide();
+        this.noButton.hide();
+    }
+
+    showYesAndNoButtons() {
+        this.yesButton.show();
+        this.noButton.show();
+    }
+
+    hideYesAndNoButtons() {
+        this.yesButton.hide();
+        this.noButton.hide();
     }
 
     createButton(iconSymbolic) {
@@ -79,8 +104,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     _init(iconSymbolic) {
         super._init();
         this.confirmLabel;
-        this.yesButton;
-        this.noButton;
+        
         this.closingLabel;
 
         this.closeSession = new CloseSession.CloseSession();
@@ -110,10 +134,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     }
 
     _addYesOrNoButtons() {
-        this.yesButton = super.createButton('emblem-ok-symbolic');
-        this.noButton = super.createButton('edit-undo-symbolic');
-        this.yesButton.add_style_class_name('confirm-before-operate');
-        this.noButton.add_style_class_name('confirm-before-operate');
+        super.createYesOrNoButtons();
         
         this.yesButton.connect('clicked', () => {
             this.closeSession.closeWindows();
@@ -202,6 +223,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this._addEntry();
         // Hide this St.Entry, only shown when user click saveButton.
         this.saveCurrentSessionEntry.hide();
+        this._addYesOrNoButtons();
 
         this._saveSession = new SaveSession.SaveSession();
 
@@ -209,13 +231,33 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
         this.savingLabel;
         this._addSavingPrompt();
-        
+
         this.connect('activate', this._onActivate.bind(this));
 
     }
 
+    _addYesOrNoButtons() {
+        super.createYesOrNoButtons();
+        
+        this.yesButton.connect('clicked', this._onClickedYes.bind(this));
+        this.noButton.connect('clicked', () => {
+            // clear entry
+            this.saveCurrentSessionEntry.set_text('');
+            this.saveCurrentSessionEntry.hide();
+            super.hideYesAndNoButtons();
+        });
+
+        this.actor.add_child(this.yesButton);
+        this.actor.add_child(this.noButton);
+
+    }
+
+    _onClickedYes(button, event) {
+        this._gotoSaveSession();
+    }
+
     _onActivate() {
-        this._onClicked();
+        this._onClickedBeginSave();
     }
 
     _addSavingPrompt() {
@@ -230,12 +272,16 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     _createButton(iconSymbolic) {
         const saveButton = super.createButton(iconSymbolic);
         this.actor.add_child(saveButton);
-        saveButton.connect('clicked', this._onClicked.bind(this));
+        saveButton.connect('clicked', this._onClickedBeginSave.bind(this));
     }
 
-    _onClicked(button, event) {
+    _onClickedBeginSave(button, event) {
+        this._timeline.stop();
+        this.savingLabel.hide();
+
         this.saveCurrentSessionEntry.show();
         this.saveCurrentSessionEntry.grab_key_focus();
+        super.showYesAndNoButtons();
     }
 
     _addEntry() {
@@ -246,40 +292,49 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             can_focus: true
         });
         const clutterText = this.saveCurrentSessionEntry.clutter_text
-        clutterText.connect('key-press-event', (entry, event) => {
-            const symbol = event.get_key_symbol();
-            if (symbol == Clutter.KEY_Return || symbol == Clutter.KEY_KP_Enter || symbol == Clutter.KEY_ISO_Enter) {
-                let sessionName = entry.get_text();
-                if (sessionName) {
-                    // '  ' is truthy
-                    if (!sessionName.trim()) {
-                        sessionName = FileUtils.default_sessionName;
-                    }
-                } else {
-                    sessionName = FileUtils.default_sessionName;
-                }
-
-                this._saveSession.saveSession(sessionName);
-
-                // clear entry
-                entry.set_text('');
-
-                this.saveCurrentSessionEntry.hide();
-
-                this.savingLabel.set_text(`Saving open windows as '${sessionName}' ...`);
-                this._timeline.set_actor(this.savingLabel);
-                this._timeline.connect('new-frame', (_timeline, _frame) => {
-                    this.savingLabel.show();
-                });
-                this._timeline.start();
-                this._timeline.connect('completed', () => {
-                    this._timeline.stop();
-                    this.savingLabel.hide();
-                });
-            }
-        });
+        clutterText.connect('key-press-event', this._onKeyPressEvent.bind(this));
         this.actor.add_child(this.saveCurrentSessionEntry);
 
     }
+
+    _onKeyPressEvent(entry, event) {
+        const symbol = event.get_key_symbol();
+        if (symbol == Clutter.KEY_Return || symbol == Clutter.KEY_KP_Enter || symbol == Clutter.KEY_ISO_Enter) {
+            this._gotoSaveSession();
+        }
+    }
+
+    _gotoSaveSession() {
+        let sessionName = this.saveCurrentSessionEntry.get_text();
+        if (sessionName) {
+            // '  ' is truthy
+            if (!sessionName.trim()) {
+                sessionName = FileUtils.default_sessionName;
+            }
+        } else {
+            sessionName = FileUtils.default_sessionName;
+        }
+
+        this._saveSession.saveSession(sessionName);
+
+        // clear entry
+        this.saveCurrentSessionEntry.set_text('');
+
+        this.saveCurrentSessionEntry.hide();
+
+        this.savingLabel.set_text(`Saving open windows as '${sessionName}' ...`);
+        this._timeline.set_actor(this.savingLabel);
+        this._timeline.connect('new-frame', (_timeline, _frame) => {
+            super.hideYesAndNoButtons();
+            this.savingLabel.show();
+        });
+        this._timeline.start();
+        this._timeline.connect('completed', () => {
+            this._timeline.stop();
+            this.savingLabel.hide();
+        });
+    }
+
+    
 
 });
