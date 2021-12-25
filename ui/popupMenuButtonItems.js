@@ -94,6 +94,12 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
         this._timeline = this.createTimeLine();
 
+        this.connect('activate', this._onActivate.bind(this));
+
+    }
+
+    _onActivate() {
+        this._onClicked();
     }
 
     _hideConfirm() {
@@ -149,15 +155,17 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     _createButton(iconSymbolic) {
         const closeButton = super.createButton(iconSymbolic);
         this.actor.add_child(closeButton);
-        closeButton.connect('clicked', (button, event) => {
-            // In case someone hide close button again when this.closingLabel is still showing
-            this._timeline.stop();
-            this.closingLabel.hide();
+        closeButton.connect('clicked', this._onClicked.bind(this));
+    }
 
-            this.confirmLabel.show();
-            this.yesButton.show();
-            this.noButton.show();
-        });
+    _onClicked(button, event) {
+        // In case someone hide close button again when this.closingLabel is still showing
+        this._timeline.stop();
+        this.closingLabel.hide();
+
+        this.confirmLabel.show();
+        this.yesButton.show();
+        this.noButton.show();
     }
 
     _addConfirm() {
@@ -201,7 +209,13 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
         this.savingLabel;
         this._addSavingPrompt();
+        
+        this.connect('activate', this._onActivate.bind(this));
 
+    }
+
+    _onActivate() {
+        this._onClicked();
     }
 
     _addSavingPrompt() {
@@ -216,10 +230,12 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     _createButton(iconSymbolic) {
         const saveButton = super.createButton(iconSymbolic);
         this.actor.add_child(saveButton);
-        saveButton.connect('clicked', (button, event) => {
-            this.saveCurrentSessionEntry.show();
-            this.saveCurrentSessionEntry.grab_key_focus();
-        });
+        saveButton.connect('clicked', this._onClicked.bind(this));
+    }
+
+    _onClicked(button, event) {
+        this.saveCurrentSessionEntry.show();
+        this.saveCurrentSessionEntry.grab_key_focus();
     }
 
     _addEntry() {
