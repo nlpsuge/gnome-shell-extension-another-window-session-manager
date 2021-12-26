@@ -200,9 +200,13 @@ class AwsIndicator extends PanelMenu.Button {
 
     _onSearch() {
         this._searchSessionItem._clearIcon.show();
-        
+
         let searchText = this._searchSessionItem._entry.text;
         if (!(searchText && searchText.trim())) {
+            // when search entry is empty, hide clear button
+            if (!searchText) {
+                this._searchSessionItem._clearIcon.hide();
+            }
             const menuItems = this._sessionsMenuSection._getMenuItems();
             for (const menuItem of menuItems) {
                 menuItem.actor.visible = true;
