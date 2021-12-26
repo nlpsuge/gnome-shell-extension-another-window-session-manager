@@ -1,9 +1,9 @@
 # gnome-shell-extension-another-window-session-manager
 Close and save open windows. And restore saved windows sessions.
 
-Most importantly, It supports both X.org and Wayland!
+Most importantly, it supports both X.org and Wayland!
 
-This project is in early development, I'm planing to add some other features, but it basicly works now.
+This project is in early development, I'm planing to add some other features, but it basically works now.
 
 # Screenshot
 
@@ -38,12 +38,12 @@ After confirm to save:
 
 # Panel menu items
 
-## Icons descpription
+## Icons description
 
 | Icon                                                         | Description                                                  |
 |--------------------------------------------------------------|--------------------------------------------------------------|
-| <img src=icons/save-symbolic.svg width="14" height="14">     | Save open windows as a sesson, which name is the item's name |
-| <img src=icons/restore-symbolic.svg width="14" height="14">  | Restore the saved sesson using the item's name               |
+| <img src=icons/save-symbolic.svg width="14" height="14">     | Save open windows as a session, which name is the item's name |
+| <img src=icons/restore-symbolic.svg width="14" height="14">  | Restore the saved session using the item's name               |
 | <img src=icons/move-symbolic.svg width="14" height="14">     | Move the open windows using the item's name                  |
 | <img src=icons/close-symbolic.svg width="14" height="14">    | Close the current open windows                               |
 
@@ -51,7 +51,7 @@ After confirm to save:
 This project uses `ps` to get some information from a process, install it via `dnf install procps-ng` if don't have.
 
 # limitation
-- It denpends on St(Shell Toolkits) and Shell APIs so heavily
+- It depends on St(Shell Toolkit) and Shell APIs so heavily
 - ...
 
 # TODO
