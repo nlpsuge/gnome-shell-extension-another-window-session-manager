@@ -65,6 +65,24 @@ function listAllSessions(sessionPath, recursion, callback) {
     
 }
 
+function trashSession(sessionName) {
+    const sessionFilePath = GLib.build_filenamev([sessions_path, sessionName]);
+    if (GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
+        const trashed = false;
+        try {
+            const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
+            trashed = sessionPathFile.trash(null);
+            if (!trashed) {
+                logError(`Failed to trash file ${sessionFilePath}, reason: Unknown.`)
+            }
+            return trashed;
+        } catch(e) {
+            logError(e, `Failed to trash file ${sessionFilePath}`);
+            return false;
+        }
+    }
+}
+
 // test
 // let index = 0;
 // listAllSessions(null, false, (file, info) => {

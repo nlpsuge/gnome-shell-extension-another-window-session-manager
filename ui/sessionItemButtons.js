@@ -6,6 +6,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const IconFinder = Me.imports.utils.iconFinder;
+const FileUtils = Me.imports.utils.fileUtils;
 
 const SaveSession = Me.imports.saveSession;
 const RestoreSession = Me.imports.restoreSession;
@@ -45,6 +46,28 @@ class SessionItemButtons extends GObject.Object {
 
         // const closeButton = this._addButton('close-symbolic.svg');
         // closeButton.connect('clicked', this._onClickClose.bind(this));
+
+        this._addSeparator();
+        const deleteButton = this._addDeleteButton();
+        deleteButton.connect('clicked', () => {
+            // We just trash file to trash scan instead of delete in case still need it.
+            FileUtils.trashSession(this.sessionItem._filename);
+        });
+
+    }
+
+    _addDeleteButton() {
+        let button = new St.Button({
+            style_class: 'button',
+            can_focus: true,
+            x_align: Clutter.ActorAlign.END,
+            x_expand: false,
+            y_expand: true,
+            track_hover: true,
+        });
+        button.set_label('Delete');
+        this.sessionItem.actor.add_child(button);
+        return button;
     }
 
     _addTags() {
