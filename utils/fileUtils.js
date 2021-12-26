@@ -4,6 +4,8 @@ const { Gio, GLib } = imports.gi
 
 var default_sessionName = 'defaultSession';
 const home_dir = GLib.get_home_dir();
+// This extension can restore `xsm`'s session file, 
+// but desktop_file_id is missing in that file, so can't move them. Will be fixed in the future.
 const config_path_base = GLib.build_filenamev([home_dir, '.config', 'another-window-session-manager']);
 var sessions_path = GLib.build_filenamev([config_path_base, 'sessions']);
 
