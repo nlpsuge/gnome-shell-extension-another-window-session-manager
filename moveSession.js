@@ -28,7 +28,7 @@ var MoveSession = class {
             return;
         }
 
-        log(`Moving windows by saved session located ${session_file_path}`);
+        log(`Moving windows by saved session located in ${session_file_path}`);
 
         const session_file = Gio.File.new_for_path(session_file_path);
         let [success, contents] = session_file.load_contents(null);

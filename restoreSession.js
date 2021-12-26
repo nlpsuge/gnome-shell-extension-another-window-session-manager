@@ -33,7 +33,7 @@ var RestoreSession = class {
             return;
         }
 
-        log(`Restoring saved session located ${session_file_path}`);
+        log(`Restoring saved session from ${session_file_path}`);
 
         try {
             this.restoreSessionFromPath(session_file_path);

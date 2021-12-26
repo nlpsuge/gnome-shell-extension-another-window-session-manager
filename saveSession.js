@@ -28,8 +28,9 @@ var SaveSession = class {
             const appName = runningShellApp.get_name();
             const desktopFileId = runningShellApp.get_id();
             const desktopAppInfo = runningShellApp.get_app_info();
-            const desktopAppInfoCommandline = desktopAppInfo?.get_commandline();
-            log(`Saving application ${appName} :  ${desktopAppInfoCommandline}`);
+            // const desktopAppInfoCommandline = desktopAppInfo?.get_commandline();
+            // Debug
+            // log(`Saving application ${appName} :  ${desktopAppInfoCommandline}`);
 
             // TODO Not reliable, the result can be wrong?
             const n_windows = runningShellApp.get_n_windows();
