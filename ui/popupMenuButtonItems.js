@@ -23,7 +23,6 @@ class PopupMenuButtonItems extends GObject.Object {
     }
 
     addButtonItems() {
-        // TODO Add label and make the item clickable so user don't need to click the icon whose size is too small to find to click?
         const popupMenuButtonItemClose = new PopupMenuButtonItemClose('close-symbolic.svg');
         const popupMenuButtonItemSave = new PopupMenuButtonItemSave('save-symbolic.svg');
         
@@ -118,6 +117,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
         this._timeline = this.createTimeLine();
 
+        // Respond to menu item's 'activate' signal so user don't need to click the icon whose size is too small to find to click
         this.connect('activate', this._onActivate.bind(this));
 
     }
@@ -232,6 +232,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this.savingLabel;
         this._addSavingPrompt();
 
+        // Respond to menu item's 'activate' signal so user don't need to click the icon whose size is too small to find to click
         this.connect('activate', this._onActivate.bind(this));
 
     }
