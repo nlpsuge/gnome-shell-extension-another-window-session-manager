@@ -96,7 +96,7 @@ class AwsIndicator extends PanelMenu.Button {
 
         // Create only one monitor
         if (!this.monitor) {
-            this._addSessionFolderMonitor(this._sessions_path);
+            this._addSessionFolderMonitor();
         }
 
         this._sessionsMenuSection = new PopupMenu.PopupMenuSection();
@@ -174,8 +174,8 @@ class AwsIndicator extends PanelMenu.Button {
      * monitor files changes, recreate items when necessary.
      * 
      */
-    _addSessionFolderMonitor(sessionPath) {
-        const sessionPathFile = Gio.File.new_for_path(sessionPath);
+    _addSessionFolderMonitor() {
+        const sessionPathFile = Gio.File.new_for_path(this._sessions_path);
         this.monitor = sessionPathFile.monitor(Gio.FileMonitorFlags.WATCH_MOVES, null);
         this.monitor.connect('changed', this._sessionPathChanged.bind(this));
     }
