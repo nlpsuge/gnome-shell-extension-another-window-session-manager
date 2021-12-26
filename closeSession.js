@@ -8,7 +8,7 @@ var CloseSession = class {
         this._defaultAppSystem = Shell.AppSystem.get_default();
         // TODO Put into Settings
         // All apps in the whitelist should be closed safely, no worrying about lost data
-        this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop'];
+        this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'smplayer.desktop'];
     }
 
     closeWindows() {
