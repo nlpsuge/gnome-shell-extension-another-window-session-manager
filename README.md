@@ -47,6 +47,9 @@ After confirm to save:
 | <img src=icons/move-symbolic.svg width="14" height="14">     | Move the open windows using the item's name                  |
 | <img src=icons/close-symbolic.svg width="14" height="14">    | Close the current open windows                               |
 
+# Dependencies
+This project uses `ps` to get some information from a process, install it via `dnf install procps-ng` if don't have.
+
 # limitation
 - It denpends on St(Shell Toolkits) and Shell APIs so heavily
 - ...
