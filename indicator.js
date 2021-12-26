@@ -12,7 +12,7 @@ const PanelMenu = imports.ui.panelMenu;
 
 const FileUtils = Me.imports.utils.fileUtils;
 const SessionItem = Me.imports.ui.sessionItem;
-const SearchSession = Me.imports.ui.searchSession;
+const SearchSessionItem = Me.imports.ui.searchSessionItem;
 const PopupMenuButtonItems = Me.imports.ui.popupMenuButtonItems;
 const IconFinder = Me.imports.utils.iconFinder;
 
@@ -58,9 +58,9 @@ class AwsIndicator extends PanelMenu.Button {
 
     _onOpenStateChanged(menu, state) {
         if (state) {
-            this._searchSession.reset();
-            this._searchSession._clearIcon.hide();
-            Mainloop.idle_add(() => this._searchSession._entry.grab_key_focus());
+            this._searchSessionItem.reset();
+            this._searchSessionItem._clearIcon.hide();
+            Mainloop.idle_add(() => this._searchSessionItem._entry.grab_key_focus());
         }
         super._onOpenStateChanged(menu, state);
     }
@@ -70,10 +70,10 @@ class AwsIndicator extends PanelMenu.Button {
         
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(), this._itemIndex++);
 
-        this._searchSession = new SearchSession.SearchSession();
-        const searchEntryText = this._searchSession._entry.get_clutter_text()
+        this._searchSessionItem = new SearchSessionItem.SearchSessionItem();
+        const searchEntryText = this._searchSessionItem._entry.get_clutter_text()
         searchEntryText.connect('text-changed', this._onSearch.bind(this));
-        this.menu.addMenuItem(this._searchSession, this._itemIndex++);
+        this.menu.addMenuItem(this._searchSessionItem, this._itemIndex++);
         
         this._addSessionItems();
     }
@@ -193,9 +193,9 @@ class AwsIndicator extends PanelMenu.Button {
     }
 
     _onSearch() {
-        this._searchSession._clearIcon.show();
+        this._searchSessionItem._clearIcon.show();
         
-        let searchText = this._searchSession._entry.text;
+        let searchText = this._searchSessionItem._entry.text;
         if (!(searchText && searchText.trim())) {
             const menuItems = this._sessionsMenuSection._getMenuItems();
             for (const menuItem of menuItems) {

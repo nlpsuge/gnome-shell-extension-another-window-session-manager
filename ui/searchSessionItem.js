@@ -6,8 +6,8 @@ const PopupMenu = imports.ui.popupMenu;
 
 const Mainloop = imports.mainloop;
 
-var SearchSession = GObject.registerClass(
-class SearchSession extends PopupMenu.PopupBaseMenuItem {
+var SearchSessionItem = GObject.registerClass(
+class SearchSessionItem extends PopupMenu.PopupBaseMenuItem {
 
     _init() {
         super._init({
