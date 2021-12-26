@@ -194,7 +194,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
             style_class: 'confirm-before-operate',
             text: 'Are you sure to close open windows?',
             x_expand: true,
-            x_align: Clutter.ActorAlign.CENTER,
+            x_align: Clutter.ActorAlign.START,
         });
         this.actor.add_child(this.confirmLabel);
     }
