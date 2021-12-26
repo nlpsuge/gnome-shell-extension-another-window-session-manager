@@ -70,7 +70,7 @@ function listAllSessions(sessionPath, recursion, callback) {
 function trashSession(sessionName) {
     const sessionFilePath = GLib.build_filenamev([sessions_path, sessionName]);
     if (GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
-        const trashed = false;
+        let trashed = false;
         try {
             const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
             trashed = sessionPathFile.trash(null);
