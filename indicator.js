@@ -74,8 +74,24 @@ class AwsIndicator extends PanelMenu.Button {
         const searchEntryText = this._searchSessionItem._entry.get_clutter_text()
         searchEntryText.connect('text-changed', this._onSearch.bind(this));
         this.menu.addMenuItem(this._searchSessionItem, this._itemIndex++);
-        
+                
+        this._addScrollableSessionsMenuSection();
         this._addSessionItems();
+
+        this._addSessionFolderMonitor();
+    }
+
+    _addScrollableSessionsMenuSection() {
+        this._sessionsMenuSection = new PopupMenu.PopupMenuSection();
+        this._scrollableSessionsMenuSection = new PopupMenu.PopupMenuSection();
+        let scrollView = new St.ScrollView({
+            style_class: 'session-menu-section',
+            overlay_scrollbars: true
+        });
+        scrollView.add_actor(this._sessionsMenuSection.actor);
+        this._scrollableSessionsMenuSection.actor.add_actor(scrollView);
+
+        this.menu.addMenuItem(this._scrollableSessionsMenuSection);
     }
 
     _addButtonItems() {
@@ -90,25 +106,9 @@ class AwsIndicator extends PanelMenu.Button {
     _addSessionItems() {
         if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
             // TOTO Empty session
-            log(`${this._sessions_path} not found!`);
+            log(`${this._sessions_path} not found! It's harmless, please save some windows in the panel menu to create it automatically.`);
             return;
         }
-
-        // Create only one monitor
-        if (!this.monitor) {
-            this._addSessionFolderMonitor();
-        }
-
-        this._sessionsMenuSection = new PopupMenu.PopupMenuSection();
-        this._scrollableSessionsMenuSection = new PopupMenu.PopupMenuSection();
-        let scrollView = new St.ScrollView({
-            style_class: 'session-menu-section',
-            overlay_scrollbars: true
-        });
-        scrollView.add_actor(this._sessionsMenuSection.actor);
-        this._scrollableSessionsMenuSection.actor.add_actor(scrollView);
-
-        this.menu.addMenuItem(this._scrollableSessionsMenuSection);
 
         // Debug
         log('List all sessions to add session items');
@@ -176,12 +176,18 @@ class AwsIndicator extends PanelMenu.Button {
      */
     _addSessionFolderMonitor() {
         const sessionPathFile = Gio.File.new_for_path(this._sessions_path);
-        this.monitor = sessionPathFile.monitor(Gio.FileMonitorFlags.WATCH_MOVES, null);
+        // Ok, it's the directory we are monitoring :)
+        // TODO If the parent of this._sessions_path was deleted, this.monitor don't get the 'changed' signal, so the panel menu items not removed.
+        // TODO If we click save icon on the panel menu item, the 'changed' signal can see temporary files, eg .goutputstream-VFXXXX, it's probably generated during overriding files, skip this kink of files?
+        this.monitor = sessionPathFile.monitor_directory(Gio.FileMonitorFlags.WATCH_MOUNTS | Gio.FileMonitorFlags.WATCH_MOVES, null);
         this.monitor.connect('changed', this._sessionPathChanged.bind(this));
     }
 
     // https://gjs-docs.gnome.org/gio20~2.66p/gio.filemonitor#signal-changed
-    _sessionPathChanged(file, otherFile, eventType) {
+    // Looks like the document is wrong ...
+    _sessionPathChanged(monitor, srcFile, descFile) {
+        // Debug
+        log(`Session path changed, readd all session items from ${this._sessions_path}. ${srcFile.get_path()} was changed.`);
         this._sessionsMenuSection.removeAll();
         // It probably is a problem when there is large amount session files,
         // say thousands of them, but who creates that much?
