@@ -53,13 +53,13 @@ After confirm to save:
 
 # TODO
 1. - Save open windows
-     - [] Save open windows 
+     - [x] Save open windows 
 3. - Restore saved open windows
-      - [] Restore saved open windows
+      - [x] Restore saved open windows
       - [x] Move to belonging workspace automatically
       - [ ] Restore window's geometry
 4. - Saved open windows list
-      - [ ] Saved open windows list
+      - [x] Saved open windows list
       - [x] Restore button
       - [x] Rename button
       - [x] Delete button
