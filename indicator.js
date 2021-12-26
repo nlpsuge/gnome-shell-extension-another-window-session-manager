@@ -156,6 +156,23 @@ class AwsIndicator extends PanelMenu.Button {
                 return -1;
             }
 
+            // modification_date_time2.compare is undefined on Gnome 3.38.1
+            if (!modification_date_time2.compare) {
+                // Unix time is the number of seconds that have elapsed since 1970-01-01 00:00:00 UTC, regardless of the time zone associated with this.
+                const unix_seconds2 = modification_date_time2.to_unix();
+                const unix_seconds1 = modification_date_time1.to_unix();
+                const diff = unix_seconds2 - unix_seconds1;
+                if (diff === 0) {
+                    return 0;
+                }
+                if (diff < 0) {
+                    return -1;
+                }
+                if (diff > 0) {
+                    return 1;
+                }
+            }
+
             // https://gjs-docs.gnome.org/glib20~2.66.1/glib.datetime#function-compare
             // -1, 0 or 1 if dt1 is less than, equal to or greater than dt2.
             return modification_date_time2.compare(modification_date_time1);
