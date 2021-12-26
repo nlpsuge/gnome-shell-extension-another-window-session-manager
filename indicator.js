@@ -39,11 +39,6 @@ class AwsIndicator extends PanelMenu.Button {
             style_class: 'popup-menu-icon'
         });
         this.add_child(icon);
-        this.buttonText = new St.Label({
-            text: _("Loading..."),
-            y_align: Clutter.ActorAlign.CENTER
-        });
-        this.add_child(this.buttonText);
 
         this._createMenu();
 
