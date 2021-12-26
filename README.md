@@ -8,19 +8,26 @@ This project is in early development, I'm planing to add some other features, bu
 # Screenshot
 
 ## Overview
-![image](https://user-images.githubusercontent.com/2271720/147340739-0bdfb598-048f-41cd-b711-e1692556cc73.png)
+![image](https://user-images.githubusercontent.com/2271720/147405199-56f33fea-fa85-4bbb-a91b-ea0dcccc837b.png)
 
 ## Close open windows
-Click to close open windows:
+Click button or item to close open windows:
 
-![image](https://user-images.githubusercontent.com/2271720/147340779-acccb8c7-142d-4250-a511-d55ccdc153aa.png)
+![image](https://user-images.githubusercontent.com/2271720/147405215-6854d881-1a9b-4352-9c42-9a2b8b22e8a3.png)
+
 
 After confirm to close:
 
 ![image](https://user-images.githubusercontent.com/2271720/147340835-853e1672-9b99-4411-a62b-df22a8450b3d.png)
 
 ## Save open windows
-![image](https://user-images.githubusercontent.com/2271720/147341045-0110b01d-495f-417b-9dd0-2c9e35f3d0b0.png)
+Click button or item to save open windows as a session:
+
+![image](https://user-images.githubusercontent.com/2271720/147405226-f580018c-e098-47e7-82f3-cdd1a86bd080.png)
+
+After confirm to save:
+
+![image](https://user-images.githubusercontent.com/2271720/147405241-cd6fd8ac-bc86-4d8e-87fb-6ce6abfa7eef.png)
 
 
 # Features
@@ -31,15 +38,14 @@ After confirm to close:
 
 # Panel menu items
 
-## Icon descpription
-Front left to right:
+## Icons descpription
+
 | Icon                                                         | Description                                                  |
 |--------------------------------------------------------------|--------------------------------------------------------------|
 | <img src=icons/save-symbolic.svg width="14" height="14">     | Save open windows as a sesson, which name is the item's name |
 | <img src=icons/restore-symbolic.svg width="14" height="14">  | Restore the saved sesson using the item's name               |
 | <img src=icons/move-symbolic.svg width="14" height="14">     | Move the open windows using the item's name                  |
-
-<img src=icons/close-symbolic.svg width="14" height="14">: Close the current open windows
+| <img src=icons/close-symbolic.svg width="14" height="14">    | Close the current open windows                               |
 
 # limitation
 - It denpends on St(Shell Toolkits) and Shell APIs so heavily
