@@ -31,7 +31,7 @@ function listAllSessions(sessionPath, recursion, callback) {
         sessionPath = get_sessions_path();
     }
     if (!GLib.file_test(sessionPath, GLib.FileTest.EXISTS)) {
-        log(`${sessionPath} not exist`);
+        logError(`${sessionPath} not exist`);
         return;
     }
 
