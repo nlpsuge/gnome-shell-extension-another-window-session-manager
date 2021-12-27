@@ -14,7 +14,8 @@ This project is in early development, I'm planing to add some other features, bu
 # Screenshot
 
 ## Overview
-![image](https://user-images.githubusercontent.com/2271720/147405199-56f33fea-fa85-4bbb-a91b-ea0dcccc837b.png)
+![image](https://user-images.githubusercontent.com/2271720/147489333-04a7e657-5a72-45b1-91c3-9dd5dc2f347c.png)
+
 
 ## Close open windows
 Click button or item to close open windows:
@@ -74,4 +75,5 @@ This project uses `ps` to get some information from a process, install it via `d
       - [x] Delete button
 5. - [x] Move windows using a saved session.
 6. - [ ] Settings
-7. - [ ] All TODO tags in the projects
+      - [x] Debugging mode
+8. - [ ] All TODO tags in the projects
