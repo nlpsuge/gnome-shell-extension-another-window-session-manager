@@ -5,6 +5,37 @@
     <property name="focusable">1</property>
     <child>
       <object class="GtkNotebookPage">
+        <property name="position">1</property>
+        <property name="child">
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkFrame" id="save_window_frame">
+                <property name="child">
+                  <object class="GtkLabel">
+                    <property name="label" translatable="yes">Nothing here, yet</property>
+                  </object>
+                </property>
+                <child type="label_item">
+                  <placeholder/>
+                </child>
+              </object>
+            </child>
+          </object>
+        </property>
+        <property name="tab">
+          <object class="GtkLabel">
+            <property name="label" translatable="yes">Save windows</property>
+          </object>
+        </property>
+      </object>
+    </child>
+    <child>
+      <placeholder/>
+    </child>
+    <!-- Always put debug mode tab at the end of the GtkNotebook -->
+    <child>
+      <object class="GtkNotebookPage">
         <property name="child">
           <object class="GtkBox">
             <property name="orientation">vertical</property>
@@ -64,36 +95,6 @@
           </object>
         </property>
       </object>
-    </child>
-    <child>
-      <object class="GtkNotebookPage">
-        <property name="position">1</property>
-        <property name="child">
-          <object class="GtkBox">
-            <property name="orientation">vertical</property>
-            <child>
-              <object class="GtkFrame" id="save_window_frame">
-                <property name="child">
-                  <object class="GtkLabel">
-                    <property name="label" translatable="yes">Nothing here, yet</property>
-                  </object>
-                </property>
-                <child type="label_item">
-                  <placeholder/>
-                </child>
-              </object>
-            </child>
-          </object>
-        </property>
-        <property name="tab">
-          <object class="GtkLabel">
-            <property name="label" translatable="yes">Save windows</property>
-          </object>
-        </property>
-      </object>
-    </child>
-    <child>
-      <placeholder/>
     </child>
   </object>
 </interface>
