@@ -94,6 +94,14 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
         return timeline;
     }
 
+    // Add the icon description. Only once icon may be too weird?
+    addIconDescription(iconDescription) {
+        this.iconDescriptionLabel = new St.Label({
+            text: iconDescription
+        });
+        this.actor.add_child(this.iconDescriptionLabel);
+    }
+
 });
 
 
@@ -109,6 +117,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.closeSession = new CloseSession.CloseSession();
 
         this._createButton(iconSymbolic);
+        this.addIconDescription('Close windows');
         this._addConfirm();
         this._addYesAndNoButtons();
         this._addClosingPrompt();
@@ -218,8 +227,9 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
     _init(iconSymbolic) {
         super._init();
-        this.saveCurrentSessionEntry;
+        this.saveCurrentSessionEntry = null;
         this._createButton(iconSymbolic);
+        this.addIconDescription('Save windows');
         this._addEntry();
         // Hide this St.Entry, only shown when user click saveButton.
         this.saveCurrentSessionEntry.hide();
@@ -229,7 +239,8 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
         this._timeline = this.createTimeLine();
 
-        this.savingLabel;
+        this.savingLabel = null;
+        
         this._addSavingPrompt();
 
         // Respond to menu item's 'activate' signal so user don't need to click the icon whose size is too small to find to click
@@ -316,6 +327,22 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             sessionName = FileUtils.default_sessionName;
         }
 
+        if (!this._canSave(sessionName)) {
+            this.savingLabel.set_text(`ERROR: Can't save windows using '${sessionName}', it's an existing directory!`);
+            this._timeline.set_actor(this.savingLabel);
+            this._timeline.connect('new-frame', (_timeline, _frame) => {
+                super.hideYesAndNoButtons();
+                this.savingLabel.show();
+            });
+            this._timeline.start();
+            this._timeline.connect('completed', () => {
+                this._timeline.stop();
+                this.savingLabel.hide();
+            });
+
+            return;
+        }
+
         this._saveSession.saveSession(sessionName);
 
         // clear entry
@@ -334,6 +361,13 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             this._timeline.stop();
             this.savingLabel.hide();
         });
+    }
+
+    _canSave(sessionName) {
+        if (FileUtils.isDirectory(sessionName)) {
+            return false;
+        }
+        return true;
     }
 
     destroy() {

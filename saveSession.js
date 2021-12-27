@@ -135,7 +135,7 @@ var SaveSession = class {
             );
 
             if (success) {
-                log(`Open windows session saved as '${sessionConfig.session_name}' located in '${sessions_path}'!`);
+                log(`Saved open windows as a session in ${session_file_path}!`);
             }
             return success;
         }
