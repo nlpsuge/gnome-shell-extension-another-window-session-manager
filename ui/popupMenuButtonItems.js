@@ -94,6 +94,14 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
         return timeline;
     }
 
+    // Add the icon description. Only once icon may be too weird?
+    addIconDescription(iconDescription) {
+        this.iconDescriptionLabel = new St.Label({
+            text: iconDescription
+        });
+        this.actor.add_child(this.iconDescriptionLabel);
+    }
+
 });
 
 
@@ -109,6 +117,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.closeSession = new CloseSession.CloseSession();
 
         this._createButton(iconSymbolic);
+        this.addIconDescription('Close windows');
         this._addConfirm();
         this._addYesAndNoButtons();
         this._addClosingPrompt();
@@ -220,6 +229,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         super._init();
         this.saveCurrentSessionEntry;
         this._createButton(iconSymbolic);
+        this.addIconDescription('Save windows');
         this._addEntry();
         // Hide this St.Entry, only shown when user click saveButton.
         this.saveCurrentSessionEntry.hide();
