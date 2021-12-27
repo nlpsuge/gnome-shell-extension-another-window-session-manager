@@ -6,10 +6,14 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const SessionConfig = Me.imports.model.sessionConfig;
 const FileUtils = Me.imports.utils.fileUtils;
+const PrefsUtils = Me.imports.utils.prefsUtils;
+
 
 var SaveSession = class {
 
     constructor() {
+        this._prefsUtils = new PrefsUtils.PrefsUtils();        
+
         this._windowTracker = Shell.WindowTracker.get_default();
         this._subprocessLauncher = new Gio.SubprocessLauncher({
             flags: (Gio.SubprocessFlags.STDOUT_PIPE |
@@ -135,7 +139,9 @@ var SaveSession = class {
             );
 
             if (success) {
-                log(`Saved open windows as a session in ${session_file_path}!`);
+                if (this._prefsUtils.isDebug()) {
+                    log(`Saved open windows as a session in ${session_file_path}!`);
+                }
             }
             return success;
         }
@@ -154,7 +160,7 @@ var SaveSession = class {
             sessionConfigObject.memory_percent = stdoutArr.slice(6, 7).join();
             sessionConfigObject.cmd = stdoutArr.slice(7);
         } else {
-            log(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`);
+            logError(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`);
             sessionConfigObject.process_create_time = null;
             sessionConfigObject.cpu_percent = null;
             sessionConfigObject.memory_percent = null;
@@ -171,6 +177,10 @@ var SaveSession = class {
         }
         if (this._subprocessLauncher) {
             this._subprocessLauncher = null;
+        }
+        if (this._prefsUtils) {
+            this._prefsUtils.destroy();
+            this._prefsUtils = null;
         }
     }
 

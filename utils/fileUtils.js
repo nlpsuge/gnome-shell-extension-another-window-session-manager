@@ -26,16 +26,18 @@ function getJsonObj(contents) {
     return session_config;
 }
 
-function listAllSessions(sessionPath, recursion, callback) {
+function listAllSessions(sessionPath, recursion, debug, callback) {
     if (!sessionPath) {
         sessionPath = get_sessions_path();
     }
     if (!GLib.file_test(sessionPath, GLib.FileTest.EXISTS)) {
-        log(`${sessionPath} not exist`);
+        logError(`${sessionPath} not exist`);
         return;
     }
 
-    log(`Looking up path: ${sessionPath}`);
+    if (debug) {
+        log(`Looking up path: ${sessionPath}`);
+    }
     const sessionPathFile = Gio.File.new_for_path(sessionPath);
     let fileEnumerator;
     try {
@@ -56,7 +58,9 @@ function listAllSessions(sessionPath, recursion, callback) {
         while ((info = fileEnumerator.next_file(null))) {
             const file = fileEnumerator.get_child(info);
             if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
-                log(`${info.get_name()} is a folder, checking`);
+                if (debug) {
+                    log(`${info.get_name()} is a folder, checking`);
+                }
                 listAllSessions(file.get_path(), callback);
             }
 

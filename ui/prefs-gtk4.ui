@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <object class="GtkNotebook" id="prefs_notebook">
+    <property name="focusable">1</property>
+    <child>
+      <object class="GtkNotebookPage">
+        <property name="position">1</property>
+        <property name="child">
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkFrame" id="save_window_frame">
+                <property name="child">
+                  <object class="GtkLabel">
+                    <property name="label" translatable="yes">Nothing here, yet</property>
+                  </object>
+                </property>
+                <child type="label_item">
+                  <placeholder/>
+                </child>
+              </object>
+            </child>
+          </object>
+        </property>
+        <property name="tab">
+          <object class="GtkLabel">
+            <property name="label" translatable="yes">Save windows</property>
+          </object>
+        </property>
+      </object>
+    </child>
+    <child>
+      <placeholder/>
+    </child>
+    <!-- Always put Debugging tab at the end of the GtkNotebook -->
+    <child>
+      <object class="GtkNotebookPage">
+        <property name="child">
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkFrame" id="debugging_mode_frame">
+                <property name="child">
+                  <object class="GtkListBox" id="debugging_mode_listbox">
+                    <property name="selection-mode">none</property>
+                    <child>
+                      <object class="GtkListBoxRow" id="debugging_mode_multi_row">
+                        <property name="focusable">1</property>
+                        <property name="child">
+                          <object class="GtkGrid" id="debugging_mode_multi_grid">
+                            <property name="margin-top">12</property>
+                            <property name="margin-bottom">12</property>
+                            <property name="row-spacing">6</property>
+                            <property name="column-spacing">32</property>
+                            <child>
+                              <object class="GtkLabel" id="debugging_mode_label">
+                                <property name="hexpand">1</property>
+                                <property name="label" translatable="yes">Debugging mode</property>
+                                <property name="use-markup">1</property>
+                                <property name="xalign">0</property>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">0</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkSwitch" id="debugging_mode_switch">
+                                <property name="focusable">1</property>
+                                <property name="halign">end</property>
+                                <property name="valign">center</property>
+                                <layout>
+                                  <property name="column">1</property>
+                                  <property name="row">0</property>
+                                </layout>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </property>
+                <child type="label_item">
+                  <placeholder/>
+                </child>
+              </object>
+            </child>
+          </object>
+        </property>
+        <property name="tab">
+          <object class="GtkLabel">
+            <property name="label" translatable="yes">Debugging</property>
+          </object>
+        </property>
+      </object>
+    </child>
+  </object>
+</interface>
