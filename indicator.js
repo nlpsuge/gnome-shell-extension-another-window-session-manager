@@ -118,7 +118,7 @@ class AwsIndicator extends PanelMenu.Button {
         }
 
         let sessionFileInfos = [];
-        FileUtils.listAllSessions(null, false, (file, info) => {
+        FileUtils.listAllSessions(null, false, this._prefsUtils.isDebug(),(file, info) => {
             // We have an interest in regular and text files
 
             const file_type = info.get_file_type();
