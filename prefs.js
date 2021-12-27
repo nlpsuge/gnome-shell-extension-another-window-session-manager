@@ -11,7 +11,21 @@ const Prefs = GObject.registerClass(
     class Prefs extends GObject.Object {
         _init() {
             Gtk.init()
+            
+            this._settings = ExtensionUtils.getSettings(
+                'org.gnome.shell.extensions.another-window-session-manager');
+
             this.render_ui();
+            this._bindSettings();
+        }
+
+        _bindSettings() {
+            this._settings.bind(
+                'debugging-mode',
+                this.debugging_mode_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
         }
 
         render_ui() {
@@ -20,12 +34,9 @@ const Prefs = GObject.registerClass(
             this._builder.add_from_file(Me.path + '/ui/prefs-gtk4.ui');
             this.notebook = this._builder.get_object('prefs_notebook');
 
-            this._builder.get_object('debugging_mode_switch').connect('notify::active', (widget, value) => {
-                // Whether the GtkSwitch widget is in its on or off state.
-                const active = widget.active
-                log('debugging_mode_switch activate via lambda: ' + active);
-            });
+            this.debugging_mode_switch = this._builder.get_object('debugging_mode_switch');
 
+            
         }
         
     }
