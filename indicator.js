@@ -123,13 +123,14 @@ class AwsIndicator extends PanelMenu.Button {
                 log(`${file.get_path()} (file type is ${file_type}) is not a regular file, skipping`);
                 return;
             }
-
             const content_type = info.get_content_type();
             if (content_type !== 'text/plain') {
                 // Debug
                 log(`${file.get_path()} (content type is ${content_type}) is not a text file, skipping`);
                 return;
             }
+
+            
             let parent = file.get_parent();
             let parentPath;
             // https://gjs-docs.gnome.org/gio20~2.66p/gio.file#method-get_parent
