@@ -5,6 +5,12 @@ Most importantly, it supports both X.org and Wayland!
 
 This project is in early development, I'm planing to add some other features, but it basically works now.
 
+<p align="left">
+  <a href="https://extensions.gnome.org/extension/4709/another-window-session-manager/">
+    <img alt="Get it on GNOME Extensions" width="228" src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true"/>
+  </a>
+</p>
+
 # Screenshot
 
 ## Overview
