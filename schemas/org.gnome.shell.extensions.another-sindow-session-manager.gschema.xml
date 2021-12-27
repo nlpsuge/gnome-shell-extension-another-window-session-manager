@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  
+  <schema id="org.gnome.shell.extensions.another-sindow-session-manager" path="/org/gnome/shell/extensions/always-show-titles-in-overview/">
+    <key name="debugging-mode" type="b">
+      <default>false</default>
+      <summary>Enable or disable the debugging mode</summary>
+      <description>
+      Enable the debugging mode to see what happened, for debugging or issue reporting purpose
+      </description>
+    </key>
+  </schema>
+</schemalist>

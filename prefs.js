@@ -20,10 +20,10 @@ const Prefs = GObject.registerClass(
             this._builder.add_from_file(Me.path + '/ui/prefs-gtk4.ui');
             this.notebook = this._builder.get_object('prefs_notebook');
 
-            this._builder.get_object('debug_mode_switch').connect('notify::active', (widget, value) => {
+            this._builder.get_object('debugging_mode_switch').connect('notify::active', (widget, value) => {
                 // Whether the GtkSwitch widget is in its on or off state.
                 const active = widget.active
-                log('debug_mode_switch activate via lambda: ' + active);
+                log('debugging_mode_switch activate via lambda: ' + active);
             });
 
         }

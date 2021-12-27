@@ -33,30 +33,30 @@
     <child>
       <placeholder/>
     </child>
-    <!-- Always put debug mode tab at the end of the GtkNotebook -->
+    <!-- Always put Debugging tab at the end of the GtkNotebook -->
     <child>
       <object class="GtkNotebookPage">
         <property name="child">
           <object class="GtkBox">
             <property name="orientation">vertical</property>
             <child>
-              <object class="GtkFrame" id="debug_mode_frame">
+              <object class="GtkFrame" id="debugging_mode_frame">
                 <property name="child">
-                  <object class="GtkListBox" id="debug_mode_listbox">
+                  <object class="GtkListBox" id="debugging_mode_listbox">
                     <property name="selection-mode">none</property>
                     <child>
-                      <object class="GtkListBoxRow" id="debug_mode_multi_row">
+                      <object class="GtkListBoxRow" id="debugging_mode_multi_row">
                         <property name="focusable">1</property>
                         <property name="child">
-                          <object class="GtkGrid" id="debug_mode_multi_grid">
+                          <object class="GtkGrid" id="debugging_mode_multi_grid">
                             <property name="margin-top">12</property>
                             <property name="margin-bottom">12</property>
                             <property name="row-spacing">6</property>
                             <property name="column-spacing">32</property>
                             <child>
-                              <object class="GtkLabel" id="debug_mode_label">
+                              <object class="GtkLabel" id="debugging_mode_label">
                                 <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Debug mode</property>
+                                <property name="label" translatable="yes">Debugging mode</property>
                                 <property name="use-markup">1</property>
                                 <property name="xalign">0</property>
                                 <layout>
@@ -66,7 +66,7 @@
                               </object>
                             </child>
                             <child>
-                              <object class="GtkSwitch" id="debug_mode_switch">
+                              <object class="GtkSwitch" id="debugging_mode_switch">
                                 <property name="focusable">1</property>
                                 <property name="halign">end</property>
                                 <property name="valign">center</property>
@@ -91,7 +91,7 @@
         </property>
         <property name="tab">
           <object class="GtkLabel">
-            <property name="label" translatable="yes">Debug mode</property>
+            <property name="label" translatable="yes">Debugging</property>
           </object>
         </property>
       </object>
