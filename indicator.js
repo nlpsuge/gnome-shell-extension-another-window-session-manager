@@ -115,25 +115,38 @@ class AwsIndicator extends PanelMenu.Button {
 
         let sessionFileInfos = [];
         FileUtils.listAllSessions(null, false, (file, info) => {
-            if (info.get_file_type() === Gio.FileType.REGULAR) {
-                let parent = file.get_parent();
-                let parentPath;
-                // https://gjs-docs.gnome.org/gio20~2.66p/gio.file#method-get_parent
-                // If the this represents the root directory of the file system, then null will be returned.
-                if (parent === null) {
-                    // Impossible, who puts sessions under the /?
-                    parentPath = '/';
-                } else {
-                    parentPath = parent.get_path();
-                }
-                // Debug
-                log(`Processing ${file.get_path()} under ${parentPath}`);
-                sessionFileInfos.push({
-                    info: info,
-                    file: file
-                });
+            // We have an interest in regular and text files
 
+            const file_type = info.get_file_type();
+            if (file_type !== Gio.FileType.REGULAR) {
+                // Debug
+                log(`${file.get_path()} (file type is ${file_type}) is not a regular file, skipping`);
+                return;
             }
+
+            const content_type = info.get_content_type();
+            if (content_type !== 'text/plain') {
+                // Debug
+                log(`${file.get_path()} (content type is ${content_type}) is not a text file, skipping`);
+                return;
+            }
+            let parent = file.get_parent();
+            let parentPath;
+            // https://gjs-docs.gnome.org/gio20~2.66p/gio.file#method-get_parent
+            // If the this represents the root directory of the file system, then null will be returned.
+            if (parent === null) {
+                // Impossible, who puts sessions under the /?
+                parentPath = '/';
+            } else {
+                parentPath = parent.get_path();
+            }
+            // Debug
+            log(`Processing ${file.get_path()} under ${parentPath}`);
+            sessionFileInfos.push({
+                info: info,
+                file: file
+            });
+
         });
 
         // Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator

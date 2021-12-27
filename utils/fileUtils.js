@@ -42,7 +42,8 @@ function listAllSessions(sessionPath, recursion, callback) {
         fileEnumerator = sessionPathFile.enumerate_children(
             [Gio.FILE_ATTRIBUTE_STANDARD_NAME, 
                 Gio.FILE_ATTRIBUTE_STANDARD_TYPE, 
-                Gio.FILE_ATTRIBUTE_TIME_MODIFIED].join(','),
+                Gio.FILE_ATTRIBUTE_TIME_MODIFIED,
+                Gio.FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE].join(','),
             Gio.FileQueryInfoFlags.NONE,
             null);
     } catch(e) {
