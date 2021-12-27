@@ -86,6 +86,15 @@ function trashSession(sessionName) {
     }
 }
 
+function isDirectory(sessionName) {
+    const sessionFilePath = GLib.build_filenamev([sessions_path, sessionName]);
+    if (GLib.file_test(sessionFilePath, GLib.FileTest.IS_DIR)) {
+        return true;
+    }
+
+    return false;
+}
+
 // test
 // let index = 0;
 // listAllSessions(null, false, (file, info) => {
