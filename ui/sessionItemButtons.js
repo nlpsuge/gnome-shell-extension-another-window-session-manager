@@ -40,11 +40,10 @@ class SessionItemButtons extends GObject.Object {
             parent: saveButton,
             markup: 'Save open windows using the current session name',
         });
-        const PopupDialogSave = new PopupDialog.PopupDialog({
-            parent: saveButton,
-            markup: 'Are you sure?',
-        });
-        PopupDialogSave.set_position(PopupDialog.POPUP_DIALOG_POSITION_TOP);
+        // new PopupDialog.PopupDialog({
+        //     parent: saveButton,
+        //     markup: 'Are you sure?',
+        // });
         saveButton.connect('clicked', this._onClickSave.bind(this));
 
         const restoreButton = this._addButton('restore-symbolic.svg');
@@ -59,6 +58,11 @@ class SessionItemButtons extends GObject.Object {
             parent: moveButton,
             markup: 'Move windows to their workspace by the saved session',
         });
+        const popupDialog = new PopupDialog.PopupDialog({
+            parent: moveButton,
+        });
+        popupDialog.setContent('Are you sure?', true);
+        
         moveButton.connect('clicked', this._onClickMove.bind(this));
 
         // this._addSeparator();
