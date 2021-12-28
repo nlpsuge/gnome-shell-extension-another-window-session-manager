@@ -8,6 +8,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const IconFinder = Me.imports.utils.iconFinder;
 const FileUtils = Me.imports.utils.fileUtils;
 const Tooltip = Me.imports.utils.tooltip;
+const PopupDialog = Me.imports.utils.popupDialog;
 
 const SaveSession = Me.imports.saveSession;
 const RestoreSession = Me.imports.restoreSession;
@@ -39,6 +40,11 @@ class SessionItemButtons extends GObject.Object {
             parent: saveButton,
             markup: 'Save open windows using the current session name',
         });
+        const PopupDialogSave = new PopupDialog.PopupDialog({
+            parent: saveButton,
+            markup: 'Are you sure?',
+        });
+        PopupDialogSave.set_position(PopupDialog.POPUP_DIALOG_POSITION_TOP);
         saveButton.connect('clicked', this._onClickSave.bind(this));
 
         const restoreButton = this._addButton('restore-symbolic.svg');
