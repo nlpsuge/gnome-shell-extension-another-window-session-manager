@@ -7,7 +7,7 @@
       <default>false</default>
       <summary>Enable or disable the debugging mode</summary>
       <description>
-      Enable the debugging mode to see what happened, for debugging or issue reporting purpose
+      Enable the debugging mode to see what happened, for debugging or issue reporting or development purpose
       </description>
     </key>
   </schema>
