@@ -147,7 +147,7 @@ var Tooltip = class Tooltip {
 
         if (this._bin === null) {
             this._bin = new St.Bin({
-                style_class: 'osd-window gsconnect-tooltip',
+                style_class: 'osd-window awsm-tooltip',
                 opacity: 232,
             });
 
