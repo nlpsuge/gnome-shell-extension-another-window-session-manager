@@ -57,9 +57,6 @@ var MoveSession = class {
         const interestingWindows = this._getAutoMoveInterestingWindows(shellApp, saved_window_sessions);
 
         if (!interestingWindows.length) {
-            if (this._prefsUtils.isDebug()) {
-                log(`No interesting windows for ${shellApp.get_name()}`);
-            }
             return;
         }
 

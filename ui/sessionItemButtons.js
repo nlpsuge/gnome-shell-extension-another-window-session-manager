@@ -7,6 +7,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const IconFinder = Me.imports.utils.iconFinder;
 const FileUtils = Me.imports.utils.fileUtils;
+const Tooltip = Me.imports.utils.tooltip;
 
 const SaveSession = Me.imports.saveSession;
 const RestoreSession = Me.imports.restoreSession;
@@ -34,12 +35,24 @@ class SessionItemButtons extends GObject.Object {
         this._addSeparator();
 
         const saveButton = this._addButton('save-symbolic.svg');
+        new Tooltip.Tooltip({
+            parent: saveButton,
+            markup: 'Save open windows using the current session name',
+        });
         saveButton.connect('clicked', this._onClickSave.bind(this));
 
         const restoreButton = this._addButton('restore-symbolic.svg');
+        new Tooltip.Tooltip({
+            parent: restoreButton,
+            markup: 'Restore windows from the saved session',
+        });
         restoreButton.connect('clicked', this._onClickRestore.bind(this));
 
         const moveButton = this._addButton('move-symbolic.svg');
+        new Tooltip.Tooltip({
+            parent: moveButton,
+            markup: 'Move windows to their workspace by the saved session',
+        });
         moveButton.connect('clicked', this._onClickMove.bind(this));
 
         // this._addSeparator();
@@ -49,6 +62,10 @@ class SessionItemButtons extends GObject.Object {
 
         this._addSeparator();
         const deleteButton = this._addDeleteButton();
+        new Tooltip.Tooltip({
+            parent: deleteButton,
+            markup: 'Move to Trash',
+        });
         deleteButton.connect('clicked', () => {
             // We just trash file to trash scan instead of delete in case still need it.
             FileUtils.trashSession(this.sessionItem._filename);
