@@ -72,7 +72,7 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
         });
 
         let button = new St.Button({
-            style_class: 'aws-item-button',
+            style_class: 'button-item',
             can_focus: true,
             child: icon,
             x_align: Clutter.ActorAlign.END,
@@ -117,7 +117,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.closeSession = new CloseSession.CloseSession();
 
         this._createButton(iconSymbolic);
-        this.addIconDescription('Close windows');
+        this.addIconDescription('Close open windows');
         this._addConfirm();
         this._addYesAndNoButtons();
         this._addClosingPrompt();
@@ -229,7 +229,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         super._init();
         this.saveCurrentSessionEntry = null;
         this._createButton(iconSymbolic);
-        this.addIconDescription('Save windows');
+        this.addIconDescription('Save open windows');
         this._addEntry();
         // Hide this St.Entry, only shown when user click saveButton.
         this.saveCurrentSessionEntry.hide();
