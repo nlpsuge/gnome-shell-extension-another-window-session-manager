@@ -321,11 +321,13 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             this._timeline.set_actor(this.savingLabel);
             this._timeline.connect('new-frame', (_timeline, _frame) => {
                 this.savingLabel.show();
+                this.hideYesAndNoButtons();
             });
             this._timeline.start();
             this._timeline.connect('completed', () => {
                 this._timeline.stop();
                 this.savingLabel.hide();
+                this.showYesAndNoButtons();
             });
 
             return;
@@ -348,6 +350,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this._timeline.connect('completed', () => {
             this._timeline.stop();
             this.savingLabel.hide();
+            this.hideYesAndNoButtons();
         });
     }
 
