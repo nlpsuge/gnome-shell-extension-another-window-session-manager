@@ -27,7 +27,7 @@ var MoveSession = class {
         const sessions_path = FileUtils.get_sessions_path();
         const session_file_path = GLib.build_filenamev([sessions_path, sessionName]);
         if (!GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
-            logError(`Session file not found: ${session_file_path}`);
+            logError(new Error(`Session file not found: ${session_file_path}`));
             return;
         }
 
@@ -41,7 +41,7 @@ var MoveSession = class {
             
             const session_config_objects = session_config.x_session_config_objects;
             if (!session_config_objects) {
-                logError(`Session details not found: ${session_file_path}`);
+                logError(new Error(`Session details not found: ${session_file_path}`));
                 return;
             }
 

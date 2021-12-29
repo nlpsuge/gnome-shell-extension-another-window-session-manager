@@ -8,9 +8,15 @@ const home_dir = GLib.get_home_dir();
 // but desktop_file_id is missing in that file, so can't move them. Will be fixed in the future.
 const config_path_base = GLib.build_filenamev([home_dir, '.config', 'another-window-session-manager']);
 var sessions_path = GLib.build_filenamev([config_path_base, 'sessions']);
+var sessions_backup_path = GLib.build_filenamev([sessions_path, 'backups']);
+
 
 function get_sessions_path() {
     return sessions_path;
+}
+
+function get_sessions_backups_path() {
+    return sessions_backup_path;
 }
 
 function getJsonObj(contents) {
@@ -31,7 +37,7 @@ function listAllSessions(sessionPath, recursion, debug, callback) {
         sessionPath = get_sessions_path();
     }
     if (!GLib.file_test(sessionPath, GLib.FileTest.EXISTS)) {
-        logError(`${sessionPath} not exist`);
+        logError(new Error(`${sessionPath} not exist`));
         return;
     }
 
@@ -80,7 +86,7 @@ function trashSession(sessionName) {
             const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
             trashed = sessionPathFile.trash(null);
             if (!trashed) {
-                logError(`Failed to trash file ${sessionFilePath}, reason: Unknown.`)
+                logError(new Error(`Failed to trash file ${sessionFilePath}. Reason: Unknown.`));
             }
             return trashed;
         } catch(e) {
