@@ -134,9 +134,35 @@ class SessionItemButtons extends GObject.Object {
     }
     
     _onClickRestore(button, event) {
-        // Using _restoredApps to hold restored apps so we create new instance every time for now
-        const _restoreSession = new RestoreSession.RestoreSession();
-        _restoreSession.restoreSession(this.sessionItem._filename);
+        if (this.confirming) {
+            return;
+        }
+
+        this.confirming = true;
+
+        this.sessionItem.actor.insert_child_below(this.sessionItem.yesButton, button);
+        this.sessionItem.actor.insert_child_above(this.sessionItem.noButton, button);
+        this.sessionItem.yesButton.show();
+        this.sessionItem.noButton.show();
+        this.sessionItem.yesButton.connect('clicked', () => {
+            // Using _restoredApps to hold restored apps so we create new instance every time for now
+            const _restoreSession = new RestoreSession.RestoreSession();
+            _restoreSession.restoreSession(this.sessionItem._filename);
+
+            // TODO clutter_actor_remove_child: assertion 'child->priv->parent != NULL' failed
+            this.sessionItem.actor.remove_child(this.sessionItem.yesButton);
+            this.sessionItem.actor.remove_child(this.sessionItem.noButton);
+
+            this.confirming = false;
+        });
+        this.sessionItem.noButton.connect('clicked', () => {
+            // TODO clutter_actor_remove_child: assertion 'child->priv->parent != NULL' failed
+            this.sessionItem.actor.remove_child(this.sessionItem.yesButton);
+            this.sessionItem.actor.remove_child(this.sessionItem.noButton);
+            this.confirming = false;
+        });
+
+    
     }
     
     _onClickMove(button, event) {

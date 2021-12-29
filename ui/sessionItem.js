@@ -8,9 +8,10 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const SessionItemButtons = Me.imports.ui.sessionItemButtons;
+const { PopupMenuButtonItem } = Me.imports.ui.popupMenuButtonItem;
 
 var SessionItem = GObject.registerClass(
-class SessionItem extends PopupMenu.PopupMenuItem {
+class SessionItem extends PopupMenuButtonItem {
     
     _init(fileInfo, file) {
         // Initialize this component, so we can use this.label etc
@@ -29,6 +30,8 @@ class SessionItem extends PopupMenu.PopupMenuItem {
 
         this._sessionItemButtons = new SessionItemButtons.SessionItemButtons(this);
         this._sessionItemButtons.addButtons();
+
+        this.createYesAndNoButtons();
 
     }
 

@@ -5,6 +5,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const IconFinder = Me.imports.utils.iconFinder;
 
+// TODO Move PopupMenuButtonItem.createYesAndNoButtons in there?
 var Button = GObject.registerClass(
 class Button extends GObject.Object {
 
