@@ -13,6 +13,8 @@ const CloseSession = Me.imports.closeSession;
 const IconFinder = Me.imports.utils.iconFinder;
 const FileUtils = Me.imports.utils.fileUtils;
 
+const { Button } = Me.imports.ui.button;
+
 var PopupMenuButtonItems = GObject.registerClass(
 class PopupMenuButtonItems extends GObject.Object {
 
@@ -66,21 +68,10 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
     }
 
     createButton(iconSymbolic) {
-        let icon = new St.Icon({
-            gicon: IconFinder.find(iconSymbolic),
-            style_class: 'system-status-icon'
-        });
-
-        let button = new St.Button({
-            style_class: 'button-item',
-            can_focus: true,
-            child: icon,
-            x_align: Clutter.ActorAlign.END,
-            x_expand: false,
-            y_expand: true,
-            track_hover: true
-        });
-
+        const button = new Button({
+            icon_symbolic: iconSymbolic,
+            button_style_class: 'button-item',
+        }).button;
         return button;
     }
 
