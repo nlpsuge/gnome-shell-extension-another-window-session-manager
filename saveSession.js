@@ -106,7 +106,7 @@ var SaveSession = class {
     }
 
     save2File(sessionConfig) {
-        const sessionConfigJson = JSON.stringify(sessionConfig);
+        const sessionConfigJson = JSON.stringify(sessionConfig, null, 4);
 
         const sessions_path = FileUtils.get_sessions_path();
         const session_file_path = GLib.build_filenamev([sessions_path, sessionConfig.session_name]);
