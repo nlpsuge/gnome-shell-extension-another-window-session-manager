@@ -87,22 +87,28 @@ var SaveSession = class {
                     window_state.is_sticky = metaWindow.is_on_all_workspaces();
                     window_state.is_above = metaWindow.is_above();
 
-                    sessionConfig.x_session_config_objects.push(sessionConfigObject);
-
-                    
+                    sessionConfig.x_session_config_objects.push(sessionConfigObject);    
                     
                 } catch (e) {
-                    logError(e, `Failed to build sessionConfigObject`);
+                    logError(e, `Failed to build session`);
+                    global.notify_error(`Failed to build session`, e.message);
                 }
             }
-
         }
 
         // Save open windows
-        const success = this.save2File(sessionConfig);
-        if (success) {
-            // TODO saved Notification
+        try {
+            const success = this.save2File(sessionConfig);
+            if (success) {
+                // TODO saved Notification
+            }
+            return success;
+        } catch (e) {
+            logError(e, `Failed to write session to disk`);
+            global.notify_error(`Failed to write session to disk`, e.message);
         }
+
+        return false;
     }
 
     save2File(sessionConfig) {
@@ -127,8 +133,8 @@ var SaveSession = class {
             }
 
             if (!backup) {
-                const errMsg = `Failed to backup the previous session file: ${session_file_path}`
-                reason = reason ? reason : `Failed to copy ${session_file_path} to ${session_file_backup}`
+                const errMsg = `Failed to backup the previous session file: ${session_file_path}`;
+                reason = reason ? reason : `Failed to copy ${session_file_path} to ${session_file_backup}`;
                 logError(new Error(`${errMsg}`), `${reason}`);
                 global.notify_error(`${errMsg}`, `${reason}`);
             }
@@ -171,7 +177,7 @@ var SaveSession = class {
             sessionConfigObject.memory_percent = stdoutArr.slice(6, 7).join();
             sessionConfigObject.cmd = stdoutArr.slice(7);
         } else {
-            logError(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`);
+            logError(new Error(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`));
             sessionConfigObject.process_create_time = null;
             sessionConfigObject.cpu_percent = null;
             sessionConfigObject.memory_percent = null;

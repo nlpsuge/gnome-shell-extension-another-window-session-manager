@@ -33,7 +33,7 @@ var RestoreSession = class {
         const sessions_path = FileUtils.get_sessions_path();
         const session_file_path = GLib.build_filenamev([sessions_path, sessionName]);
         if (!GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
-            logError(`Session file not found: ${session_file_path}`);
+            logError(new Error(`Session file not found: ${session_file_path}`));
             return;
         }
 
@@ -55,7 +55,7 @@ var RestoreSession = class {
             
             const session_config_objects = session_config.x_session_config_objects;
             if (!session_config_objects) {
-                logError(`Session details not found: ${session_file_path}`);
+                logError(new Error(`Session details not found: ${session_file_path}`));
                 return;
             }
 
@@ -87,11 +87,11 @@ var RestoreSession = class {
                                     });
                                 }
                             } else {
-                                logError(`Failed to restore ${app_name}. Reason: cannot find ${desktop_file_id}.`);
-                                global.notify_error(`Failed to restore ${app_name}`, `Reason: cannot find ${desktop_file_id}.`);
+                                logError(new Error(`Failed to restore ${app_name}`, `Cannot find ${desktop_file_id}.`));
+                                global.notify_error(`Failed to restore ${app_name}`, `Reason: Cannot find ${desktop_file_id}.`);
                             }
                         } else {
-                            logError(`Failed to restore ${app_name}. Reason: unknown.`);
+                            logError(new Error(`Failed to restore ${app_name}. Reason: unknown.`));
                             global.notify_error(`Failed to restore ${app_name}`, 'Reason: unknown.');
                         }
                     } else {
@@ -107,7 +107,7 @@ var RestoreSession = class {
                         } else {
                             // TODO try to launch via app_info by searching the app name?
                             let errorMsg = `Empty command line for ${app_name}`;
-                            logError(errorMsg);
+                            logError(new Error(errorMsg), `Invalid command line: ${cmd}`);
                             global.notify_error(errorMsg, `Invalid command line: ${cmd}`);
                         }
                     }

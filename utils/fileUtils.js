@@ -37,7 +37,7 @@ function listAllSessions(sessionPath, recursion, debug, callback) {
         sessionPath = get_sessions_path();
     }
     if (!GLib.file_test(sessionPath, GLib.FileTest.EXISTS)) {
-        logError(`${sessionPath} not exist`);
+        logError(new Error(`${sessionPath} not exist`));
         return;
     }
 
@@ -86,7 +86,7 @@ function trashSession(sessionName) {
             const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
             trashed = sessionPathFile.trash(null);
             if (!trashed) {
-                logError(`Failed to trash file ${sessionFilePath}, reason: Unknown.`)
+                logError(new Error(`Failed to trash file ${sessionFilePath}. Reason: Unknown.`));
             }
             return trashed;
         } catch(e) {
