@@ -112,14 +112,25 @@ var SaveSession = class {
         const session_file_path = GLib.build_filenamev([sessions_path, sessionConfig.session_name]);
         const session_file = Gio.File.new_for_path(session_file_path);
         if (GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
-            const session_file_backup_path = GLib.build_filenamev([sessions_path, 'backups']);
+            let backup = false;
+            let reason = null;
+            const session_file_backup_path = FileUtils.get_sessions_backups_path();
+            const session_file_backup = GLib.build_filenamev([session_file_backup_path, sessionConfig.session_name + '.backup-' + new Date().getTime()]);
             if (GLib.mkdir_with_parents(session_file_backup_path, 0o744) === 0) {
-                const session_file_backup = GLib.build_filenamev([session_file_backup_path, sessionConfig.session_name + '.backup-' + new Date().getTime()]);
-                session_file.copy(
+                backup = session_file.copy(
                     Gio.File.new_for_path(session_file_backup),
                     Gio.FileCopyFlags.OVERWRITE,
                     null,
                     null);
+            } else {
+                reason = `Failed to create backups folder: ${session_file_backup_path}`;
+            }
+
+            if (!backup) {
+                const errMsg = `Failed to backup the previous session file: ${session_file_path}`
+                reason = reason ? reason : `Failed to copy ${session_file_path} to ${session_file_backup}`
+                logError(new Error(`${errMsg}`), `${reason}`);
+                global.notify_error(`${errMsg}`, `${reason}`);
             }
 
         }
