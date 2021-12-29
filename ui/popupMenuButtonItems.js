@@ -322,7 +322,6 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             this.savingLabel.set_text(`ERROR: Can't save windows using '${sessionName}', it's an existing directory!`);
             this._timeline.set_actor(this.savingLabel);
             this._timeline.connect('new-frame', (_timeline, _frame) => {
-                super.hideYesAndNoButtons();
                 this.savingLabel.show();
             });
             this._timeline.start();
