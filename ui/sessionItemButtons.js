@@ -14,6 +14,8 @@ const RestoreSession = Me.imports.restoreSession;
 const MoveSession = Me.imports.moveSession;
 const CloseSession = Me.imports.closeSession;
 
+const { Button } = Me.imports.ui.button;
+
 
 var SessionItemButtons = GObject.registerClass(
 class SessionItemButtons extends GObject.Object {
@@ -105,6 +107,7 @@ class SessionItemButtons extends GObject.Object {
             style_class: 'system-status-icon'
         });
 
+        // TODO Remove cycle in the background in case everyone think this separator is a clickable button, actually it's just a view-only separator.
         let button = new St.Button({
             style_class: 'aws-item-separator',
             can_focus: false,
@@ -119,22 +122,9 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _addButton(iconSymbolic) {
-        let icon = new St.Icon({
-            gicon: IconFinder.find(iconSymbolic),
-            style_class: 'system-status-icon'
-        });
-
-        // TODO Remove cycle in the background in case everyone think this separator is a clickable button, actually it's just a view-only separator.
-        let button = new St.Button({
-            style_class: 'aws-item-button',
-            can_focus: true,
-            child: icon,
-            x_align: Clutter.ActorAlign.END,
-            x_expand: false,
-            y_expand: true,
-            track_hover: true
-        });
-
+        const button = new Button({
+            icon_symbolic: iconSymbolic,
+        }).button;
         this.sessionItem.actor.add_child(button);
         return button;
     }
