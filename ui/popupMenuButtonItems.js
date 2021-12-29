@@ -53,8 +53,7 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
         this.noButton = this.createButton('edit-undo-symbolic');
         this.yesButton.add_style_class_name('confirm-before-operate');
         this.noButton.add_style_class_name('confirm-before-operate');
-        this.yesButton.hide();
-        this.noButton.hide();
+        this.hideYesAndNoButtons();
     }
 
     showYesAndNoButtons() {
@@ -78,8 +77,8 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
     createTimeLine() {
         // Set actor when using
         const timeline = new Clutter.Timeline({
-            // 1.5s
-            duration: 1500,
+            // 2s
+            duration: 2000,
             repeat_count: 0,
         });
         return timeline;
@@ -128,8 +127,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
     _hideConfirm() {
         this.confirmLabel.hide();
-        this.yesButton.hide();
-        this.noButton.hide();
+        this.hideYesAndNoButtons();
         this.closingLabel.hide();
     }
 
@@ -185,8 +183,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.closingLabel.hide();
 
         this.confirmLabel.show();
-        this.yesButton.show();
-        this.noButton.show();
+        this.showYesAndNoButtons();
     }
 
     _addConfirm() {
@@ -318,8 +315,9 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             sessionName = FileUtils.default_sessionName;
         }
 
-        if (!this._canSave(sessionName)) {
-            this.savingLabel.set_text(`ERROR: Can't save windows using '${sessionName}', it's an existing directory!`);
+        const [canSave, reason] = this._canSave(sessionName);
+        if (!canSave) {
+            this.savingLabel.set_text(reason);
             this._timeline.set_actor(this.savingLabel);
             this._timeline.connect('new-frame', (_timeline, _frame) => {
                 this.savingLabel.show();
@@ -354,10 +352,14 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     }
 
     _canSave(sessionName) {
-        if (FileUtils.isDirectory(sessionName)) {
-            return false;
+        if (sessionName === FileUtils.sessions_backup_folder_name) {
+            return [false, `ERROR: ${sessionName} is a reserved word, can't be used.`];
         }
-        return true;
+
+        if (FileUtils.isDirectory(sessionName)) {
+            return [false, `ERROR: Can't save windows using '${sessionName}', it's an existing directory!`];
+        }
+        return [true, ''];
     }
 
     destroy() {

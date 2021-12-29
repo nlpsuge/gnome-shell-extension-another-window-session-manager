@@ -8,7 +8,8 @@ const home_dir = GLib.get_home_dir();
 // but desktop_file_id is missing in that file, so can't move them. Will be fixed in the future.
 const config_path_base = GLib.build_filenamev([home_dir, '.config', 'another-window-session-manager']);
 var sessions_path = GLib.build_filenamev([config_path_base, 'sessions']);
-var sessions_backup_path = GLib.build_filenamev([sessions_path, 'backups']);
+var sessions_backup_folder_name = 'backups';
+var sessions_backup_path = GLib.build_filenamev([sessions_path, sessions_backup_folder_name]);
 
 
 function get_sessions_path() {
