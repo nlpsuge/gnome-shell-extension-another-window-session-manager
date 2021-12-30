@@ -3,7 +3,10 @@ Close and save open windows. And restore saved windows sessions.
 
 Most importantly, it supports both X.org and Wayland!
 
-This project is in early development, I'm planing to add some other features, but it basically works now.
+This project is in early development, but it's basically working now. I'm planing to add some other features.
+
+This extension is based on [St(Shell Toolkit)](https://gjs-docs.gnome.org/st10~1.0_api/) and [Shell](https://gjs-docs.gnome.org/shell01~0.1_api/) APIs.
+
 
 <p align="left">
   <a href="https://extensions.gnome.org/extension/4709/another-window-session-manager/">
@@ -14,8 +17,7 @@ This project is in early development, I'm planing to add some other features, bu
 # Screenshot
 
 ## Overview
-![image](https://user-images.githubusercontent.com/2271720/147489333-04a7e657-5a72-45b1-91c3-9dd5dc2f347c.png)
-
+![image](https://user-images.githubusercontent.com/2271720/147721596-0e84626c-8c10-4331-99ac-f0eb3b2db7d3.png)
 
 ## Close open windows
 Click button or item to close open windows:
@@ -40,7 +42,7 @@ After confirm to save:
 # Features
 1. Save open windows
 2. Restore saved open windows and move open windows automatically in the progress
-3. Move windows using a saved session
+3. Move windows according to a saved session
 4. ...
 
 # Panel menu items
@@ -58,7 +60,6 @@ After confirm to save:
 This project uses `ps` to get some information from a process, install it via `dnf install procps-ng` if don't have.
 
 # limitation
-- It depends on St(Shell Toolkit) and Shell APIs so heavily
 - ...
 
 # TODO
@@ -73,7 +74,7 @@ This project uses `ps` to get some information from a process, install it via `d
       - [x] Restore button
       - [x] Rename button
       - [x] Delete button
-5. - [x] Move windows using a saved session.
+5. - [x] Move windows according to a saved session.
 6. - [ ] Settings
       - [x] Debugging mode
 8. - [ ] All TODO tags in the projects

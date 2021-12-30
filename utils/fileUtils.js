@@ -81,19 +81,21 @@ function listAllSessions(sessionPath, recursion, debug, callback) {
 
 function trashSession(sessionName) {
     const sessionFilePath = GLib.build_filenamev([sessions_path, sessionName]);
-    if (GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
-        let trashed = false;
-        try {
-            const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
-            trashed = sessionPathFile.trash(null);
-            if (!trashed) {
-                logError(new Error(`Failed to trash file ${sessionFilePath}. Reason: Unknown.`));
-            }
-            return trashed;
-        } catch(e) {
-            logError(e, `Failed to trash file ${sessionFilePath}`);
-            return false;
+    if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
+        return true;
+    }
+    
+    let trashed = false;
+    try {
+        const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
+        trashed = sessionPathFile.trash(null);
+        if (!trashed) {
+            logError(new Error(`Failed to trash file ${sessionFilePath}. Reason: Unknown.`));
         }
+        return trashed;
+    } catch(e) {
+        logError(e, `Failed to trash file ${sessionFilePath}`);
+        return false;
     }
 }
 

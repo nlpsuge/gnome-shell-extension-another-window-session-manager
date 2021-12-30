@@ -199,7 +199,6 @@ class AwsIndicator extends PanelMenu.Button {
         const sessionPathFile = Gio.File.new_for_path(this._sessions_path);
         // Ok, it's the directory we are monitoring :)
         // TODO If the parent of this._sessions_path was deleted, this.monitor don't get the 'changed' signal, so the panel menu items not removed.
-        // TODO If we click save icon on the panel menu item, the 'changed' signal can see temporary files, eg .goutputstream-VFXXXX, it's probably generated during overriding files, skip this kink of files?
         this.monitor = sessionPathFile.monitor_directory(Gio.FileMonitorFlags.WATCH_MOUNTS | Gio.FileMonitorFlags.WATCH_MOVES, null);
         this.monitor.connect('changed', this._sessionPathChanged.bind(this));
     }
