@@ -22,21 +22,22 @@ This extension is based on [St(Shell Toolkit)](https://gjs-docs.gnome.org/st10~1
 ## Close open windows
 Click button or item to close open windows:
 
-![image](https://user-images.githubusercontent.com/2271720/147405215-6854d881-1a9b-4352-9c42-9a2b8b22e8a3.png)
+![image](https://user-images.githubusercontent.com/2271720/147727060-c5b64c45-7b00-4343-a28d-28d88003be87.png)
 
 
 After confirm to close:
 
-![image](https://user-images.githubusercontent.com/2271720/147340835-853e1672-9b99-4411-a62b-df22a8450b3d.png)
+![image](https://user-images.githubusercontent.com/2271720/147727104-436ea99b-3539-4eae-b1c4-a3fa83f8734d.png)
 
 ## Save open windows
 Click button or item to save open windows as a session:
 
-![image](https://user-images.githubusercontent.com/2271720/147405226-f580018c-e098-47e7-82f3-cdd1a86bd080.png)
+![image](https://user-images.githubusercontent.com/2271720/147727121-82cb063f-339d-481c-bccb-07e91e0fe5d4.png)
+
 
 After confirm to save:
 
-![image](https://user-images.githubusercontent.com/2271720/147405241-cd6fd8ac-bc86-4d8e-87fb-6ce6abfa7eef.png)
+![image](https://user-images.githubusercontent.com/2271720/147727180-633fa9e0-4b66-4763-8cf1-f365ef77f7b3.png)
 
 
 # Features
