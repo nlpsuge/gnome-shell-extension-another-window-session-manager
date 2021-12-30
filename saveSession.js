@@ -6,13 +6,13 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const SessionConfig = Me.imports.model.sessionConfig;
 const FileUtils = Me.imports.utils.fileUtils;
-const PrefsUtils = Me.imports.utils.prefsUtils;
+const Log = Me.imports.utils.log;
 
 
 var SaveSession = class {
 
     constructor() {
-        this._prefsUtils = new PrefsUtils.PrefsUtils();        
+        this._log = new Log.Log();
 
         this._windowTracker = Shell.WindowTracker.get_default();
         this._subprocessLauncher = new Gio.SubprocessLauncher({
@@ -156,9 +156,7 @@ var SaveSession = class {
             );
 
             if (success) {
-                if (this._prefsUtils.isDebug()) {
-                    log(`Saved open windows as a session in ${session_file_path}!`);
-                }
+                this._log.debug(`Saved open windows as a session in ${session_file_path}!`);
             }
             return success;
         }
@@ -195,10 +193,7 @@ var SaveSession = class {
         if (this._subprocessLauncher) {
             this._subprocessLauncher = null;
         }
-        if (this._prefsUtils) {
-            this._prefsUtils.destroy();
-            this._prefsUtils = null;
-        }
+        
     }
 
 }
