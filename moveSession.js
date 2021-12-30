@@ -86,9 +86,10 @@ var MoveSession = class {
             const y = window_position.y_offset;
             const width = window_position.width;
             const height = window_position.height;
-            if (window_position.provider == 'Meta') {
-                open_window.move_resize_frame(true, x, y, width, height);
-            }
+            // Comment the three lines below since it does not work in case it causes unexpected issues.
+            // if (window_position.provider == 'Meta') {
+            //     open_window.move_resize_frame(true, x, y, width, height);
+            // }
 
             saved_window_session.moved = true;
         }
