@@ -12,8 +12,6 @@ const Log = Me.imports.utils.log;
 var SaveSession = class {
 
     constructor() {
-        this._log = new Log.Log();
-
         this._windowTracker = Shell.WindowTracker.get_default();
         this._subprocessLauncher = new Gio.SubprocessLauncher({
             flags: (Gio.SubprocessFlags.STDOUT_PIPE |
@@ -156,7 +154,7 @@ var SaveSession = class {
             );
 
             if (success) {
-                this._log.debug(`Saved open windows as a session in ${session_file_path}!`);
+                Log.debug(`Saved open windows as a session in ${session_file_path}!`);
             }
             return success;
         }
