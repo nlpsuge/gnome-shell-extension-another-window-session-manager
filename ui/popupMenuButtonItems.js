@@ -333,7 +333,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             return;
         }
 
-        this._saveSession.saveSession(sessionName);
+        this._saveSessionAsync(sessionName);
 
         // clear entry
         this.saveCurrentSessionEntry.set_text('');
@@ -352,6 +352,14 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             this.savingLabel.hide();
             this.hideYesAndNoButtons();
         });
+    }
+
+    async _saveSessionAsync(sessionName) {
+        try {
+            this._saveSession.saveSession(sessionName);
+        } catch (e) {
+            logError(e, 'Failed to save session');
+        }
     }
 
     _canSave(sessionName) {
