@@ -60,8 +60,8 @@ After confirm to save:
 # Dependencies
 This project uses `ps` to get some information from a process, install it via `dnf install procps-ng` if don't have.
 
-# limitation
-- ...
+# Where are the saved sessions?
+They are all in `~/.config/another-window-session-manager/sessions`. When use an exsiting name to save the current open windows, the previous file will be copied to `~/.config/another-window-session-manager/sessions/backups`
 
 # TODO
 1. - Save open windows
