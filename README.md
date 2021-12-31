@@ -40,11 +40,12 @@ After confirm to save:
 ![image](https://user-images.githubusercontent.com/2271720/147727180-633fa9e0-4b66-4763-8cf1-f365ef77f7b3.png)
 
 
-# Features
+# Main features
 1. Save open windows
-2. Restore saved open windows and move open windows automatically in the progress
+2. Restore saved open windows and move windows automatically in the progress
 3. Move windows according to a saved session
-4. ...
+4. Restore window state, including `Always on Top` and `Always on Visible Workspace`
+5. ...
 
 # Panel menu items
 
@@ -61,7 +62,7 @@ After confirm to save:
 This project uses `ps` to get some information from a process, install it via `dnf install procps-ng` if don't have.
 
 # Where are the saved sessions?
-They are all in `~/.config/another-window-session-manager/sessions`. When use an exsiting name to save the current open windows, the previous file will be copied to `~/.config/another-window-session-manager/sessions/backups`
+They are all in `~/.config/another-window-session-manager/sessions`. When use an exsiting name to save the current open windows, the previous file will be copied to `~/.config/another-window-session-manager/sessions/backups` as a new name, which is {the-old-session-name}**.backup-{timestampt}**.
 
 # TODO
 1. - Save open windows
