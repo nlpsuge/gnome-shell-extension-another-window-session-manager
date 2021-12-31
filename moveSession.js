@@ -12,6 +12,8 @@ const Log = Me.imports.utils.log;
 var MoveSession = class {
 
     constructor() {
+        this._log = new Log.Log();
+
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
 
@@ -29,8 +31,7 @@ var MoveSession = class {
             return;
         }
 
-        Log.debug(`Moving windows by saved session located in ${session_file_path}`);
-        
+        this._log.debug(`Moving windows by saved session located in ${session_file_path}`);
         const session_file = Gio.File.new_for_path(session_file_path);
         let [success, contents] = session_file.load_contents(null);
         if (success) {
@@ -63,8 +64,7 @@ var MoveSession = class {
             const title = open_window.get_title();
             const desktop_number = saved_window_session.desktop_number;
 
-            Log.debug(`Auto move the window '${title}' to workspace ${desktop_number} for ${shellApp.get_name()}`);
-            
+            this._log.debug(`Auto move the window '${title}' to workspace ${desktop_number} for ${shellApp.get_name()}`);
             this._createEnoughWorkspace(desktop_number);
             open_window.change_workspace_by_index(desktop_number, false);
             
@@ -118,7 +118,7 @@ var MoveSession = class {
 
                 if (windows_count === 1 || title === saved_window_session.window_title) {
                     if (open_window_workspace_index === desktop_number) {
-                        Log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
+                        this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
                         saved_window_session.moved = true;
                         return;
                     }
@@ -146,6 +146,11 @@ var MoveSession = class {
     destroy() {
         if (this._defaultAppSystem) {
             this._defaultAppSystem = null;
+        }
+
+        if (this._log) {
+            this._log.destroy();
+            this._log = null;
         }
         
     }

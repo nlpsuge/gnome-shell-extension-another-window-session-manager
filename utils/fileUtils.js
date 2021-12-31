@@ -2,11 +2,6 @@
 
 const { Gio, GLib } = imports.gi
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-const Log = Me.imports.utils.log;
-
 var default_sessionName = 'defaultSession';
 const home_dir = GLib.get_home_dir();
 // This extension can restore `xsm`'s session file, 
@@ -38,7 +33,7 @@ function getJsonObj(contents) {
     return session_config;
 }
 
-function listAllSessions(sessionPath, recursion, callback) {
+function listAllSessions(sessionPath, recursion, debug, callback) {
     if (!sessionPath) {
         sessionPath = get_sessions_path();
     }
@@ -47,8 +42,9 @@ function listAllSessions(sessionPath, recursion, callback) {
         return;
     }
 
-    Log.debug(`Looking up path: ${sessionPath}`);
-    
+    if (debug) {
+        log(`Looking up path: ${sessionPath}`);
+    }
     const sessionPathFile = Gio.File.new_for_path(sessionPath);
     let fileEnumerator;
     try {
@@ -69,8 +65,10 @@ function listAllSessions(sessionPath, recursion, callback) {
         while ((info = fileEnumerator.next_file(null))) {
             const file = fileEnumerator.get_child(info);
             if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
-                Log.debug(`${info.get_name()} is a folder, checking`);
-                listAllSessions(file.get_path(), recursion, callback);
+                if (debug) {
+                    log(`${info.get_name()} is a folder, checking`);
+                }
+                listAllSessions(file.get_path(), recursion, debug, callback);
             }
 
             if (callback) {
@@ -82,8 +80,6 @@ function listAllSessions(sessionPath, recursion, callback) {
 }
 
 function trashSession(sessionName) {
-    Log.debug(`Moving ${sessionName} to trash scan.`);
-    
     const sessionFilePath = GLib.build_filenamev([sessions_path, sessionName]);
     if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
         return true;
