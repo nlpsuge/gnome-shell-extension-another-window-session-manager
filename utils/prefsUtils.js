@@ -1,3 +1,5 @@
+'use strict';
+
 const ExtensionUtils = imports.misc.extensionUtils;
 
 var PrefsUtils = class {

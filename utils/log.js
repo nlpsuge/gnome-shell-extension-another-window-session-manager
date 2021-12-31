@@ -15,7 +15,7 @@ var Log = class {
 
     debug(logContent) {
         if (this._prefsUtils.isDebug()) {
-            log(`[Another window session manager] ${logContent}`);
+            log(`[DEBUG][Another window session manager] ${logContent}`);
         }
     }
 

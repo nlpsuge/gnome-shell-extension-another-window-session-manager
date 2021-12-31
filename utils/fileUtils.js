@@ -68,7 +68,7 @@ function listAllSessions(sessionPath, recursion, debug, callback) {
                 if (debug) {
                     log(`${info.get_name()} is a folder, checking`);
                 }
-                listAllSessions(file.get_path(), callback);
+                listAllSessions(file.get_path(), recursion, debug, callback);
             }
 
             if (callback) {
