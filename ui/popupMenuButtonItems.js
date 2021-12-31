@@ -197,7 +197,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     }
 
     destroy() {
-        // TODO　Nullify others created objects?
+        // TODO Nullify others created objects?
 
         // TODO Also disconnect new-frame and completed?
         if (this._timeline) {
@@ -366,7 +366,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     }
 
     destroy() {
-        // TODO　Nullify others created objects?
+        // TODO Nullify others created objects?
 
         // TODO Also disconnect new-frame and completed?
         if (this._timeline) {
