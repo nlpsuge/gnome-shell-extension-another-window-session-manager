@@ -6,12 +6,14 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const FileUtils = Me.imports.utils.fileUtils;
-const Log = Me.imports.utils.log;
+const PrefsUtils = Me.imports.utils.prefsUtils;
 
 
 var MoveSession = class {
 
     constructor() {
+        this._prefsUtils = new PrefsUtils.PrefsUtils();
+
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
 
@@ -29,8 +31,9 @@ var MoveSession = class {
             return;
         }
 
-        Log.debug(`Moving windows by saved session located in ${session_file_path}`);
-        
+        if (this._prefsUtils.isDebug()) {
+            log(`Moving windows by saved session located in ${session_file_path}`);
+        }
         const session_file = Gio.File.new_for_path(session_file_path);
         let [success, contents] = session_file.load_contents(null);
         if (success) {
@@ -63,8 +66,9 @@ var MoveSession = class {
             const title = open_window.get_title();
             const desktop_number = saved_window_session.desktop_number;
 
-            Log.debug(`Auto move the window '${title}' to workspace ${desktop_number} for ${shellApp.get_name()}`);
-            
+            if (this._prefsUtils.isDebug()) {
+                log(`Auto move the window '${title}' to workspace ${desktop_number} for ${shellApp.get_name()}`);
+            }
             this._createEnoughWorkspace(desktop_number);
             open_window.change_workspace_by_index(desktop_number, false);
             
@@ -118,7 +122,9 @@ var MoveSession = class {
 
                 if (windows_count === 1 || title === saved_window_session.window_title) {
                     if (open_window_workspace_index === desktop_number) {
-                        Log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
+                        if (this._prefsUtils.isDebug()) {
+                            log(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
+                        }
                         saved_window_session.moved = true;
                         return;
                     }
@@ -147,7 +153,11 @@ var MoveSession = class {
         if (this._defaultAppSystem) {
             this._defaultAppSystem = null;
         }
-        
+
+        if (this._prefsUtils) {
+            this._prefsUtils.destroy();
+            this._prefsUtils = null;
+        }
     }
 
 }

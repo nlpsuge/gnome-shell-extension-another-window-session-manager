@@ -6,10 +6,25 @@ const Me = ExtensionUtils.getCurrentExtension();
 const PrefsUtils = Me.imports.utils.prefsUtils;
 
 
-const _prefsUtils = new PrefsUtils.PrefsUtils();
+var Log = class {
 
-function debug(logContent) {
-    if (_prefsUtils.isDebug()) {
-        log(`[Another window session manager] ${logContent}`);
+    constructor() {
+        this._prefsUtils = new PrefsUtils.PrefsUtils();
+        
     }
+
+    debug(logContent) {
+        if (this._prefsUtils.isDebug()) {
+            log(`[Another window session manager] ${logContent}`);
+        }
+    }
+
+    destroy() {
+        if (this._prefsUtils) {
+            this._prefsUtils.destroy();
+            this._prefsUtils = null;
+        }
+
+    }
+
 }

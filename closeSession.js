@@ -4,10 +4,12 @@ const { Shell } = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const Log = Me.imports.utils.log;
+const PrefsUtils = Me.imports.utils.prefsUtils;
 
 var CloseSession = class {
     constructor() {
+        this._prefsUtils = new PrefsUtils.PrefsUtils();
+
         this._skip_app_with_multiple_windows = true;
         this._defaultAppSystem = Shell.AppSystem.get_default();
         // TODO Put into Settings
@@ -16,16 +18,21 @@ var CloseSession = class {
     }
 
     closeWindows() {
-        Log.debug('Closing open windows');
+        if (this._prefsUtils.isDebug()) {
+            log('Closing open windows');
+        }
         let running_apps = this._defaultAppSystem.get_running();
         for (const app of running_apps) {
             const app_name = app.get_name();
             if (this._skip_multiple_windows(app)) {
-                Log.debug(`Skipping ${app.get_name()} because it has more than one windows`);
+                if (this._prefsUtils.isDebug()) {
+                    log(`Skipping ${app.get_name()} because it has more than one windows`);
+                }
                 continue;
             }
-
-            Log.debug(`Closing ${app_name}`);
+            if (this._prefsUtils.isDebug()) {
+                log(`Closing ${app_name}`);
+            }
             app.request_quit();
         }
     }
@@ -34,7 +41,9 @@ var CloseSession = class {
         if (shellApp.get_n_windows() > 1 && this._skip_app_with_multiple_windows) {
             const app_id = shellApp.get_id();
             if (this.whitelist.includes(app_id)) {
-                Log.debug(`${shellApp.get_name()} / ${app_id} in the whitelist.`);
+                if (this._prefsUtils.isDebug()) {
+                    log(`${shellApp.get_name()} / ${app_id} in the whitelist.`);
+                }
                 return false;
             }
             return true;
@@ -45,6 +54,11 @@ var CloseSession = class {
     destroy() {
         if (this._defaultAppSystem) {
             this._defaultAppSystem = null;
+        }
+
+        if (this._prefsUtils) {
+            this._prefsUtils.destroy();
+            this._prefsUtils = null;
         }
     }
     

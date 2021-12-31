@@ -15,7 +15,7 @@ const SessionItem = Me.imports.ui.sessionItem;
 const SearchSessionItem = Me.imports.ui.searchSessionItem;
 const PopupMenuButtonItems = Me.imports.ui.popupMenuButtonItems;
 const IconFinder = Me.imports.utils.iconFinder;
-const Log = Me.imports.utils.log;
+const PrefsUtils = Me.imports.utils.prefsUtils;
 
 
 var AwsIndicator = GObject.registerClass(
@@ -23,6 +23,8 @@ class AwsIndicator extends PanelMenu.Button {
 
     _init() {
         super._init(0.0, "Another Window Session Manager");
+
+        this._prefsUtils = new PrefsUtils.PrefsUtils();
         
         this._itemIndex = 0;
 
@@ -111,20 +113,26 @@ class AwsIndicator extends PanelMenu.Button {
             return;
         }
 
-        Log.debug('List all sessions to add session items');
+        if (this._prefsUtils.isDebug()) {
+            log('List all sessions to add session items');
+        }
 
         let sessionFileInfos = [];
-        FileUtils.listAllSessions(null, false, (file, info) => {
+        FileUtils.listAllSessions(null, false, this._prefsUtils.isDebug(),(file, info) => {
             // We have an interest in regular and text files
 
             const file_type = info.get_file_type();
             if (file_type !== Gio.FileType.REGULAR) {
-                Log.debug(`${file.get_path()} (file type is ${file_type}) is not a regular file, skipping`);
+                if (this._prefsUtils.isDebug()) {
+                    log(`${file.get_path()} (file type is ${file_type}) is not a regular file, skipping`);
+                }
                 return;
             }
             const content_type = info.get_content_type();
             if (content_type !== 'text/plain') {
-                Log.debug(`${file.get_path()} (content type is ${content_type}) is not a text file, skipping`);
+                if (this._prefsUtils.isDebug()) {
+                    log(`${file.get_path()} (content type is ${content_type}) is not a text file, skipping`);
+                }
                 return;
             }
 
@@ -139,7 +147,9 @@ class AwsIndicator extends PanelMenu.Button {
             } else {
                 parentPath = parent.get_path();
             }
-            Log.debug(`Processing ${file.get_path()} under ${parentPath}`);
+            if (this._prefsUtils.isDebug()) {
+                log(`Processing ${file.get_path()} under ${parentPath}`);
+            }
             sessionFileInfos.push({
                 info: info,
                 file: file
@@ -196,8 +206,9 @@ class AwsIndicator extends PanelMenu.Button {
     // https://gjs-docs.gnome.org/gio20~2.66p/gio.filemonitor#signal-changed
     // Looks like the document is wrong ...
     _sessionPathChanged(monitor, srcFile, descFile) {
-        Log.debug(`Session path changed, readd all session items from ${this._sessions_path}. ${srcFile.get_path()} was changed.`);
-        
+        if (this._prefsUtils.isDebug()) {
+            log(`Session path changed, readd all session items from ${this._sessions_path}. ${srcFile.get_path()} was changed.`);
+        }
         this._sessionsMenuSection.removeAll();
         // It probably is a problem when there is large amount session files,
         // say thousands of them, but who creates that much?
@@ -239,6 +250,11 @@ class AwsIndicator extends PanelMenu.Button {
 
         if (this._sessions_path) {
             this._sessions_path = null;
+        }
+
+        if (this._prefsUtils) {
+            this._prefsUtils.destroy();
+            this._prefsUtils = null;
         }
 
         this.destroy();

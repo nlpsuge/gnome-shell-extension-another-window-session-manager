@@ -11,12 +11,14 @@ const Me = ExtensionUtils.getCurrentExtension();
 const MoveSession = Me.imports.moveSession;
 
 const FileUtils = Me.imports.utils.fileUtils;
-const Log = Me.imports.utils.log;
+const PrefsUtils = Me.imports.utils.prefsUtils;
 
 
 var RestoreSession = class {
 
     constructor() {
+        this._prefsUtils = new PrefsUtils.PrefsUtils();
+
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
         this._restoredApps = new Map();
@@ -35,8 +37,9 @@ var RestoreSession = class {
             return;
         }
 
-        Log.debug(`Restoring saved session from ${session_file_path}`);
-        
+        if (this._prefsUtils.isDebug()) {
+            log(`Restoring saved session from ${session_file_path}`);
+        }
         try {
             this.restoreSessionFromPath(session_file_path);
         } catch (e) {
@@ -68,7 +71,9 @@ var RestoreSession = class {
                             [launched, running] = this.launch(shell_app);
                             if (launched) {
                                 if (!running) {
-                                    Log.debug(`${app_name} launched!`);
+                                    if (this._prefsUtils.isDebug()) {
+                                        log(`${app_name} launched!`);
+                                    }
                                 }
                                 const existingShellAppData = this._restoredApps.get(shell_app);
                                 if (existingShellAppData) {
@@ -125,7 +130,9 @@ var RestoreSession = class {
         }
 
         if (this._appIsRunning(shellApp)) {
-            Log.debug(`${shellApp.get_name()} is running, skipping`)
+            if (this._prefsUtils.isDebug()) {
+                log(`${shellApp.get_name()} is running, skipping`)
+            }
             return [true, true];
         }
 
@@ -188,6 +195,10 @@ var RestoreSession = class {
             this._moveSession = null;
         }
 
+        if (this._prefsUtils) {
+            this._prefsUtils.destroy();
+            this._prefsUtils = null;
+        }
     }
 
 }
