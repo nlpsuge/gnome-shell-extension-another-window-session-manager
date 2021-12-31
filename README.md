@@ -20,7 +20,7 @@ This extension is based on [St(Shell Toolkit)](https://gjs-docs.gnome.org/st10~1
 ![image](https://user-images.githubusercontent.com/2271720/147721596-0e84626c-8c10-4331-99ac-f0eb3b2db7d3.png)
 
 ## Close open windows
-Click button or item to close open windows:
+Click item to close open windows:
 
 ![image](https://user-images.githubusercontent.com/2271720/147727060-c5b64c45-7b00-4343-a28d-28d88003be87.png)
 
@@ -30,7 +30,7 @@ After confirm to close:
 ![image](https://user-images.githubusercontent.com/2271720/147727104-436ea99b-3539-4eae-b1c4-a3fa83f8734d.png)
 
 ## Save open windows
-Click button or item to save open windows as a session:
+Click item to save open windows as a session:
 
 ![image](https://user-images.githubusercontent.com/2271720/147727121-82cb063f-339d-481c-bccb-07e91e0fe5d4.png)
 
