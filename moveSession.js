@@ -94,7 +94,7 @@ var MoveSession = class {
                     const current_y = frameRect.y;
                     const current_width = frameRect.width;
                     const current_height = frameRect.height;
-                    // x, y width and height
+                    // if x, y width and height all 0, the window probably still not be full rendered, recheck
                     if (current_x === 0 &&
                         current_y === 0 &&
                         current_width === 0 &&
@@ -102,7 +102,16 @@ var MoveSession = class {
                         return GLib.SOURCE_CONTINUE;
                     }
 
+                    // In `journalctl /usr/bin/gnome-shell` still has the below error, looks harmless, ignore it:
+                    // meta_window_set_stack_position_no_sync: assertion 'window->stack_position >= 0' failed
                     this._restoreWindowGeometry(open_window, saved_window_session);
+
+                    // The window can't be moved due to previous reason, change workspace if necessary.
+                    const desktop_number = saved_window_session.desktop_number;
+                    const current_workspace = open_window.get_workspace();
+                    if (desktop_number !== current_workspace.index()) {
+                        open_window.change_workspace_by_index(desktop_number, false);
+                    }
                     actor.disconnect(signal)
                     return GLib.SOURCE_REMOVE;
                 });
