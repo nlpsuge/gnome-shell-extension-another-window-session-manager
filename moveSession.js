@@ -1,6 +1,6 @@
 'use strict';
 
-const { Shell, Gio, GLib } = imports.gi;
+const { Shell, Gio, GLib, Meta } = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -85,10 +85,35 @@ var MoveSession = class {
             open_window.stick();
         }
 
-        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-            this._restoreWindowGeometry(open_window, saved_window_session);
-            return GLib.SOURCE_REMOVE;
-        });
+        if (Meta.is_wayland_compositor()) {
+            let actor = open_window.get_compositor_private();
+            let signal = actor.connect('effects-completed', () => {
+                GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                    const frameRect = open_window.get_frame_rect();
+                    const current_x = frameRect.x;
+                    const current_y = frameRect.y;
+                    const current_width = frameRect.width;
+                    const current_height = frameRect.height;
+                    // x, y width and height
+                    if (current_x === 0 &&
+                        current_y === 0 &&
+                        current_width === 0 &&
+                        current_height === 0) {
+                        return GLib.SOURCE_CONTINUE;
+                    }
+
+                    this._restoreWindowGeometry(open_window, saved_window_session);
+                    actor.disconnect(signal)
+                    return GLib.SOURCE_REMOVE;
+                });
+            })
+
+        } else {
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                this._restoreWindowGeometry(open_window, saved_window_session);
+                return GLib.SOURCE_REMOVE;
+            });
+        }
 
     }
 
@@ -110,6 +135,7 @@ var MoveSession = class {
                 current_width !== to_width ||
                 current_height !== to_height) 
             {
+                log(`${current_x} / ${current_y} / ${current_width} / ${current_height}`);
                 metaWindow.move_resize_frame(false, to_x, to_y, to_width, to_height);
             }
         }
