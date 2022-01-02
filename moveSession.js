@@ -17,6 +17,8 @@ var MoveSession = class {
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
 
+        this._connectIds = [];
+
     }
 
     moveWindows(sessionName) {
@@ -101,6 +103,7 @@ var MoveSession = class {
                         metaWindowActor.disconnect(firstFrameId);
                     });
                 });
+                this._connectIds.push([metaWindowActor, firstFrameId]);
             }
             
             this._restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, null);
@@ -231,6 +234,13 @@ var MoveSession = class {
         if (this._log) {
             this._log.destroy();
             this._log = null;
+        }
+
+        if (this._connectIds) {
+            this._connectIds.forEach((obj, id) => {
+                obj.disconnect(id);
+            });
+            this._connectIds = null;
         }
 
     }
