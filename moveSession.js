@@ -65,11 +65,17 @@ var MoveSession = class {
             const desktop_number = saved_window_session.desktop_number;
 
             this._log.debug(`Auto move the window '${title}' to workspace ${desktop_number} for ${shellApp.get_name()}`);
-            this._createEnoughWorkspace(desktop_number);
-            open_window.change_workspace_by_index(desktop_number, false);
             
-            this._restoreWindowStateAndGeometry(open_window, saved_window_session);
+            try {
+                this._createEnoughWorkspace(desktop_number);
+                open_window.change_workspace_by_index(desktop_number, false);
+                
+                this._restoreWindowStateAndGeometry(open_window, saved_window_session);
+            } catch(e) {
+                // I just don't want one failure breaks the loop 
 
+                this._log.error(e, `Failed to move window ${title} for ${shellApp.get_name()} automatically`);
+            }
             saved_window_session.moved = true;
         }
 
@@ -86,36 +92,33 @@ var MoveSession = class {
         }
 
         if (Meta.is_wayland_compositor()) {
-            let actor = open_window.get_compositor_private();
-            let signal = actor.connect('effects-completed', () => {
-                GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                    const frameRect = open_window.get_frame_rect();
-                    const current_x = frameRect.x;
-                    const current_y = frameRect.y;
-                    const current_width = frameRect.width;
-                    const current_height = frameRect.height;
-                    // if x, y width and height all 0, the window probably still not be full rendered, recheck
-                    if (current_x === 0 &&
-                        current_y === 0 &&
-                        current_width === 0 &&
-                        current_height === 0) {
-                        return GLib.SOURCE_CONTINUE;
-                    }
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                let frameRect = open_window.get_frame_rect();
+                let current_x = frameRect.x;
+                let current_y = frameRect.y;
+                let current_width = frameRect.width;
+                let current_height = frameRect.height;
+                // if x, y width and height all 0, the window probably still not be full rendered, recheck
+                if (current_x === 0 &&
+                    current_y === 0 &&
+                    current_width === 0 &&
+                    current_height === 0) 
+                {
+                    return GLib.SOURCE_CONTINUE;
+                }
 
-                    // In `journalctl /usr/bin/gnome-shell` still has the below error, looks harmless, ignore it:
-                    // meta_window_set_stack_position_no_sync: assertion 'window->stack_position >= 0' failed
-                    this._restoreWindowGeometry(open_window, saved_window_session);
+                // In `journalctl /usr/bin/gnome-shell` still has the below error, looks harmless, ignore it:
+                // meta_window_set_stack_position_no_sync: assertion 'window->stack_position >= 0' failed
+                this._restoreWindowGeometry(open_window, saved_window_session);
 
-                    // The window can't be moved due to previous reason, change workspace if necessary.
-                    const desktop_number = saved_window_session.desktop_number;
-                    const current_workspace = open_window.get_workspace();
-                    if (desktop_number !== current_workspace.index()) {
-                        open_window.change_workspace_by_index(desktop_number, false);
-                    }
-                    actor.disconnect(signal)
-                    return GLib.SOURCE_REMOVE;
-                });
-            })
+                // The window can't be moved due to previous reason, change workspace if necessary.
+                const desktop_number = saved_window_session.desktop_number;
+                const current_workspace = open_window.get_workspace();
+                if (desktop_number !== current_workspace.index()) {
+                    open_window.change_workspace_by_index(desktop_number, false);
+                }
+                return GLib.SOURCE_REMOVE;
+            });
 
         } else {
             GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
@@ -144,7 +147,6 @@ var MoveSession = class {
                 current_width !== to_width ||
                 current_height !== to_height) 
             {
-                log(`${current_x} / ${current_y} / ${current_width} / ${current_height}`);
                 metaWindow.move_resize_frame(false, to_x, to_y, to_width, to_height);
             }
         }
