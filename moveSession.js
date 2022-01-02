@@ -92,9 +92,10 @@ var MoveSession = class {
         }
 
         if (Meta.is_wayland_compositor()) {
-            let metaWindowActor = open_window.get_compositor_private();
             // It makes no sense to connect the 'first-frame' if a window has existed already
             if (first) {
+                let metaWindowActor = open_window.get_compositor_private();
+                // See: https://github.com/paperwm/PaperWM/blob/10215f57e8b34a044e10b7407cac8fac4b93bbbc/tiling.js#L2120
                 const firstFrameId = metaWindowActor.connect('first-frame', () => {
                     this._restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, () => {
                         metaWindowActor.disconnect(firstFrameId);
