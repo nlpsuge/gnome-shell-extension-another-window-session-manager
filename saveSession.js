@@ -98,6 +98,7 @@ var SaveSession = class {
 
         // Save open windows
         try {
+            sessionConfig.x_session_config_objects = sessionConfig.sort();
             const success = this.save2File(sessionConfig);
             if (success) {
                 // TODO saved Notification

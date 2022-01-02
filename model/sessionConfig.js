@@ -48,5 +48,32 @@ var SessionConfig = class {
     backup_time; // str
     restore_times; // list = []
     x_session_config_objects = []; // list[SessionConfigObject]
-    
+
+
+    /**
+     * Sort session_config_objects by desktop number
+     * 
+     */
+    sort() {
+        let x_session_config_objects_copy = this.x_session_config_objects.slice();
+        x_session_config_objects_copy.sort((o1, o2) => {
+            const desktop_number1 = o1.desktop_number;
+            const desktop_number2 = o2.desktop_number;
+
+            const diff = desktop_number1 - desktop_number2;
+            if (diff === 0) {
+                return 0;
+            }
+
+            if (diff > 0) {
+                return 1;
+            }
+
+            if (diff < 0) {
+                return -1;
+            }
+
+        });
+        return x_session_config_objects_copy;
+    }
 }
