@@ -143,7 +143,7 @@ var RestoreSession = class {
         // log(`windows-changed triggered for ${shellApp.get_name()}`);
         const shellAppData = this._restoredApps.get(shellApp);
         let saved_window_sessions = shellAppData.saved_window_sessions
-        this._moveSession.moveWindowsByShellApp(shellApp, saved_window_sessions);
+        this._moveSession.moveWindowsByShellApp(shellApp, saved_window_sessions, true);
     }
 
     _appIsRunning(app) {

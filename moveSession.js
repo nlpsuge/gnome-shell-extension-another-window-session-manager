@@ -45,13 +45,13 @@ var MoveSession = class {
 
             const running_apps = this._defaultAppSystem.get_running();
             for (const shellApp of running_apps) {
-                this.moveWindowsByShellApp(shellApp, session_config_objects);
+                this.moveWindowsByShellApp(shellApp, session_config_objects, false);
             }
         }
 
     }
 
-    moveWindowsByShellApp(shellApp, saved_window_sessions) {
+    moveWindowsByShellApp(shellApp, saved_window_sessions, first) {
         const interestingWindows = this._getAutoMoveInterestingWindows(shellApp, saved_window_sessions);
 
         if (!interestingWindows.length) {
@@ -70,7 +70,7 @@ var MoveSession = class {
                 this._createEnoughWorkspace(desktop_number);
                 open_window.change_workspace_by_index(desktop_number, false);
                 
-                this._restoreWindowStateAndGeometry(open_window, saved_window_session);
+                this._restoreWindowStateAndGeometry(open_window, saved_window_session, first);
             } catch(e) {
                 // I just don't want one failure breaks the loop 
 
@@ -81,7 +81,7 @@ var MoveSession = class {
 
     }
 
-    _restoreWindowStateAndGeometry(open_window, saved_window_session) {
+    _restoreWindowStateAndGeometry(open_window, saved_window_session, first) {
         // window state
         const window_state = saved_window_session.window_state;
         if (window_state.is_above) {
@@ -92,34 +92,18 @@ var MoveSession = class {
         }
 
         if (Meta.is_wayland_compositor()) {
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                let frameRect = open_window.get_frame_rect();
-                let current_x = frameRect.x;
-                let current_y = frameRect.y;
-                let current_width = frameRect.width;
-                let current_height = frameRect.height;
-                // if x, y width and height all 0, the window probably still not be full rendered, recheck
-                if (current_x === 0 &&
-                    current_y === 0 &&
-                    current_width === 0 &&
-                    current_height === 0) 
-                {
-                    return GLib.SOURCE_CONTINUE;
-                }
-
-                // In `journalctl /usr/bin/gnome-shell` still has the below error, looks harmless, ignore it:
-                // meta_window_set_stack_position_no_sync: assertion 'window->stack_position >= 0' failed
-                this._restoreWindowGeometry(open_window, saved_window_session);
-
-                // The window can't be moved due to previous reason, change workspace if necessary.
-                const desktop_number = saved_window_session.desktop_number;
-                const current_workspace = open_window.get_workspace();
-                if (desktop_number !== current_workspace.index()) {
-                    open_window.change_workspace_by_index(desktop_number, false);
-                }
-                return GLib.SOURCE_REMOVE;
-            });
-
+            let metaWindowActor = open_window.get_compositor_private();
+            // It makes no sense to connect the 'first-frame' if a window has existed already
+            if (first) {
+                const firstFrameId = metaWindowActor.connect('first-frame', () => {
+                    this._restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, () => {
+                        metaWindowActor.disconnect(firstFrameId);
+                    });
+                });
+            }
+            
+            this._restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, null);
+            
         } else {
             GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 this._restoreWindowGeometry(open_window, saved_window_session);
@@ -127,6 +111,40 @@ var MoveSession = class {
             });
         }
 
+    }
+
+    _restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, cbFunc) {
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            let frameRect = open_window.get_frame_rect();
+            let current_x = frameRect.x;
+            let current_y = frameRect.y;
+            let current_width = frameRect.width;
+            let current_height = frameRect.height;
+            // if x, y width and height all 0, the window probably still not be full rendered, recheck
+            if (current_x === 0 &&
+                current_y === 0 &&
+                current_width === 0 &&
+                current_height === 0) 
+            {
+                return GLib.SOURCE_CONTINUE;
+            }
+
+            // In `journalctl /usr/bin/gnome-shell` still has the below error, looks harmless, ignore it:
+            // meta_window_set_stack_position_no_sync: assertion 'window->stack_position >= 0' failed
+            this._restoreWindowGeometry(open_window, saved_window_session);
+
+            // The window can't be moved due to previous reason, change workspace if necessary.
+            const desktop_number = saved_window_session.desktop_number;
+            const current_workspace = open_window.get_workspace();
+            if (desktop_number !== current_workspace.index()) {
+                open_window.change_workspace_by_index(desktop_number, false);
+            }
+
+            if (cbFunc) {
+                cbFunc();
+            }
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _restoreWindowGeometry(metaWindow, saved_window_session) {
@@ -147,7 +165,7 @@ var MoveSession = class {
                 current_width !== to_width ||
                 current_height !== to_height) 
             {
-                metaWindow.move_resize_frame(false, to_x, to_y, to_width, to_height);
+                metaWindow.move_resize_frame(true, to_x, to_y, to_width, to_height);
             }
         }
     }
