@@ -12,10 +12,11 @@ const SessionItemButtons = Me.imports.ui.sessionItemButtons;
 var SessionItem = GObject.registerClass(
 class SessionItem extends PopupMenu.PopupMenuItem {
     
-    _init(fileInfo, file) {
+    _init(fileInfo, file, indicator) {
         // Initialize this component, so we can use this.label etc
         super._init("");
 
+        this._indicator = indicator;
         this._filename = fileInfo.get_name();
         this._filepath = file.get_path();
         this._modification_time = 'Unknown';

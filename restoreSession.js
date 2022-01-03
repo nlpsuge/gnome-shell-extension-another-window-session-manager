@@ -8,15 +8,13 @@ const { ByteArray } = imports.byteArray;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const MoveSession = Me.imports.moveSession;
-
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 
 
 var RestoreSession = class {
 
-    constructor() {
+    constructor(sessionItemButtons) {
         this._log = new Log.Log();
 
         this.sessionName = FileUtils.default_sessionName;
@@ -24,11 +22,15 @@ var RestoreSession = class {
         this._windowTracker = Shell.WindowTracker.get_default();        
 
         // All launching apps info by Shell.App#launch()
-        this._restoringApps = new Map();
+        if (sessionItemButtons) {
+            sessionItemButtons.sessionItem._indicator._restoringApps = new Map();
+            this._restoringApps = sessionItemButtons.sessionItem._indicator._restoringApps;
+        } else {
+            this._restoringApps = new Map();
+        }        
 
         // All launched apps info by Shell.App#launch()
         this._restoredApps = new Map();
-        this._moveSession = new MoveSession.MoveSession();
 
         this._display = global.display;
         this._displayId = null;
@@ -68,8 +70,6 @@ var RestoreSession = class {
                 return;
             }
             
-            this._displayId = global.display.connect('window-created', this._windowCreated.bind(this));
-
             for (const session_config_object of session_config_objects) {
                 const app_name = session_config_object.app_name;
                 let launched = false;
@@ -159,35 +159,6 @@ var RestoreSession = class {
         return [launched, false];
     }
 
-    _windowCreated(display, metaWindow, userData) {
-        let metaWindowActor = metaWindow.get_compositor_private();
-        // https://github.com/paperwm/PaperWM/blob/10215f57e8b34a044e10b7407cac8fac4b93bbbc/tiling.js#L2120
-        // https://gjs-docs.gnome.org/meta8~8_api/meta.windowactor#signal-first-frame
-        const firstFrameId = metaWindowActor.connect('first-frame', () => {
-            const shellApp = this._windowTracker.get_window_app(metaWindow);
-            if (!shellApp) {
-                return;
-            }
-
-            if (this._log.isDebug()) {
-                // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
-                this._log.debug(`window-created -> first-frame: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
-            }
-
-            const shellAppData = this._restoringApps.get(shellApp);
-            if (!shellAppData) {
-                return;
-            }
-    
-            const saved_window_sessions = shellAppData.saved_window_sessions;
-            this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
-        
-        });
-        
-        this._connectIds.push([metaWindowActor, firstFrameId]);
-        
-    }
-
     _appIsRunning(app) {
         // Running apps can be empty even if there are apps running when gnome-shell starting
         const running_apps = this._defaultAppSystem.get_running();
@@ -236,10 +207,6 @@ var RestoreSession = class {
 
         if (this._windowTracker) {
             this._windowTracker = null;
-        }
-
-        if (this._moveSession) {
-            this._moveSession = null;
         }
 
         if (this._log) {

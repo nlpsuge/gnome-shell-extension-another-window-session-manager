@@ -95,6 +95,10 @@ var MoveSession = class {
             this._restoreWindowStateAndGeometry(metaWindow, saved_window_session);
             const desktop_number = saved_window_session.desktop_number;
             this._createEnoughWorkspace(desktop_number);
+            if (this._log.isDebug()) {
+                const shellApp = this._windowTracker.get_window_app(metaWindow);
+                this._log.debug(`Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number}`);
+            }
             metaWindow.change_workspace_by_index(desktop_number, false);
             saved_window_session.moved = true;
             return GLib.SOURCE_REMOVE;
@@ -116,7 +120,7 @@ var MoveSession = class {
                 if (open_window_workspace_index === desktop_number) {
                     if (this._log.isDebug()) {
                         const shellApp = this._windowTracker.get_window_app(metaWindow);
-                        this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
+                        this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp?.get_name()}`);
                     }
                     this._restoreWindowStateAndGeometry(metaWindow, saved_window_session);
                     saved_window_session.moved = true;
@@ -247,9 +251,23 @@ var MoveSession = class {
 
     _createEnoughWorkspace(workspaceNumber) {
         let workspaceManager = global.workspace_manager;
+
+        // We have enough workspace now, return
+        if (workspaceManager.n_workspaces >= workspaceNumber) {
+            return;
+        }
+
+        // First, make all existing workspaces persistent
+        for (let i = 0; i <= workspaceManager.n_workspaces - 1; i++) {
+            let workspace = workspaceManager.get_workspace_by_index(i);
+            if (!workspace._keepAliveId) {
+                workspace._keepAliveId = true;
+            }
+        }
+
+        // Second, make all newly added workspaces persistent, so they can not removed due to it does not contain any windows
         for (let i = workspaceManager.n_workspaces; i <= workspaceNumber; i++) {
             workspaceManager.append_new_workspace(false, 0);
-            // Make workspaces persistent, so they can not removed due to it does not contains any windows
             workspaceManager.get_workspace_by_index(i)._keepAliveId = true;
         }
     }

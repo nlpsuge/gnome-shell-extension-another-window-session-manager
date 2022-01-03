@@ -134,8 +134,9 @@ class SessionItemButtons extends GObject.Object {
     }
     
     _onClickRestore(button, event) {
+        this.sessionItem._indicator._restoringApps = [];
         // Using _restoredApps to hold restored apps so we create new instance every time for now
-        const _restoreSession = new RestoreSession.RestoreSession();
+        const _restoreSession = new RestoreSession.RestoreSession(this);
         _restoreSession.restoreSession(this.sessionItem._filename);
     }
     
