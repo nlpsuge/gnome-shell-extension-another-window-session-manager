@@ -19,6 +19,13 @@ var CloseSession = class {
 
     closeWindows() {
         this._log.debug('Closing open windows');
+        
+        let workspaceManager = global.workspace_manager;
+        for (let i = 0; i < workspaceManager.n_workspaces; i++) {
+            // Make workspaces non-persistent, so they can be removed if no windows in it
+            workspaceManager.get_workspace_by_index(i)._keepAliveId = false;
+        }
+
         let running_apps = this._defaultAppSystem.get_running();
         for (const app of running_apps) {
             const app_name = app.get_name();
