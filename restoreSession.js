@@ -1,6 +1,6 @@
 'use strict';
 
-const { Shell, Gio, GLib } = imports.gi;
+const { Shell, Gio, GLib, Meta } = imports.gi;
 const Util = imports.misc.util;
 
 const { ByteArray } = imports.byteArray;
@@ -66,7 +66,7 @@ var RestoreSession = class {
                     if (desktop_file_id) {
                         const shell_app = this._defaultAppSystem.lookup_app(desktop_file_id)
                         if (shell_app) {
-                            [launched, running] = this.launch(shell_app);
+                            [launched, running] = this.launch(shell_app, session_config_object.desktop_number);
                             if (launched) {
                                 if (!running) {
                                     this._log.debug(`${app_name} launched!`);
@@ -120,7 +120,7 @@ var RestoreSession = class {
        
     }
 
-    launch(shellApp) {
+    launch(shellApp, desktopNumber) {
         if (this._restoredApps.has(shellApp)) {
             return [true, true];
         }
@@ -130,10 +130,27 @@ var RestoreSession = class {
             return [true, true];
         }
 
+        // There is a situation that on Wayland a window in the current workspace can't resize and move reliably, most time it failed.
+        // I really don't know how to handle above situation, so I launch an app always in a different workspace. When its workspace is changed 
+        // to desktopNumber in MoveSession, it should trigger some signals.
+        let workspace = -1;
+        if (Meta.is_wayland_compositor()) {
+            let workspaceManager = global.workspace_manager;
+            let activeWorkspaceNum = workspaceManager.get_active_workspace_index();
+            if (activeWorkspaceNum === desktopNumber) {
+                if (activeWorkspaceNum === 0) {
+                    workspace = desktopNumber + 1;
+                } else {
+                    workspace = desktopNumber - 1;
+                }
+            } else {
+                workspace = 0;
+            }
+        }
         const launched = shellApp.launch(
             // 0 for current event timestamp
             0, 
-            -1,
+            workspace,
             this._getProperGpuPref(shellApp));
         return [launched, false];
     }

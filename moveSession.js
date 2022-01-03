@@ -68,11 +68,12 @@ var MoveSession = class {
 
             this._log.debug(`Auto move the window '${title}' to workspace ${desktop_number} for ${shellApp.get_name()}`);
             
-            try {
+            try {                
+                this._restoreWindowStateAndGeometry(open_window, saved_window_session, first);
+                
                 this._createEnoughWorkspace(desktop_number);
                 open_window.change_workspace_by_index(desktop_number, false);
                 
-                this._restoreWindowStateAndGeometry(open_window, saved_window_session, first);
             } catch(e) {
                 // I just don't want one failure breaks the loop 
 
@@ -98,12 +99,47 @@ var MoveSession = class {
             if (first) {
                 let metaWindowActor = open_window.get_compositor_private();
                 // See: https://github.com/paperwm/PaperWM/blob/10215f57e8b34a044e10b7407cac8fac4b93bbbc/tiling.js#L2120
+                // Works when click the app icon to switch to or switch to in Overview,
                 const firstFrameId = metaWindowActor.connect('first-frame', () => {
+                    log(`first-frame ${open_window.get_title()}`);
                     this._restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, () => {
                         metaWindowActor.disconnect(firstFrameId);
                     });
                 });
+                
+                // const effectsCompletedId = metaWindowActor.connect('effects-completed', () => {
+                //     log(`effects-completed ${open_window.get_title()}`);
+                //     this._restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, () => {
+                //         metaWindowActor.disconnect(effectsCompletedId);
+                //     });
+                // });
+
+                // const positionChangedId = open_window.connect('position-changed', () => {
+                //     log(`position-changed ${open_window.get_title()}`);
+                //     this._restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, () => {
+                //         open_window.disconnect(positionChangedId);
+                //     });
+                // });
+
+                // const sizeChangedId = open_window.connect('size-changed', () => {
+                //     log(`size-changed ${open_window.get_title()}`);
+                //     this._restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, () => {
+                //         open_window.disconnect(sizeChangedId);
+                //     });
+                // });
+
+                const shownId = open_window.connect('shown', () => {
+                    log(`shown ${open_window.get_title()}`);
+                    this._restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, () => {
+                        open_window.disconnect(shownId);
+                    });
+                });
+
                 this._connectIds.push([metaWindowActor, firstFrameId]);
+                // this._connectIds.push([metaWindowActor, effectsCompletedId]);
+                // this._connectIds.push([open_window, positionChangedId]);
+                // this._connectIds.push([open_window, sizeChangedId]);
+                this._connectIds.push([open_window, shownId]);
             }
             
             this._restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, null);
@@ -118,7 +154,7 @@ var MoveSession = class {
     }
 
     _restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, cbFunc) {
-        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+        GLib.idle_add(GLib.PRIORITY_LOW + 1, () => {
             let frameRect = open_window.get_frame_rect();
             let current_x = frameRect.x;
             let current_y = frameRect.y;
@@ -201,7 +237,7 @@ var MoveSession = class {
                 if (windows_count === 1 || title === saved_window_session.window_title) {
                     if (open_window_workspace_index === desktop_number) {
                         this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
-                        this._restoreWindowStateAndGeometry(open_window, saved_window_session);
+                        this._restoreWindowStateAndGeometry(open_window, saved_window_session, false);
                         saved_window_session.moved = true;
                         return;
                     }
@@ -223,6 +259,8 @@ var MoveSession = class {
         let workspaceManager = global.workspace_manager;
         for (let i = workspaceManager.n_workspaces; i <= workspaceNumber; i++) {
             workspaceManager.append_new_workspace(false, 0);
+            // Make workspaces persistent, so they can not removed due to it does not contains any windows
+            workspaceManager.get_workspace_by_index(i)._keepAliveId = true;
         }
     }
 
