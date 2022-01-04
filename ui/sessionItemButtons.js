@@ -2,6 +2,8 @@
 
 const { GObject, St, Clutter } = imports.gi;
 
+const Main = imports.ui.main;
+
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -138,6 +140,12 @@ class SessionItemButtons extends GObject.Object {
         // Using _restoredApps to hold restored apps so we create new instance every time for now
         const _restoreSession = new RestoreSession.RestoreSession(this);
         _restoreSession.restoreSession(this.sessionItem._filename);
+
+        // Leave Overview if we are in Overview to reduce or fix `Bug in window manager: Workspace does not exist to index!` in mutter
+        // See: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134
+        if (Main.overview.visible) {
+            Main.overview.toggle();
+        }
     }
     
     _onClickMove(button, event) {
