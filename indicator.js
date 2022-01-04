@@ -1,6 +1,6 @@
 'use strict';
 
-const { GObject, St, Gio, GLib, Clutter, Shell } = imports.gi;
+const { GObject, St, Gio, GLib, Clutter, Shell, Meta } = imports.gi;
 
 const Mainloop = imports.mainloop;
 
@@ -74,6 +74,24 @@ class AwsIndicator extends PanelMenu.Button {
     }
 
     _windowCreated(display, metaWindow, userData) {
+        if (!Meta.is_wayland_compositor()) {
+            const shellApp = this._windowTracker.get_window_app(metaWindow);
+            if (!shellApp) {
+                return;
+            }
+            
+            const shellAppData = this._restoringApps.get(shellApp);
+            if (!shellAppData) {
+                return;
+            }
+    
+            const saved_window_sessions = shellAppData.saved_window_sessions;
+    
+            // On X11, we have to create enough workspace and move windows before receive the first-frame signal.
+            // If not, all windows will be shown in current workspace when stay in Overview, which is not pretty.
+            this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
+        }
+        
         let metaWindowActor = metaWindow.get_compositor_private();
         // https://github.com/paperwm/PaperWM/blob/10215f57e8b34a044e10b7407cac8fac4b93bbbc/tiling.js#L2120
         // https://gjs-docs.gnome.org/meta8~8_api/meta.windowactor#signal-first-frame
@@ -83,21 +101,41 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
 
-            if (this._log.isDebug()) {
-                // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
-                this._log.debug(`window-created -> first-frame: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
-            }
+            // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
+            this._log.debug(`window-created -> first-frame: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
             const shellAppData = this._restoringApps.get(shellApp);
             if (!shellAppData) {
                 return;
             }
-    
+            
             const saved_window_sessions = shellAppData.saved_window_sessions;
+            
             this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
         
             metaWindowActor.disconnect(firstFrameId);
             firstFrameId = 0;
+        })
+        let shownId = metaWindow.connect('shown', () => {
+            const shellApp = this._windowTracker.get_window_app(metaWindow);
+            if (!shellApp) {
+                return;
+            }
+            
+            // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
+            this._log.debug(`window-created -> shown: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
+
+            const shellAppData = this._restoringApps.get(shellApp);
+            if (!shellAppData) {
+                return;
+            }
+            
+            const saved_window_sessions = shellAppData.saved_window_sessions;
+            
+            this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
+        
+            metaWindow.disconnect(shownId);
+            shownId = 0;
         });
 
         // TODO disconnect? Comment it due to too many errors when disable extension.

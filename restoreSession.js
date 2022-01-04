@@ -1,6 +1,6 @@
 'use strict';
 
-const { Shell, Gio, GLib, Meta } = imports.gi;
+const { Shell, Gio, GLib } = imports.gi;
 const Util = imports.misc.util;
 
 const { ByteArray } = imports.byteArray;

@@ -85,6 +85,21 @@ var MoveSession = class {
 
     }
 
+    createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions) {
+        const saved_window_session = this._getOneMatchedSavedWindow(metaWindow, saved_window_sessions);
+        if (!saved_window_session) {
+            return;
+        }
+
+        const desktop_number = saved_window_session.desktop_number;
+        this._createEnoughWorkspace(desktop_number);
+        if (this._log.isDebug()) {
+            const shellApp = this._windowTracker.get_window_app(metaWindow);
+            this._log.debug(`Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number}`);
+        }
+        metaWindow.change_workspace_by_index(desktop_number, false);
+    }
+
     moveWindowsByMetaWindow(metaWindow, saved_window_sessions) {
         const saved_window_session = this._getOneMatchedSavedWindow(metaWindow, saved_window_sessions);
         if (!saved_window_session) {
@@ -94,12 +109,15 @@ var MoveSession = class {
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._restoreWindowStateAndGeometry(metaWindow, saved_window_session);
             const desktop_number = saved_window_session.desktop_number;
+            // It's necessary to move window again to ensure an app goes to its own workspace. 
+            // In a sort of situation, some apps probably just don't want to move when call createEnoughWorkspaceAndMoveWindows() from `Meta.Display::window-created` signal.
             this._createEnoughWorkspace(desktop_number);
             if (this._log.isDebug()) {
                 const shellApp = this._windowTracker.get_window_app(metaWindow);
                 this._log.debug(`Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number}`);
             }
             metaWindow.change_workspace_by_index(desktop_number, false);
+
             saved_window_session.moved = true;
             return GLib.SOURCE_REMOVE;
         });
@@ -253,7 +271,7 @@ var MoveSession = class {
         let workspaceManager = global.workspace_manager;
 
         // We have enough workspace now, return
-        if (workspaceManager.n_workspaces >= workspaceNumber) {
+        if (workspaceManager.n_workspaces >= workspaceNumber + 1) {
             return;
         }
 
@@ -266,6 +284,7 @@ var MoveSession = class {
         }
 
         // Second, make all newly added workspaces persistent, so they can not removed due to it does not contain any windows
+        // And keep the last one non-persistent
         for (let i = workspaceManager.n_workspaces; i <= workspaceNumber; i++) {
             workspaceManager.append_new_workspace(false, 0);
             workspaceManager.get_workspace_by_index(i)._keepAliveId = true;
