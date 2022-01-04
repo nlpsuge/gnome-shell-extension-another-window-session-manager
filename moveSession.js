@@ -95,7 +95,7 @@ var MoveSession = class {
         this._createEnoughWorkspace(desktop_number);
         if (this._log.isDebug()) {
             const shellApp = this._windowTracker.get_window_app(metaWindow);
-            this._log.debug(`Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number}`);
+            this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number}`);
         }
         metaWindow.change_workspace_by_index(desktop_number, false);
     }
@@ -114,7 +114,7 @@ var MoveSession = class {
             this._createEnoughWorkspace(desktop_number);
             if (this._log.isDebug()) {
                 const shellApp = this._windowTracker.get_window_app(metaWindow);
-                this._log.debug(`Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number}`);
+                this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number}`);
             }
             metaWindow.change_workspace_by_index(desktop_number, false);
 

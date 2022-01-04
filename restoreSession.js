@@ -146,6 +146,8 @@ var RestoreSession = class {
 
         if (this._appIsRunning(shellApp)) {
             this._log.debug(`${shellApp.get_name()} is running, skipping`)
+            // Delete shellApp from this._restoringApps to prevent it move the same app when close and open it manually.
+            this._restoringApps.delete(shellApp);
             return [true, true];
         }
 
