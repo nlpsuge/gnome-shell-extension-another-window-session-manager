@@ -165,40 +165,6 @@ var MoveSession = class {
 
     }
 
-    _restoreWindowStateAndGeometryOnWayland(open_window, saved_window_session, cbFunc) {
-        GLib.idle_add(GLib.PRIORITY_LOW + 1, () => {
-            let frameRect = open_window.get_frame_rect();
-            let current_x = frameRect.x;
-            let current_y = frameRect.y;
-            let current_width = frameRect.width;
-            let current_height = frameRect.height;
-            // if x, y width and height all 0, the window probably still not be full rendered, recheck
-            if (current_x === 0 &&
-                current_y === 0 &&
-                current_width === 0 &&
-                current_height === 0) 
-            {
-                return GLib.SOURCE_CONTINUE;
-            }
-
-            // In `journalctl /usr/bin/gnome-shell` still has the below error, looks harmless, ignore it:
-            // meta_window_set_stack_position_no_sync: assertion 'window->stack_position >= 0' failed
-            this._restoreWindowGeometry(open_window, saved_window_session);
-
-            // The window can't be moved due to previous reason, change workspace if necessary.
-            const desktop_number = saved_window_session.desktop_number;
-            const current_workspace = open_window.get_workspace();
-            if (desktop_number !== current_workspace.index()) {
-                open_window.change_workspace_by_index(desktop_number, false);
-            }
-
-            if (cbFunc) {
-                cbFunc();
-            }
-            return GLib.SOURCE_REMOVE;
-        });
-    }
-
     _restoreWindowGeometry(metaWindow, saved_window_session) {
         const window_position = saved_window_session.window_position;
         if (window_position.provider === 'Meta') {
