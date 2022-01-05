@@ -18,7 +18,7 @@ var MoveSession = class {
         this._defaultAppSystem = Shell.AppSystem.get_default();
         this._windowTracker = Shell.WindowTracker.get_default();
 
-        this._connectIds = [];
+        this._sourceIds = [];
 
     }
 
@@ -113,12 +113,13 @@ var MoveSession = class {
         }
 
         if (saved_window_session.moved) {
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 this._restoreWindowStateAndGeometry(metaWindow, saved_window_session);
                 return GLib.SOURCE_REMOVE;
             });
+            this._sourceIds.push(sourceId);
         } else {
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 this._restoreWindowStateAndGeometry(metaWindow, saved_window_session);
                 const desktop_number = saved_window_session.desktop_number;
                 // It's necessary to move window again to ensure an app goes to its own workspace.
@@ -133,6 +134,7 @@ var MoveSession = class {
                 saved_window_session.moved = true;
                 return GLib.SOURCE_REMOVE;
             });
+            this._sourceIds.push(sourceId);
         }
     }
 
@@ -293,11 +295,12 @@ var MoveSession = class {
             this._log = null;
         }
 
-        if (this._connectIds) {
-            this._connectIds.forEach((obj, id) => {
-                obj.disconnect(id);
+        if (this._sourceIds) {
+            this._sourceIds.forEach(sourceId => {
+                log(`reming ${sourceId}`);
+                GLib.Source.remove(sourceId);
             });
-            this._connectIds = null;
+            this._sourceIds = null;
         }
 
         if (this._windowTracker) {
