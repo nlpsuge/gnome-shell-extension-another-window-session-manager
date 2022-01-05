@@ -45,7 +45,8 @@ After confirm to save:
 2. Restore saved open windows and move windows automatically in the progress
 3. Move windows according to a saved session
 4. Restore window state, including `Always on Top` and `Always on Visible Workspace`
-5. ...
+5. Restore window size and position
+6. ...
 
 # Panel menu items
 
@@ -61,6 +62,13 @@ After confirm to save:
 # Dependencies
 This project uses `ps` to get some information from a process, install it via `dnf install procps-ng` if don't have.
 
+# Known issues
+
+1. On both X11 and Wayland, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) continually during the process of restoring, the window size and position may can't be restored, and it may restore many instances of an application. **As a workaround, click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) only once util all apps restored.**
+2. On Wayland, if [a window is maximized along the left or right sides of the screen](https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en) before closed, its size and position can't be restored. **As a workaround, click move button (<img src=icons/move-symbolic.svg width="14" height="14">) to restore their size and position.**
+3. On both X11 and Wayland, due to [this bug](https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134) within mutter, in Overview, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) then immediately click the newly created workspace, the Gnome Shell can crash. To fix this issue, the Overview will be toggled hidden after click the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) when in Overview. I will remove this behaviour once I find a better solution or it's fixed in a new version of Gnome Shell.
+4. ...
+
 # Where are the saved sessions?
 They are all in `~/.config/another-window-session-manager/sessions`. When use an exsiting name to save the current open windows, the previous file will be copied to `~/.config/another-window-session-manager/sessions/backups` as a new name, which is the-old-session-name**.backup-current-timestamp**.
 
@@ -70,7 +78,7 @@ They are all in `~/.config/another-window-session-manager/sessions`. When use an
 3. - Restore saved open windows
       - [x] Restore saved open windows
       - [x] Move to belonging workspace automatically
-      - [ ] Restore window's geometry
+      - [x] Restore window size and position
 4. - Saved open windows list
       - [x] Saved open windows list
       - [x] Restore button
