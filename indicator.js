@@ -19,6 +19,7 @@ const PopupMenuButtonItems = Me.imports.ui.popupMenuButtonItems;
 const IconFinder = Me.imports.utils.iconFinder;
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const Log = Me.imports.utils.log;
+const Signal = Me.imports.utils.signal;
 
 
 var AwsIndicator = GObject.registerClass(
@@ -31,6 +32,8 @@ class AwsIndicator extends PanelMenu.Button {
 
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._log = new Log.Log();
+
+        this._signal = new Signal.Signal();
         
         this._itemIndex = 0;
 
@@ -53,7 +56,6 @@ class AwsIndicator extends PanelMenu.Button {
 
         this.menu.connect('open-state-changed', this._onOpenStateChanged.bind(this));
 
-        this.connect('destroy', this._onDestroy.bind(this));
         // Open menu
         // this.menu.open(true);
         // Toggle menu
@@ -67,9 +69,11 @@ class AwsIndicator extends PanelMenu.Button {
         this._restoringApps = new Map();
         this._moveSession = new MoveSession.MoveSession();
 
-        // this._connectIds = [];
+        this._metaWindowConnectIds = [];
         this._display = global.display;
         this._displayId = this._display.connect('window-created', this._windowCreated.bind(this));
+
+        this._isDestroyed = false;
         
     }
 
@@ -103,8 +107,18 @@ class AwsIndicator extends PanelMenu.Button {
         // https://github.com/paperwm/PaperWM/blob/10215f57e8b34a044e10b7407cac8fac4b93bbbc/tiling.js#L2120
         // https://gjs-docs.gnome.org/meta8~8_api/meta.windowactor#signal-first-frame
         let firstFrameId = metaWindowActor.connect('first-frame', () => {
+            if (this._isDestroyed) {
+                metaWindowActor.disconnect(firstFrameId);
+            }
+
             const shellApp = this._windowTracker.get_window_app(metaWindow);
             if (!shellApp) {
+                return;
+            }
+
+            // To prevent the below error when disable this extension after restore apps:
+            // JS ERROR: TypeError: this._log is null 
+            if (!this._log) {
                 return;
             }
 
@@ -123,9 +137,20 @@ class AwsIndicator extends PanelMenu.Button {
             metaWindowActor.disconnect(firstFrameId);
             firstFrameId = 0;
         })
+        
         let shownId = metaWindow.connect('shown', () => {
+            if (this._isDestroyed) {
+                metaWindow.disconnect(shownId);
+            }
+
             const shellApp = this._windowTracker.get_window_app(metaWindow);
             if (!shellApp) {
+                return;
+            }
+
+            // To prevent the below error when disable this extension after restore apps:
+            // JS ERROR: TypeError: this._log is null
+            if (!this._log) {
                 return;
             }
             
@@ -145,8 +170,23 @@ class AwsIndicator extends PanelMenu.Button {
             shownId = 0;
         });
 
-        // TODO disconnect? Comment it due to too many errors when disable extension.
-        // this._connectIds.push([metaWindowActor, firstFrameId]);
+
+        /*
+        We have to disconnect firstFrameId within the unmanaging signal of metaWindow.
+        
+        If we do this in `destroy()`, the metaWindowActor instance has been disposed, disconnecting signals from 
+        metaWindowActor gets many errors when disable extension: Object .MetaWindowActorWayland (0x55fae658e3d0), has been already disposed — impossible to access it. This might be caused by the object having been destroyed from C code using something such as destroy(), dispose(), or remove() vfuncs.
+        I don't know why 😢. TODO
+
+        But metaWindow is not disposed in `destroy()`, so we can disconnect signals from it there.
+        */
+        let unmanagingId = metaWindow.connect('unmanaging', () => {
+            // Fix ../gobject/gsignal.c:2732: instance '0x55629xxxxxx' has no handler with id '11000' when disable this extension right after restore apps
+            this._signal.disconnectSafely(metaWindowActor, firstFrameId);
+        });
+
+        this._metaWindowConnectIds.push([metaWindow, shownId]);
+        this._metaWindowConnectIds.push([metaWindow, unmanagingId]);
         
     }
 
@@ -199,7 +239,7 @@ class AwsIndicator extends PanelMenu.Button {
 
     _addSessionItems() {
         if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
-            // TOTO Empty session
+            // TODO Empty session
             log(`${this._sessions_path} not found! It's harmless, please save some windows in the panel menu to create it automatically.`);
             return;
         }
@@ -291,7 +331,7 @@ class AwsIndicator extends PanelMenu.Button {
     _sessionPathChanged(monitor, srcFile, descFile) {
         this._log.debug(`Session path changed, readd all session items from ${this._sessions_path}. ${srcFile.get_path()} was changed.`);
         this._sessionsMenuSection.removeAll();
-        // It probably is a problem when there is large amount session files,
+        // It probably is a problem when there are large amount session files,
         // say thousands of them, but who creates that much?
         // 
         // Can use Gio.FileMonitorEvent to modify the results 
@@ -323,7 +363,7 @@ class AwsIndicator extends PanelMenu.Button {
         }
     }
 
-    _onDestroy() {
+    destroy() {
         if (this.monitor) {
             this.monitor.cancel();
             this.monitor = null;
@@ -343,21 +383,22 @@ class AwsIndicator extends PanelMenu.Button {
             this._log = null;
         }
 
-        // if (this._connectIds) {
-        //     for (let [obj, id] of this._connectIds) {
-        //         if (id) {
-        //             obj.disconnect(id);
-        //         }
-        //     }
-        //     this._connectIds = null;
-        // }
+        if (this._metaWindowConnectIds) {
+            for (let [obj, signalId] of this._metaWindowConnectIds) {
+                // Fix ../gobject/gsignal.c:2732: instance '0x55629xxxxxx' has no handler with id '11000' when disable this extension right after restore apps
+                this._signal.disconnectSafely(obj, signalId);
+            }
+            this._metaWindowConnectIds = null;
+        }
         
         if (this._displayId) {
             this._display.disconnect(this._displayId);
             this._displayId = 0;
         }
 
-        this.destroy();
+        super.destroy();
+
+        this._isDestroyed = true;
         
     }
 
