@@ -8,21 +8,34 @@ const { ByteArray } = imports.byteArray;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const MoveSession = Me.imports.moveSession;
-
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 
 
 var RestoreSession = class {
 
-    constructor() {
+    constructor(sessionItemButtons) {
         this._log = new Log.Log();
 
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
+        this._windowTracker = Shell.WindowTracker.get_default();        
+
+        // All launching apps info by Shell.App#launch()
+        if (sessionItemButtons) {
+            sessionItemButtons.sessionItem._indicator._restoringApps = new Map();
+            this._restoringApps = sessionItemButtons.sessionItem._indicator._restoringApps;
+        } else {
+            this._restoringApps = new Map();
+        }        
+
+        // All launched apps info by Shell.App#launch()
         this._restoredApps = new Map();
-        this._moveSession = new MoveSession.MoveSession();
+
+        this._display = global.display;
+        this._displayId = null;
+
+        this._connectIds = [];
     }
 
     restoreSession(sessionName) {
@@ -56,7 +69,7 @@ var RestoreSession = class {
                 logError(new Error(`Session details not found: ${session_file_path}`));
                 return;
             }
-
+            
             for (const session_config_object of session_config_objects) {
                 const app_name = session_config_object.app_name;
                 let launched = false;
@@ -66,6 +79,15 @@ var RestoreSession = class {
                     if (desktop_file_id) {
                         const shell_app = this._defaultAppSystem.lookup_app(desktop_file_id)
                         if (shell_app) {
+                            const restoringShellAppData = this._restoringApps.get(shell_app);
+                            if (restoringShellAppData) {
+                                restoringShellAppData.saved_window_sessions.push(session_config_object);
+                            } else {
+                                this._restoringApps.set(shell_app, {
+                                    saved_window_sessions: [session_config_object]
+                                });
+                            }
+                            
                             [launched, running] = this.launch(shell_app);
                             if (launched) {
                                 if (!running) {
@@ -75,10 +97,7 @@ var RestoreSession = class {
                                 if (existingShellAppData) {
                                     existingShellAppData.saved_window_sessions.push(session_config_object);
                                 } else {
-                                    // TODO Better to listen Meta.Workspace::window-added(Meta.Window), so we can also know a window added by running the command line in the case of there is no desktop_file_id at all?
-                                    const windows_change_id = shell_app.connect('windows-changed', this._autoMoveWindows.bind(this));
                                     this._restoredApps.set(shell_app, {
-                                        windows_change_id: windows_change_id,
                                         saved_window_sessions: [session_config_object]
                                     });
                                 }
@@ -127,23 +146,19 @@ var RestoreSession = class {
 
         if (this._appIsRunning(shellApp)) {
             this._log.debug(`${shellApp.get_name()} is running, skipping`)
+            // Delete shellApp from this._restoringApps to prevent it move the same app when close and open it manually.
+            this._restoringApps.delete(shellApp);
             return [true, true];
         }
 
+        // -1 current workspace?
+        let workspace = -1;
         const launched = shellApp.launch(
             // 0 for current event timestamp
             0, 
-            -1,
+            workspace,
             this._getProperGpuPref(shellApp));
         return [launched, false];
-    }
-
-    _autoMoveWindows(shellApp) {
-        // Debug
-        // log(`windows-changed triggered for ${shellApp.get_name()}`);
-        const shellAppData = this._restoredApps.get(shellApp);
-        let saved_window_sessions = shellAppData.saved_window_sessions
-        this._moveSession.moveWindowsByShellApp(shellApp, saved_window_sessions);
     }
 
     _appIsRunning(app) {
@@ -174,24 +189,38 @@ var RestoreSession = class {
 
     destroy() {
         if (this._restoredApps) {
-            for (const [app, v] of this._restoredApps) {
-                app.disconnect(v.windows_change_id);
-            }
             this._restoredApps.clear();
             this._restoredApps = null;
+        }
+
+        if (this._restoringApps) {
+            this._restoringApps.clear();
+            this._restoringApps = null;
+        }
+
+        if (this._displayId) {
+            this._display.disconnect(this._displayId);
+            this._displayId = 0;
         }
 
         if (this._defaultAppSystem) {
             this._defaultAppSystem = null;
         }
 
-        if (this._moveSession) {
-            this._moveSession = null;
+        if (this._windowTracker) {
+            this._windowTracker = null;
         }
 
         if (this._log) {
             this._log.destroy();
             this._log = null;
+        }
+
+        if (this._connectIds) {
+            for (let [obj, id] of this._connectIds) {
+                obj.disconnect(id);
+            }
+            this._connectIds = null;
         }
         
     }

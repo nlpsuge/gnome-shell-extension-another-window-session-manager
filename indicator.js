@@ -1,6 +1,6 @@
 'use strict';
 
-const { GObject, St, Gio, GLib, Clutter } = imports.gi;
+const { GObject, St, Gio, GLib, Clutter, Shell, Meta } = imports.gi;
 
 const Mainloop = imports.mainloop;
 
@@ -9,6 +9,8 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const PopupMenu = imports.ui.popupMenu;
 const PanelMenu = imports.ui.panelMenu;
+
+const MoveSession = Me.imports.moveSession;
 
 const FileUtils = Me.imports.utils.fileUtils;
 const SessionItem = Me.imports.ui.sessionItem;
@@ -24,6 +26,8 @@ class AwsIndicator extends PanelMenu.Button {
 
     _init() {
         super._init(0.0, "Another Window Session Manager");
+
+        this._windowTracker = Shell.WindowTracker.get_default();
 
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._log = new Log.Log();
@@ -59,6 +63,91 @@ class AwsIndicator extends PanelMenu.Button {
         // See: PopupMenu#itemActivated() => this.menu._getTopMenu().close
         this.menu.itemActivated = function(animate) {};
 
+        // Set a initial value to prevent error in `journalctl` when starting gnome-shell
+        this._restoringApps = new Map();
+        this._moveSession = new MoveSession.MoveSession();
+
+        // this._connectIds = [];
+        this._display = global.display;
+        this._displayId = this._display.connect('window-created', this._windowCreated.bind(this));
+        
+    }
+
+    _windowCreated(display, metaWindow, userData) {
+        if (!Meta.is_wayland_compositor()) {
+            const shellApp = this._windowTracker.get_window_app(metaWindow);
+            if (!shellApp) {
+                return;
+            }
+            
+            const shellAppData = this._restoringApps.get(shellApp);
+            if (!shellAppData) {
+                return;
+            }
+    
+            const saved_window_sessions = shellAppData.saved_window_sessions;
+    
+            // On X11, we have to create enough workspace and move windows before receive the first-frame signal.
+            // If not, all windows will be shown in current workspace when stay in Overview, which is not pretty.
+            let matchedSavedWindowSession = this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
+            
+            if (matchedSavedWindowSession) {
+                // Fix window geometry later on in first-frame or shown signal
+                // TODO The side-effect is when a window is already in the current workspace there will be two same logs (The window 'Clocks' is already on workspace 0 for Clocks) in the journalctl, which is not pretty. 
+                // TODO Maybe it's better to use another state to indicator whether a window has been restored geometry.
+                matchedSavedWindowSession.moved = false;
+            }
+        }
+        
+        let metaWindowActor = metaWindow.get_compositor_private();
+        // https://github.com/paperwm/PaperWM/blob/10215f57e8b34a044e10b7407cac8fac4b93bbbc/tiling.js#L2120
+        // https://gjs-docs.gnome.org/meta8~8_api/meta.windowactor#signal-first-frame
+        let firstFrameId = metaWindowActor.connect('first-frame', () => {
+            const shellApp = this._windowTracker.get_window_app(metaWindow);
+            if (!shellApp) {
+                return;
+            }
+
+            // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
+            this._log.debug(`window-created -> first-frame: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
+
+            const shellAppData = this._restoringApps.get(shellApp);
+            if (!shellAppData) {
+                return;
+            }
+            
+            const saved_window_sessions = shellAppData.saved_window_sessions;
+            
+            this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
+        
+            metaWindowActor.disconnect(firstFrameId);
+            firstFrameId = 0;
+        })
+        let shownId = metaWindow.connect('shown', () => {
+            const shellApp = this._windowTracker.get_window_app(metaWindow);
+            if (!shellApp) {
+                return;
+            }
+            
+            // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
+            this._log.debug(`window-created -> shown: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
+
+            const shellAppData = this._restoringApps.get(shellApp);
+            if (!shellAppData) {
+                return;
+            }
+            
+            const saved_window_sessions = shellAppData.saved_window_sessions;
+            
+            this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
+        
+            metaWindow.disconnect(shownId);
+            shownId = 0;
+        });
+
+        // TODO disconnect? Comment it due to too many errors when disable extension.
+        // this._connectIds.push([metaWindowActor, firstFrameId]);
+        
     }
 
     _onOpenStateChanged(menu, state) {
@@ -179,7 +268,7 @@ class AwsIndicator extends PanelMenu.Button {
         for (const sessionFileInfo of sessionFileInfos) {
             const info = sessionFileInfo.info;
             const file = sessionFileInfo.file;
-            let item = new SessionItem.SessionItem(info, file);
+            let item = new SessionItem.SessionItem(info, file, this);
             this._sessionsMenuSection.addMenuItem(item, this._itemIndex++);
         }
         
@@ -252,6 +341,20 @@ class AwsIndicator extends PanelMenu.Button {
         if (this._log) {
             this._log.destroy();
             this._log = null;
+        }
+
+        // if (this._connectIds) {
+        //     for (let [obj, id] of this._connectIds) {
+        //         if (id) {
+        //             obj.disconnect(id);
+        //         }
+        //     }
+        //     this._connectIds = null;
+        // }
+        
+        if (this._displayId) {
+            this._display.disconnect(this._displayId);
+            this._displayId = 0;
         }
 
         this.destroy();

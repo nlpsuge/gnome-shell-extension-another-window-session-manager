@@ -86,6 +86,7 @@ var SaveSession = class {
                     // See: ui/windowMenu.js:L80
                     window_state.is_sticky = metaWindow.is_on_all_workspaces();
                     window_state.is_above = metaWindow.is_above();
+                    window_state.meta_maximized = metaWindow.get_maximized();
 
                     sessionConfig.x_session_config_objects.push(sessionConfigObject);    
                     
@@ -98,6 +99,7 @@ var SaveSession = class {
 
         // Save open windows
         try {
+            sessionConfig.x_session_config_objects = sessionConfig.sort();
             const success = this.save2File(sessionConfig);
             if (success) {
                 // TODO saved Notification

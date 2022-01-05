@@ -13,10 +13,18 @@ var Log = class {
         
     }
 
+    isDebug() {
+        return this._prefsUtils.isDebug();
+    }
+
     debug(logContent) {
-        if (this._prefsUtils.isDebug()) {
+        if (this.isDebug()) {
             log(`[DEBUG][Another window session manager] ${logContent}`);
         }
+    }
+
+    error(e, logContent) {
+        logError(e, `[ERROR][Another window session manager] ${logContent}`);
     }
 
     destroy() {

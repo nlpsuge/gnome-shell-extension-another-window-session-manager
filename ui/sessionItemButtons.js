@@ -2,6 +2,8 @@
 
 const { GObject, St, Clutter } = imports.gi;
 
+const Main = imports.ui.main;
+
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -107,7 +109,6 @@ class SessionItemButtons extends GObject.Object {
             style_class: 'system-status-icon'
         });
 
-        // TODO Remove cycle in the background in case everyone think this separator is a clickable button, actually it's just a view-only separator.
         let button = new St.Button({
             style_class: 'aws-item-separator',
             can_focus: false,
@@ -134,9 +135,17 @@ class SessionItemButtons extends GObject.Object {
     }
     
     _onClickRestore(button, event) {
+        this.sessionItem._indicator._restoringApps = [];
         // Using _restoredApps to hold restored apps so we create new instance every time for now
-        const _restoreSession = new RestoreSession.RestoreSession();
+        const _restoreSession = new RestoreSession.RestoreSession(this);
         _restoreSession.restoreSession(this.sessionItem._filename);
+
+        // TODO Add to Settings or add an if in the future version when confirm the below bug is fixed.
+        // Leave Overview if we are in Overview to reduce or fix `Bug in window manager: Workspace does not exist to index!` in mutter
+        // See: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134
+        if (Main.overview.visible) {
+            Main.overview.toggle();
+        }
     }
     
     _onClickMove(button, event) {
