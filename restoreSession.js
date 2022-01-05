@@ -91,7 +91,7 @@ var RestoreSession = class {
                             [launched, running] = this.launch(shell_app);
                             if (launched) {
                                 if (!running) {
-                                    this._log.debug(`${app_name} launched!`);
+                                    this._log.info(`${app_name} launched!`);
                                 }
                                 const existingShellAppData = this._restoredApps.get(shell_app);
                                 if (existingShellAppData) {

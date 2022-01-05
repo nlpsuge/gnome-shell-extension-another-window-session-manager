@@ -27,6 +27,10 @@ var Log = class {
         logError(e, `[ERROR][Another window session manager] ${logContent}`);
     }
 
+    info() {
+        log(`[INFO][Another window session manager] ${logContent}`);
+    }
+
     destroy() {
         if (this._prefsUtils) {
             this._prefsUtils.destroy();
