@@ -89,7 +89,14 @@ class AwsIndicator extends PanelMenu.Button {
     
             // On X11, we have to create enough workspace and move windows before receive the first-frame signal.
             // If not, all windows will be shown in current workspace when stay in Overview, which is not pretty.
-            this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
+            let matchedSavedWindowSession = this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
+            
+            if (matchedSavedWindowSession) {
+                // Fix window geometry later on in first-frame or shown signal
+                // TODO The side-effect is when a window is already in the current workspace there will be two same logs (The window 'Clocks' is already on workspace 0 for Clocks) in the journalctl, which is not pretty. 
+                // TODO Maybe it's better to use another state to indicator whether a window has been restored geometry.
+                matchedSavedWindowSession.moved = false;
+            }
         }
         
         let metaWindowActor = metaWindow.get_compositor_private();

@@ -5,6 +5,15 @@ class WindowState {
     is_sticky; // bool
     // If always on top
     is_above; // bool
+
+    // Additional fields
+
+    // https://gjs-docs.gnome.org/meta9~9_api/meta.window#method-get_maximized
+    // 0: Not in the maximization mode
+    // 1: Horizontal - Meta.MaximizeFlags.HORIZONTAL
+    // 2: Vertical - Meta.MaximizeFlags.VERTICAL
+    // 3. Both - Meta.MaximizeFlags.BOTH
+    meta_maximized;
 }
 
 class WindowPosition {  
