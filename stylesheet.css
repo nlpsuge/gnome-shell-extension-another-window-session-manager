@@ -57,7 +57,12 @@
 .aws-item-separator {
     border-radius: 32px;
     padding: 4px;
-    border: 1px solid #282c2c;
+    /* 
+    Remove cycle / border in the background in case everyone think this separator is a clickable button, actually it's just a view-only separator.
+
+    https://developer.mozilla.org/en-US/docs/Web/CSS/border 
+    */
+    border: none;
 }
 
 .aws-item-separator > StIcon {

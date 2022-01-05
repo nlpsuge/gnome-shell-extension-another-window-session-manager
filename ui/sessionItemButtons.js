@@ -109,7 +109,6 @@ class SessionItemButtons extends GObject.Object {
             style_class: 'system-status-icon'
         });
 
-        // TODO Remove cycle in the background in case everyone think this separator is a clickable button, actually it's just a view-only separator.
         let button = new St.Button({
             style_class: 'aws-item-separator',
             can_focus: false,
