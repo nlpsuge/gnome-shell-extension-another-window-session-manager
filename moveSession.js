@@ -34,7 +34,7 @@ var MoveSession = class {
             return;
         }
 
-        this._log.debug(`Moving windows by saved session located in ${session_file_path}`);
+        this._log.info(`Moving windows by saved session located in ${session_file_path}`);
         const session_file = Gio.File.new_for_path(session_file_path);
         let [success, contents] = session_file.load_contents(null);
         if (success) {
@@ -67,7 +67,7 @@ var MoveSession = class {
             const title = open_window.get_title();
             const desktop_number = saved_window_session.desktop_number;
 
-            this._log.debug(`Auto move the window '${title}' to workspace ${desktop_number} for ${shellApp.get_name()}`);
+            this._log.debug(`Auto move the window '${title}' to workspace ${desktop_number} from ${open_window.get_workspace().index()} for ${shellApp.get_name()}`);
             
             try {                
                 this._restoreWindowStateAndGeometry(open_window, saved_window_session);
