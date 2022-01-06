@@ -158,7 +158,7 @@ var SaveSession = class {
             );
 
             if (success) {
-                this._log.debug(`Saved open windows as a session in ${session_file_path}!`);
+                this._log.info(`Saved open windows as a session in ${session_file_path}!`);
             }
             return success;
         }
