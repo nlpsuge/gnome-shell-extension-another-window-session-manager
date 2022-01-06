@@ -50,7 +50,7 @@ var RestoreSession = class {
             return;
         }
 
-        this._log.debug(`Restoring saved session from ${session_file_path}`);
+        this._log.info(`Restoring saved session from ${session_file_path}`);
         try {
             this.restoreSessionFromPath(session_file_path);
         } catch (e) {
