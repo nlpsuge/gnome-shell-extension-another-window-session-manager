@@ -41,12 +41,15 @@ After confirm to save:
 
 
 # Main features
-1. Save open windows
-2. Restore saved open windows and move windows automatically in the progress
-3. Move windows according to a saved session
-4. Restore window state, including `Always on Top` and `Always on Visible Workspace`
+1. Close open windows
+2. Save open windows
+3. Restore saved open windows and move windows to their own workspace automatically in the progress
+4. Restore window state, including `Always on Top`, `Always on Visible Workspace` and maximization
 5. Restore window size and position
-6. ...
+6. Move windows to their own workspace according to a saved session
+7. Trash saved session
+8. Search saved session by the session name fuzzily
+9. ...
 
 # Panel menu items
 
