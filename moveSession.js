@@ -67,7 +67,7 @@ var MoveSession = class {
             const title = open_window.get_title();
             const desktop_number = saved_window_session.desktop_number;
 
-            this._log.debug(`Auto move the window '${title}' to workspace ${desktop_number} from ${open_window.get_workspace().index()} for ${shellApp.get_name()}`);
+            this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${open_window.get_workspace().index()}`);
             
             try {                
                 this._restoreWindowStateAndGeometry(open_window, saved_window_session);
@@ -100,7 +100,7 @@ var MoveSession = class {
         this._createEnoughWorkspace(desktop_number);
         if (this._log.isDebug()) {
             const shellApp = this._windowTracker.get_window_app(metaWindow);
-            this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number}`);
+            this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number} from ${metaWindow.get_workspace().index()}`);
         }
         metaWindow.change_workspace_by_index(desktop_number, false);
         return saved_window_session;
@@ -127,7 +127,7 @@ var MoveSession = class {
                 this._createEnoughWorkspace(desktop_number);
                 if (this._log.isDebug()) {
                     const shellApp = this._windowTracker.get_window_app(metaWindow);
-                    this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number}`);
+                    this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number} from ${metaWindow.get_workspace().index()}`);
                 }
                 metaWindow.change_workspace_by_index(desktop_number, false);
 
@@ -168,32 +168,52 @@ var MoveSession = class {
      * @see https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en
      */
     _restoreWindowStateAndGeometry(metaWindow, saved_window_session) {
+        this._restoreWindowState(metaWindow, saved_window_session);
+        this._restoreWindowGeometry(metaWindow, saved_window_session);
+    }
+
+    _restoreWindowState(metaWindow, saved_window_session) {
         // window state
         const window_state = saved_window_session.window_state;
         if (window_state.is_above) {
-            metaWindow.make_above();
+            if (!metaWindow.is_above()) {
+                this._log.debug(`Making ${metaWindow.get_title()} above`);
+                metaWindow.make_above();
+            }
         }
         if (window_state.is_sticky) {
-            metaWindow.stick();
+            if (!metaWindow.is_on_all_workspaces()) {
+                this._log.debug(`Making ${metaWindow.get_title()} sticky`);
+                metaWindow.stick();
+            }
         }
 
         const savedMetaMaximized = window_state.meta_maximized;
         // Maximize a window to take up all of the space
         if (savedMetaMaximized === Meta.MaximizeFlags.BOTH) {
-            metaWindow.maximize(savedMetaMaximized);
-        } else {
-            // If current window is in maximum mode, it can't be resized.
+            const currentMetaMaximized = metaWindow.get_maximized();
+            if (currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
+                this._log.debug(`Maximizing ${metaWindow.get_title()}`);
+                metaWindow.maximize(savedMetaMaximized);
+            }
+        }
+
+    }
+
+    /**
+     * @see https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en
+     */
+    _restoreWindowGeometry(metaWindow, saved_window_session) {
+        const window_state = saved_window_session.window_state;
+        const savedMetaMaximized = window_state.meta_maximized;
+        if (savedMetaMaximized !== Meta.MaximizeFlags.BOTH) {
+            // It can't be resized if current window is in maximum mode, including vertically maximization along the left and right sides of the screen
             const currentMetaMaximized = metaWindow.get_maximized();
             if (currentMetaMaximized) {
                 metaWindow.unmaximize(currentMetaMaximized);
             }
-
-            // Also handle 'maximize windows vertically along the left and right sides of the screen'
-            this._restoreWindowGeometry(metaWindow, saved_window_session);
         }
-    }
 
-    _restoreWindowGeometry(metaWindow, saved_window_session) {
         const window_position = saved_window_session.window_position;
         if (window_position.provider === 'Meta') {
             const to_x = window_position.x_offset;

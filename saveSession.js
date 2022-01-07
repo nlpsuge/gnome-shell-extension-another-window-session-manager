@@ -80,6 +80,17 @@ var SaveSession = class {
                         // Shell.App does have an id like window:22, but it's useless for restoring
                         // If desktop_file_id is '', launch this application via command line
                         sessionConfigObject.desktop_file_id = '';
+
+                        // Log useful info to be used to create a .desktop that can be recognized by `Shell.AppSystem.get_default().get_running()`
+                        // So we can use this .desktop to restore window state and move windows to their workspace
+                        // See: https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/4921
+                        this._log.info(`${appName} - ${sessionConfigObject.window_title} don't have a recognizable .desktop file, please try to use the below info to create one.`);
+                        this._log.info(`${appName} is_window_backed : ${runningShellApp.is_window_backed()}`);
+                        const cmdStr = sessionConfigObject.cmd.join(' ');
+                        this._log.info(`${appName} - ${sessionConfigObject.window_title} command line : ${cmdStr}`);
+                        this._log.info(`${appName} - ${sessionConfigObject.window_title} wm_class : ${metaWindow.get_wm_class()}`);
+                        this._log.info(`${appName} - ${sessionConfigObject.window_title} wm_class_instance : ${metaWindow.get_wm_class_instance()}`);
+                        
                     }
                     
                     let window_state = sessionConfigObject.window_state;

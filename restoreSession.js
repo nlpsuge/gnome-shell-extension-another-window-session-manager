@@ -33,7 +33,6 @@ var RestoreSession = class {
         this._restoredApps = new Map();
 
         this._display = global.display;
-        this._displayId = null;
 
         this._connectIds = [];
     }
@@ -106,8 +105,8 @@ var RestoreSession = class {
                                 global.notify_error(`Failed to restore ${app_name}`, `Reason: Cannot find ${desktop_file_id}.`);
                             }
                         } else {
-                            logError(new Error(`Failed to restore ${app_name}. Reason: unknown.`));
-                            global.notify_error(`Failed to restore ${app_name}`, 'Reason: unknown.');
+                            logError(new Error(`Failed to restore ${app_name}. Reason: don't find Shell.App by ${desktop_file_id}.`));
+                            global.notify_error(`Failed to restore ${app_name}`, `Reason: don't find Shell.App by ${desktop_file_id}.`);
                         }
                     } else {
                         // TODO check running state to skip running apps
@@ -196,11 +195,6 @@ var RestoreSession = class {
         if (this._restoringApps) {
             this._restoringApps.clear();
             this._restoringApps = null;
-        }
-
-        if (this._displayId) {
-            this._display.disconnect(this._displayId);
-            this._displayId = 0;
         }
 
         if (this._defaultAppSystem) {

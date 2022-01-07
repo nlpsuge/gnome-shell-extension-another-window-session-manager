@@ -79,27 +79,47 @@ class AwsIndicator extends PanelMenu.Button {
 
     _windowCreated(display, metaWindow, userData) {
         if (!Meta.is_wayland_compositor()) {
+            // We call createEnoughWorkspaceAndMoveWindows() if and only if all conditions checked.
+            
+            // But we give some windows (such as the OS running in VirtualBox) a chance to connect `first-frame` and `shown` signals.
+            // The reason I do this is that 
+            // `Shell.AppSystem.get_default().lookup_app('a-VirtualBox-machine-name.desktop')`
+            // and `Shell.WindowTracker.get_default().get_window_app(metaWindow_of_VirtualBoxMachine)`
+            // are not the same instance. 
+            
+            // My best guess is:
+            // Looks like if launch a VirtualBox machine via `/usr/lib64/virtualbox/VirtualBoxVM --comment "test" --startvm "{xxxxxxx-xxxxxxx-xxxxxxx-xxxxxxx-xxxxxxxxxxxxxx}"`,
+            // it will open two process: the first process open another process, which is running a machine, and then the first process stops to run and the associated Shell.App is also destroyed.
+            // And
+            // the two processes all have window, window of the first process will be destroyed before/after the second process open a new window, which is running the virtual OS.
+            // Install https://extensions.gnome.org/extension/4679/burn-my-windows/ to watch this process.
+
             const shellApp = this._windowTracker.get_window_app(metaWindow);
-            if (!shellApp) {
-                return;
-            }
+            if (shellApp) {
             
-            const shellAppData = this._restoringApps.get(shellApp);
-            if (!shellAppData) {
-                return;
-            }
-    
-            const saved_window_sessions = shellAppData.saved_window_sessions;
-    
-            // On X11, we have to create enough workspace and move windows before receive the first-frame signal.
-            // If not, all windows will be shown in current workspace when stay in Overview, which is not pretty.
-            let matchedSavedWindowSession = this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
-            
-            if (matchedSavedWindowSession) {
-                // Fix window geometry later on in first-frame or shown signal
-                // TODO The side-effect is when a window is already in the current workspace there will be two same logs (The window 'Clocks' is already on workspace 0 for Clocks) in the journalctl, which is not pretty. 
-                // TODO Maybe it's better to use another state to indicator whether a window has been restored geometry.
-                matchedSavedWindowSession.moved = false;
+                const shellAppData = this._restoringApps.get(shellApp);
+                if (shellAppData) {
+                    const saved_window_sessions = shellAppData.saved_window_sessions;
+
+                    // On X11, we have to create enough workspace and move windows before receive the first-frame signal.
+                    // If not, all windows will be shown in current workspace when stay in Overview, which is not pretty.
+                    let matchedSavedWindowSession = this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
+                    
+                    if (matchedSavedWindowSession) {
+                        // We try to restore window state here if necessary.
+                        // Below are possible reasons:
+                        // 1) In current implement there is no guarantee that the first-frame and shown signals can be triggered immediately. You have to click a window to trigger them.
+                        // 2) The restored window state could be lost
+                        this._log.debug(`Restoring window state of ${shellApp.get_name()} - ${metaWindow.get_title()} if necessary`);
+                        this._moveSession._restoreWindowState(metaWindow, matchedSavedWindowSession);
+
+
+                        // Fix window geometry later on in first-frame signal
+                        // TODO The side-effect is when a window is already in the current workspace there will be two same logs (The window 'Clocks' is already on workspace 0 for Clocks) in the journalctl, which is not pretty.
+                        // TODO Maybe it's better to use another state to indicator whether a window has been restored geometry.
+                        matchedSavedWindowSession.moved = false;
+                    }
+                }             
             }
         }
         
@@ -109,6 +129,7 @@ class AwsIndicator extends PanelMenu.Button {
         let firstFrameId = metaWindowActor.connect('first-frame', () => {
             if (this._isDestroyed) {
                 metaWindowActor.disconnect(firstFrameId);
+                return;
             }
 
             const shellApp = this._windowTracker.get_window_app(metaWindow);
@@ -141,6 +162,7 @@ class AwsIndicator extends PanelMenu.Button {
         let shownId = metaWindow.connect('shown', () => {
             if (this._isDestroyed) {
                 metaWindow.disconnect(shownId);
+                return;
             }
 
             const shellApp = this._windowTracker.get_window_app(metaWindow);
