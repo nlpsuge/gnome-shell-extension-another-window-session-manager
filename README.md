@@ -5,7 +5,7 @@ Most importantly, it supports both X11 and Wayland!
 
 This project is in early development, but it's basically working now. More features will be added in the future.
 
-This extension is based on [St(Shell Toolkit)](https://gjs-docs.gnome.org/st10~1.0_api/) and [Shell](https://gjs-docs.gnome.org/shell01~0.1_api/) APIs.
+This extension is based on several [Gnome technologies](https://www.gnome.org/technologies/) and APIs including [Meta](https://gjs-docs.gnome.org/meta9~9_api), [Shell](https://gjs-docs.gnome.org/shell01~0.1_api/) and [St(Shell Toolkit)](https://gjs-docs.gnome.org/st10~1.0_api/).
 
 
 <p align="left">
@@ -63,18 +63,20 @@ After confirm to save:
 | <img src=icons/close-symbolic.svg width="14" height="14">    | Close the current open windows                               |
 
 # Dependencies
-This project uses `ps` to get some information from a process, install it via `dnf install procps-ng` if don't have.
+This project uses `ps` to get some information from a process, install it via `dnf install procps-ng` if you don't have.
 
 # Known issues
 
-1. On both X11 and Wayland, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) continually during the process of restoring, the window size and position may can't be restored, and it may restore many instances of an application. **As a workaround, click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) only once util all apps restored.**
-2. On Wayland, if [a window is maximized along the left or right sides of the screen](https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en) before closed, its size and position can't be restored. **As a workaround, click move button (<img src=icons/move-symbolic.svg width="14" height="14">) to restore their size and position.**
-3. On both X11 and Wayland, due to [this bug](https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134) within mutter, in Overview, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) then immediately click the newly created workspace, the Gnome Shell can crash. To fix this issue, the Overview will be toggled hidden after click the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) when in Overview. I will remove this behaviour once I find a better solution or it's fixed in a new version of Gnome Shell.
-4. If an application lunched via a command line and it don't have a `.desktop`, it can't be moved to its own workspace, can't be restored both size and position. **Please click the app icon to launch an application before save it in the session and restore**.
+1. On both X11 and Wayland, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) continually during the process of restoring, the window size and position may can't be restored, and it may restore many instances of an application. **As a workaround, click the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) only once until all apps are restored.**
+2. On Wayland, if [a window is maximized along the left or right sides of the screen](https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en) before closed, its size and position can't be restored. **As a workaround, click the move button (<img src=icons/move-symbolic.svg width="14" height="14">) to restore their size and position.**
+3. On both X11 and Wayland, due to [this bug](https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134) within mutter, in Overview, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) then immediately click the newly created workspace, the Gnome Shell can crash. To fix this issue, the Overview will be toggled hidden after clicking the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) when in Overview. I will remove this behaviour once I find a better solution or it's fixed in a new version of Gnome Shell.
+4. If an application launched via a command line and it doesn't have a `.desktop`, it can't be moved to its own workspace, can't be restored both size and position. **Please click the app icon to launch an application before saving it in the session and restore**.
 5. ...
 
 # Where are the saved sessions?
-They are all in `~/.config/another-window-session-manager/sessions`. When use an exsiting name to save the current open windows, the previous file will be copied to `~/.config/another-window-session-manager/sessions/backups` as a new name, which is the-old-session-name**.backup-current-timestamp**.
+They are all in `~/.config/another-window-session-manager/sessions`. When use an existing name to save the current open windows, the previous file will be copied to `~/.config/another-window-session-manager/sessions/backups` as a new name, which is the-old-session-name**.backup-current-timestamp**.
+
+Note that I've marked `backups` as a reserved word, so you can't use it as a session name when saving a session. But you do have the freedom to create manually a file named `backups` in `~/.config/another-window-session-manager/sessions`. But this extension will only backup the session file that you are clicking the save button and you will receive an error log in the `journalctl` and an error notification every time you save an existing session.
 
 # TODO
 1. - Save open windows
@@ -82,13 +84,19 @@ They are all in `~/.config/another-window-session-manager/sessions`. When use an
 3. - Restore saved open windows
       - [x] Restore saved open windows
       - [x] Move to belonging workspace automatically
-      - [x] Restore window size and position
+      - [x] Restore window size and position ([issue 17](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/17))
+      - [ ] Restore window workspace, size and position of applications launched via a command line and don't have a recognizable `.desktop` file by `Shell.AppSystem.get_default().get_running()`.
+      - [ ] Support dual-monitors ([issue 21](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/21))
 4. - Saved open windows list
-      - [x] Saved open windows list
+      - [x] Save open windows button
       - [x] Restore button
-      - [x] Rename button
+      - [ ] Rename button (double click text to rename?)
+      - [x] Move button
       - [x] Delete button
 5. - [x] Move windows according to a saved session.
 6. - [ ] Settings
       - [x] Debugging mode
-8. - [ ] All TODO tags in the projects
+      - [ ] whitelist using for closing application with multiple windows
+7. - [ ] Support restoring a saved session when startup ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
+8. - [ ] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
+9. - [ ] All TODO tags in the projects
