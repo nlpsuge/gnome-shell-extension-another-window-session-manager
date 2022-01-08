@@ -70,10 +70,13 @@ var MoveSession = class {
             this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${open_window.get_workspace().index()}`);
             
             try {                
-                this._restoreWindowStateAndGeometry(open_window, saved_window_session);
+                this._restoreWindowGeometry(open_window, saved_window_session);
                 
                 this._createEnoughWorkspace(desktop_number);
                 open_window.change_workspace_by_index(desktop_number, false);
+                
+                // restore window state if necessary due to moving windows could reset window state
+                this._restoreWindowState(open_window, saved_window_session);
                 
             } catch(e) {
                 // I just don't want one failure breaks the loop 
