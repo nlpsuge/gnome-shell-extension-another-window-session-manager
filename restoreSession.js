@@ -112,7 +112,7 @@ var RestoreSession = class {
                         // TODO check running state to skip running apps
     
                         const cmd = session_config_object.cmd;
-                        if (cmd) {
+                        if (cmd && cmd.length !== 0) {
                             const cmdString = cmd.join(' ');
                             Util.trySpawnCommandLine(cmdString);
                             launched = true;

@@ -7,6 +7,8 @@ const Me = ExtensionUtils.getCurrentExtension();
 const SessionConfig = Me.imports.model.sessionConfig;
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
+// for make prototype affect
+Me.imports.utils.string;
 
 
 var SaveSession = class {
@@ -83,16 +85,39 @@ var SaveSession = class {
                         // If desktop_file_id is '', launch this application via command line
                         sessionConfigObject.desktop_file_id = '';
 
-                        // Log useful info to be used to create a .desktop that can be recognized by `Shell.AppSystem.get_default().get_running()`
-                        // So we can use this .desktop to restore window state and move windows to their workspace
+                        // Generating a compatible desktop file for this app so that it can be recognized by `Shell.AppSystem.get_default().get_running()`
+                        // And also use it to restore window state and move windows to their workspace etc
                         // See: https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/4921
-                        this._log.info(`${appName} - ${sessionConfigObject.window_title} don't have a recognizable .desktop file, please try to use the below info to create one.`);
-                        this._log.info(`${appName} is_window_backed : ${runningShellApp.is_window_backed()}`);
-                        const cmdStr = sessionConfigObject.cmd.join(' ');
-                        this._log.info(`${appName} - ${sessionConfigObject.window_title} command line : ${cmdStr}`);
-                        this._log.info(`${appName} - ${sessionConfigObject.window_title} wm_class : ${metaWindow.get_wm_class()}`);
-                        this._log.info(`${appName} - ${sessionConfigObject.window_title} wm_class_instance : ${metaWindow.get_wm_class_instance()}`);
                         
+                        // Note that the generated desktop file doesn't always work:
+                        // 1) The commandLine or cmdStr might not be always right, such as 
+                        // querying the process of Wire-x.x.x.AppImage to get the cmd 
+                        // returns '/tmp/.mount_Wire-3xXxIGA/wire-desktop'.
+                        // 2) ...
+                        
+                        this._log.info(`Generating a compatible desktop file for ${appName}`);
+                        
+                        const iconString = runningShellApp.get_icon().to_string()
+                        const argument = {
+                            appName: appName,
+                            commandLine: sessionConfigObject.cmd ? sessionConfigObject.cmd.join(' ') : '',
+                            icon: iconString ? iconString : '',
+                            wmClass: metaWindow.get_wm_class(),
+                            wmClassInstance: metaWindow.get_wm_class_instance(),
+                        };
+
+                        const desktopFileName = '__' + appName + '.desktop';
+                        const desktopFileContent = FileUtils.loadDesktopTemplate().fill(argument);
+                        if (!desktopFileContent) {
+                            const errMsg = `Failed to generate a .desktop file ${desktopFileName} using ${JSON.stringify(argument)}`;
+                            logError(errMsg);
+                        } else {
+                            this._log.info(`Generated a .desktop file, you can copy the content to a .desktop file named ${desktopFileName} and copy it to ${FileUtils.desktop_file_store_path_base}:`
+                            + '\n\n'
+                            + desktopFileContent
+                            + '\n');
+                        }
+
                     }
                     
                     let window_state = sessionConfigObject.window_state;
