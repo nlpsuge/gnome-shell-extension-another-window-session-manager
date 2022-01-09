@@ -75,6 +75,7 @@ var SaveSession = class {
                     sessionConfigObject.windows_count = n_windows;
                     if (desktopAppInfo) {
                         sessionConfigObject.desktop_file_id = desktopFileId;
+                        sessionConfigObject.desktop_file_id_full_path = desktopAppInfo.get_filename();
                     } else {
                         // No app info associated with this application, we just set an empty string
                         // Shell.App does have an id like window:22, but it's useless for restoring
