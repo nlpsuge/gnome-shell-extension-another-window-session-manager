@@ -7,6 +7,8 @@ const Me = ExtensionUtils.getCurrentExtension();
 const SessionConfig = Me.imports.model.sessionConfig;
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
+// for make prototype affect
+Me.imports.utils.string;
 
 
 var SaveSession = class {
@@ -75,6 +77,7 @@ var SaveSession = class {
                     sessionConfigObject.windows_count = n_windows;
                     if (desktopAppInfo) {
                         sessionConfigObject.desktop_file_id = desktopFileId;
+                        sessionConfigObject.desktop_file_id_full_path = desktopAppInfo.get_filename();
                     } else {
                         // No app info associated with this application, we just set an empty string
                         // Shell.App does have an id like window:22, but it's useless for restoring
@@ -91,6 +94,20 @@ var SaveSession = class {
                         this._log.info(`${appName} - ${sessionConfigObject.window_title} wm_class : ${metaWindow.get_wm_class()}`);
                         this._log.info(`${appName} - ${sessionConfigObject.window_title} wm_class_instance : ${metaWindow.get_wm_class_instance()}`);
                         
+                        const iconString = runningShellApp.get_icon().to_string()
+                        const argument = {
+                            appName: appName,
+                            commandLine: cmdStr,
+                            icon: iconString ? iconString : '',
+                            wmClass: metaWindow.get_wm_class(),
+                            wmClassInstance: metaWindow.get_wm_class_instance(),
+                        };
+                        
+                        const desktopFileName = '__' + appName + '.desktop';
+                        const [created, existing, reason] = FileUtils.writeDesktopFileIfNecessary(desktopFileName, argument);
+                        if (!created && !existing && reason) {
+                            global.notify_error(reason, reason);
+                        }
                     }
                     
                     let window_state = sessionConfigObject.window_state;
