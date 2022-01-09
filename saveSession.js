@@ -75,6 +75,7 @@ var SaveSession = class {
                     sessionConfigObject.windows_count = n_windows;
                     if (desktopAppInfo) {
                         sessionConfigObject.desktop_file_id = desktopFileId;
+                        // Save the .desktop full path, so we know which desktop is used by this app.
                         sessionConfigObject.desktop_file_id_full_path = desktopAppInfo.get_filename();
                     } else {
                         // No app info associated with this application, we just set an empty string
