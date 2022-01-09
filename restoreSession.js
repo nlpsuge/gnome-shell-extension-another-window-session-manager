@@ -105,8 +105,8 @@ var RestoreSession = class {
                                 global.notify_error(`Failed to restore ${app_name}`, `Reason: Cannot find ${desktop_file_id}.`);
                             }
                         } else {
-                            logError(new Error(`Failed to restore ${app_name}. Reason: don't find Shell.App by ${desktop_file_id}.`));
-                            global.notify_error(`Failed to restore ${app_name}`, `Reason: don't find Shell.App by ${desktop_file_id}.`);
+                            logError(new Error(`Failed to restore ${app_name}. Reason: don't find Shell.App by ${desktop_file_id}, App is not installed or something is wrong in ${desktop_file_id}?`));
+                            global.notify_error(`Failed to restore ${app_name}`, `Reason: don't find Shell.App by ${desktop_file_id}. App is not installed or something is wrong in ${desktop_file_id}?`);
                         }
                     } else {
                         // TODO check running state to skip running apps
