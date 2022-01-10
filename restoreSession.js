@@ -117,7 +117,7 @@ var RestoreSession = class {
                             Util.trySpawnCommandLine(cmdString);
                             launched = true;
                             // Important log. Indicate that this app may has no .desktop file, need to be handled specially.
-                            log(`${app_name} launched via ${cmdString}!`);
+                            this._log.info(`${app_name} launched via command line ${cmdString}!`);
                         } else {
                             // TODO try to launch via app_info by searching the app name?
                             let errorMsg = `Empty command line for ${app_name}`;
