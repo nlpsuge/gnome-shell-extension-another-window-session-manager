@@ -69,14 +69,32 @@ This project uses `ps` to get some information from a process, install it via `d
 
 1. On both X11 and Wayland, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) continually during the process of restoring, the window size and position may can't be restored, and it may restore many instances of an application. **As a workaround, click the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) only once until all apps are restored.**
 2. On Wayland, if [a window is maximized along the left or right sides of the screen](https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en) before closed, its size and position can't be restored. **As a workaround, click the move button (<img src=icons/move-symbolic.svg width="14" height="14">) to restore their size and position.**
-3. On both X11 and Wayland, due to [this bug](https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134) within mutter, in Overview, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) then immediately click the newly created workspace, the Gnome Shell can crash. To fix this issue, the Overview will be toggled hidden after clicking the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) when in Overview. I will remove this behaviour once I find a better solution or it's fixed in a new version of Gnome Shell.
-4. If an application launched via a command line and it doesn't have a `.desktop`, it can't be moved to its own workspace, can't be restored both size and position. **Please click the app icon to launch an application before saving it in the session and restore**.
-5. ...
+3. On both X11 and Wayland, due to [this bug](https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134) within mutter, in Overview, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) then immediately click the newly created workspace, the Gnome Shell can crash. To fix this issue, the Overview will be toggled hidden after clicking the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) when in Overview. I will remove this behavior once I find a better solution or it's fixed in a new version of Gnome Shell.
+4. ...
+
+# Support applications launched via a command line or applications that don't have a proper .desktop file
+If the .desktop is missing from a session file, restoring an application relies on the command line completely.
+
+In this case this extension will generate a .desktop in the `journalctl` when you click the save button (<img src=icons/save-symbolic.svg width="14" height="14">). Search `Generated a .desktop file` in `journalctl /usr/bin/gnome-shell -r` to find it: `journalctl /usr/bin/gnome-shell -b -o cat --no-pager | grep 'Generated a .desktop file'`. To make it work, You need to copy it to `~/.local/share/applications`, and relaunch the app and save the session again. This extension should be able to restore the workspace, state, size and position of this application.
+
+**The generated .desktop might not always works, it's better to check whether the `Exec` is correct or not.** If you restore an app using a bad .desktop, this extension will give you a notification and log error logs in the `journalctl`.
+
+I tested on Anki, VirtualBox machine and two .AppImage apps, they all have no .desktop and are launched in the terminal. By using the generated .desktop, Anki, VirtualBox machine works. One .AppImage app works. Another .AppImage app is `Wire_x86_64.AppImage` and doesn't work, because the command line returned is something like `/tmp/.mount_Wire-3xxxxx/wire-desktop`, file in the `/tmp` will be deleted during the OS shutdown and start.
+
+It's impossible / hard to query the command line from a process, the pid of a window might not be right too and I don't find a standard way for this.
+
+## How can I know whether a .desktop of an application is proper or not?
+
+One of the following should be enough to prove the .desktop is not proper:
+1. Right click on the icon in the panel or dash, if there is no `Add to Favorites` in the menu
+2. This extension can launch an application, but can't move the window to its workspace. (But it might suggest there is a bug in this extension, LOL :))
+
+Most existing applications should have a proper .desktop. I'm just handling the special case. Someone like myself might want this feature.
 
 # Where are the saved sessions?
 They are all in `~/.config/another-window-session-manager/sessions`. When use an existing name to save the current open windows, the previous file will be copied to `~/.config/another-window-session-manager/sessions/backups` as a new name, which is the-old-session-name**.backup-current-timestamp**.
 
-Note that I've marked `backups` as a reserved word, so you can't use it as a session name when saving a session. But you do have the freedom to create manually a file named `backups` in `~/.config/another-window-session-manager/sessions`. But this extension will only backup the session file that you are clicking the save button and you will receive an error log in the `journalctl` and an error notification every time you save an existing session.
+Note that I've marked `backups` as a reserved word, so you can't use it as a session name when saving a session. But you do have the freedom to manually create a file named `backups` in `~/.config/another-window-session-manager/sessions`. But this extension will only backup the session file that you are clicking the save button and you will receive an error log in the `journalctl` and an error notification every time you save an existing session.
 
 # TODO
 1. - Save open windows
