@@ -1,6 +1,8 @@
 'use strict';
 
 const { Gio, GLib } = imports.gi
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
 
 var default_sessionName = 'defaultSession';
 const home_dir = GLib.get_home_dir();
@@ -10,6 +12,9 @@ const config_path_base = GLib.build_filenamev([home_dir, '.config', 'another-win
 var sessions_path = GLib.build_filenamev([config_path_base, 'sessions']);
 var sessions_backup_folder_name = 'backups';
 var sessions_backup_path = GLib.build_filenamev([sessions_path, sessions_backup_folder_name]);
+var desktop_template_path = GLib.build_filenamev([Me.path, '/template/template.desktop']);
+var desktop_file_store_path_base = '~/.local/share/applications';
+var desktop_file_store_path = `${desktop_file_store_path_base}/__another-window-session-manager`;
 
 
 function get_sessions_path() {
@@ -107,6 +112,22 @@ function isDirectory(sessionName) {
 
     return false;
 }
+
+function loadDesktopTemplate() {
+    const desktop_template_file = Gio.File.new_for_path(desktop_template_path);
+    let [success, contents] = desktop_template_file.load_contents(null);
+    if (success) {
+        if (contents instanceof Uint8Array) {
+            return imports.byteArray.toString(contents);
+        } else {
+            // Unreachable code
+            return contents;
+        }
+    }
+
+    return '';
+}
+
 
 // test
 // let index = 0;

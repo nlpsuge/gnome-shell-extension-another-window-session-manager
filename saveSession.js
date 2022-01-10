@@ -7,6 +7,8 @@ const Me = ExtensionUtils.getCurrentExtension();
 const SessionConfig = Me.imports.model.sessionConfig;
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
+// for make prototype affect
+Me.imports.utils.string;
 
 
 var SaveSession = class {
@@ -28,6 +30,8 @@ var SaveSession = class {
         sessionConfig.session_name = sessionName ? sessionName : FileUtils.default_sessionName;
         sessionConfig.session_create_time = new Date().toLocaleString();
         
+        this._log.info(`Saving open windows as a session named ${sessionConfig.session_name}`);
+
         for (const runningShellApp of runningShellApps) {
             const appName = runningShellApp.get_name();
             const desktopFileId = runningShellApp.get_id();
@@ -41,12 +45,17 @@ var SaveSession = class {
 
             const metaWindows = runningShellApp.get_windows();
             for (const metaWindow of metaWindows) {
+                if (metaWindow.is_attached_dialog()) {
+                    continue;
+                }
+
                 // TODO pid is 0 if not known 
                 // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
                 const pid = metaWindow.get_pid();
                 const input_cmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,command'];
                 try {
                     const proc = this._subprocessLauncher.spawnv(input_cmd);
+                    // TODO Use async version in the future
                     const result = proc.communicate_utf8(null, null);
                                         
                     const sessionConfigObject = new SessionConfig.SessionConfigObject();
@@ -75,11 +84,61 @@ var SaveSession = class {
                     sessionConfigObject.windows_count = n_windows;
                     if (desktopAppInfo) {
                         sessionConfigObject.desktop_file_id = desktopFileId;
+                        // Save the .desktop full path, so we know which desktop is used by this app.
+                        sessionConfigObject.desktop_file_id_full_path = desktopAppInfo.get_filename();
                     } else {
                         // No app info associated with this application, we just set an empty string
                         // Shell.App does have an id like window:22, but it's useless for restoring
                         // If desktop_file_id is '', launch this application via command line
                         sessionConfigObject.desktop_file_id = '';
+
+                        // Generating a compatible desktop file for this app so that it can be recognized by `Shell.AppSystem.get_default().get_running()`
+                        // And also use it to restore window state and move windows to their workspace etc
+                        // See: https://gitlab.gnome.org/GNOME/gnome-shell/-/issues/4921
+                        
+                        // Note that the generated desktop file doesn't always work:
+                        // 1) The commandLine or cmdStr might not be always right, such as 
+                        // querying the process of Wire-x.x.x.AppImage to get the cmd 
+                        // returns '/tmp/.mount_Wire-3xXxIGA/wire-desktop'.
+                        // 2) ...
+                        
+                        this._log.info(`Generating a compatible desktop file for ${appName}`);
+                        let cmdStr = sessionConfigObject.cmd ? sessionConfigObject.cmd.join(' ').trim() : '';
+                        if (cmdStr.startsWith('./')) {
+                            // Try to get the working directory to complete the command line
+                            const proc = this._subprocessLauncher.spawnv(['pwdx', `${pid}`]);
+                            // TODO Use async version in the future
+                            const result = proc.communicate_utf8(null, null);
+                            let [, stdout, stderr] = result;
+                            let status = proc.get_exit_status();
+                            if (status === 0 && stdout) {
+                                cmdStr = `${stdout.split(':')[1].trim()}/${cmdStr}`
+                            } else {
+                                logError(`Failed to query the working directory according to ${pid}, and the current command line is ${cmdStr}`);
+                            }
+
+                        }
+                        const iconString = runningShellApp.get_icon().to_string()
+                        const argument = {
+                            appName: appName,
+                            commandLine: cmdStr,
+                            icon: iconString ? iconString : '',
+                            wmClass: metaWindow.get_wm_class(),
+                            wmClassInstance: metaWindow.get_wm_class_instance(),
+                        };
+
+                        const desktopFileName = '__' + appName + '.desktop';
+                        const desktopFileContent = FileUtils.loadDesktopTemplate().fill(argument);
+                        if (!desktopFileContent) {
+                            const errMsg = `Failed to generate a .desktop file ${desktopFileName} using ${JSON.stringify(argument)}`;
+                            logError(errMsg);
+                        } else {
+                            this._log.info(`Generated a .desktop file, you can use the below content to create a .desktop file and copy it to ${FileUtils.desktop_file_store_path_base} :`
+                            + '\n\n'
+                            + desktopFileContent
+                            + '\n');
+                        }
+
                     }
                     
                     let window_state = sessionConfigObject.window_state;

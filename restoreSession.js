@@ -33,7 +33,6 @@ var RestoreSession = class {
         this._restoredApps = new Map();
 
         this._display = global.display;
-        this._displayId = null;
 
         this._connectIds = [];
     }
@@ -106,19 +105,19 @@ var RestoreSession = class {
                                 global.notify_error(`Failed to restore ${app_name}`, `Reason: Cannot find ${desktop_file_id}.`);
                             }
                         } else {
-                            logError(new Error(`Failed to restore ${app_name}. Reason: unknown.`));
-                            global.notify_error(`Failed to restore ${app_name}`, 'Reason: unknown.');
+                            logError(new Error(`Failed to restore ${app_name}. Reason: don't find Shell.App by ${desktop_file_id}, App is not installed or something is wrong in ${desktop_file_id}?`));
+                            global.notify_error(`Failed to restore ${app_name}`, `Reason: don't find Shell.App by ${desktop_file_id}. App is not installed or something is wrong in ${desktop_file_id}?`);
                         }
                     } else {
                         // TODO check running state to skip running apps
     
                         const cmd = session_config_object.cmd;
-                        if (cmd) {
+                        if (cmd && cmd.length !== 0) {
                             const cmdString = cmd.join(' ');
                             Util.trySpawnCommandLine(cmdString);
                             launched = true;
                             // Important log. Indicate that this app may has no .desktop file, need to be handled specially.
-                            log(`${app_name} launched via ${cmdString}!`);
+                            this._log.info(`${app_name} launched via command line ${cmdString}!`);
                         } else {
                             // TODO try to launch via app_info by searching the app name?
                             let errorMsg = `Empty command line for ${app_name}`;
@@ -196,11 +195,6 @@ var RestoreSession = class {
         if (this._restoringApps) {
             this._restoringApps.clear();
             this._restoringApps = null;
-        }
-
-        if (this._displayId) {
-            this._display.disconnect(this._displayId);
-            this._displayId = 0;
         }
 
         if (this._defaultAppSystem) {

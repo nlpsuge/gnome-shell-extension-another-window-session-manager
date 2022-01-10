@@ -67,15 +67,31 @@ var MoveSession = class {
             const title = open_window.get_title();
             const desktop_number = saved_window_session.desktop_number;
 
-            this._log.debug(`Auto move the window '${title}' to workspace ${desktop_number} from ${open_window.get_workspace().index()} for ${shellApp.get_name()}`);
-            
-            try {                
-                this._restoreWindowStateAndGeometry(open_window, saved_window_session);
-                
+            try {
+                this._restoreWindowGeometry(open_window, saved_window_session);
+
                 this._createEnoughWorkspace(desktop_number);
-                open_window.change_workspace_by_index(desktop_number, false);
-                
-            } catch(e) {
+
+                // Due the fact that 
+                // moving windows across workspaces will lost the window states, 
+                // which are including `Always on Visible Workspace`, 
+                // on both X11 and Wayland, and then restoring 
+                // `Always on Visible Workspace` again on that window can cause 
+                // notifiable 'glitch', I mean the window will disappear and appear.
+                // So we check window state here, if the window is already 
+                // `Always on Visible Workspace`, don't move it.
+                const is_sticky = saved_window_session.window_state.is_sticky;
+                if (!(is_sticky && open_window.is_on_all_workspaces)) {
+                    this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${open_window.get_workspace().index()}`);
+                    open_window.change_workspace_by_index(desktop_number, false);
+                } else {
+                    this._log.debug(`The window '${shellApp.get_name()} - ${title}' is already sticky on workspace ${desktop_number}`);
+                }
+
+                // restore window state if necessary due to moving windows could lost window state
+                this._restoreWindowState(open_window, saved_window_session);
+
+            } catch (e) {
                 // I just don't want one failure breaks the loop 
 
                 this._log.error(e, `Failed to move window ${title} for ${shellApp.get_name()} automatically`);
@@ -100,7 +116,7 @@ var MoveSession = class {
         this._createEnoughWorkspace(desktop_number);
         if (this._log.isDebug()) {
             const shellApp = this._windowTracker.get_window_app(metaWindow);
-            this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number}`);
+            this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number} from ${metaWindow.get_workspace().index()}`);
         }
         metaWindow.change_workspace_by_index(desktop_number, false);
         return saved_window_session;
@@ -120,16 +136,19 @@ var MoveSession = class {
             this._sourceIds.push(sourceId);
         } else {
             const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._restoreWindowStateAndGeometry(metaWindow, saved_window_session);
+                this._restoreWindowGeometry(metaWindow, saved_window_session);
                 const desktop_number = saved_window_session.desktop_number;
                 // It's necessary to move window again to ensure an app goes to its own workspace.
                 // In a sort of situation, some apps probably just don't want to move when call createEnoughWorkspaceAndMoveWindows() from `Meta.Display::window-created` signal.
                 this._createEnoughWorkspace(desktop_number);
                 if (this._log.isDebug()) {
                     const shellApp = this._windowTracker.get_window_app(metaWindow);
-                    this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number}`);
+                    this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number} from ${metaWindow.get_workspace().index()}`);
                 }
                 metaWindow.change_workspace_by_index(desktop_number, false);
+
+                // The window state get lost during moving the window, and we need to restore window state again.
+                this._restoreWindowState(metaWindow, saved_window_session);
 
                 saved_window_session.moved = true;
                 return GLib.SOURCE_REMOVE;
@@ -153,7 +172,7 @@ var MoveSession = class {
                 if (open_window_workspace_index === desktop_number) {
                     if (this._log.isDebug()) {
                         const shellApp = this._windowTracker.get_window_app(metaWindow);
-                        this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp?.get_name()}`);
+                        this._log.debug(`The window '${shellApp?.get_name()} - ${title}' is already on workspace ${desktop_number}`);
                     }
                     saved_window_session.moved = true;
                 }
@@ -168,39 +187,59 @@ var MoveSession = class {
      * @see https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en
      */
     _restoreWindowStateAndGeometry(metaWindow, saved_window_session) {
+        this._restoreWindowState(metaWindow, saved_window_session);
+        this._restoreWindowGeometry(metaWindow, saved_window_session);
+    }
+
+    _restoreWindowState(metaWindow, saved_window_session) {
         // window state
         const window_state = saved_window_session.window_state;
         if (window_state.is_above) {
-            metaWindow.make_above();
+            if (!metaWindow.is_above()) {
+                this._log.debug(`Making ${metaWindow.get_title()} above`);
+                metaWindow.make_above();
+            }
         }
         if (window_state.is_sticky) {
-            metaWindow.stick();
+            if (!metaWindow.is_on_all_workspaces()) {
+                this._log.debug(`Making ${metaWindow.get_title()} sticky`);
+                metaWindow.stick();
+            }
         }
 
         const savedMetaMaximized = window_state.meta_maximized;
         // Maximize a window to take up all of the space
         if (savedMetaMaximized === Meta.MaximizeFlags.BOTH) {
-            metaWindow.maximize(savedMetaMaximized);
-        } else {
-            // If current window is in maximum mode, it can't be resized.
+            const currentMetaMaximized = metaWindow.get_maximized();
+            if (currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
+                this._log.debug(`Maximizing ${metaWindow.get_title()}`);
+                metaWindow.maximize(savedMetaMaximized);
+            }
+        }
+
+    }
+
+    /**
+     * @see https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en
+     */
+    _restoreWindowGeometry(metaWindow, saved_window_session) {
+        const window_state = saved_window_session.window_state;
+        const savedMetaMaximized = window_state.meta_maximized;
+        if (savedMetaMaximized !== Meta.MaximizeFlags.BOTH) {
+            // It can't be resized if current window is in maximum mode, including vertically maximization along the left and right sides of the screen
             const currentMetaMaximized = metaWindow.get_maximized();
             if (currentMetaMaximized) {
                 metaWindow.unmaximize(currentMetaMaximized);
             }
-
-            // Also handle 'maximize windows vertically along the left and right sides of the screen'
-            this._restoreWindowGeometry(metaWindow, saved_window_session);
         }
-    }
 
-    _restoreWindowGeometry(metaWindow, saved_window_session) {
         const window_position = saved_window_session.window_position;
         if (window_position.provider === 'Meta') {
             const to_x = window_position.x_offset;
             const to_y = window_position.y_offset;
             const to_width = window_position.width;
             const to_height = window_position.height;
-        
+
             const frameRect = metaWindow.get_frame_rect();
             const current_x = frameRect.x;
             const current_y = frameRect.y;
@@ -209,8 +248,7 @@ var MoveSession = class {
             if (to_x !== current_x ||
                 to_y !== current_y ||
                 current_width !== to_width ||
-                current_height !== to_height) 
-            {
+                current_height !== to_height) {
                 metaWindow.move_resize_frame(true, to_x, to_y, to_width, to_height);
             }
         }
@@ -251,9 +289,9 @@ var MoveSession = class {
                     autoMoveInterestingWindows.push({
                         open_window: open_window,
                         saved_window_session: saved_window_session
-                    });    
+                    });
                 }
-    
+
             });
 
         });

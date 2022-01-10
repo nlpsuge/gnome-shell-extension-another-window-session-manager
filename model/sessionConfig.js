@@ -48,7 +48,10 @@ var SessionConfigObject = class {
 
     // Additional fields
 
+    // the .desktop file name
     desktop_file_id; // str
+    // The full .desktop file path
+    desktop_file_id_full_path; // str
 }
 
 var SessionConfig = class {
