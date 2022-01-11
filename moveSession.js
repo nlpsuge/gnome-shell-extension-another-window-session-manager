@@ -111,7 +111,7 @@ var MoveSession = class {
         }
 
         const monitorNumber = saved_window_session.monitor_number;
-        if (monitorNumber) {
+        if (monitorNumber === undefined) {
             return;
         }
 
