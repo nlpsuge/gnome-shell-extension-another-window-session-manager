@@ -68,6 +68,8 @@ var MoveSession = class {
             const desktop_number = saved_window_session.desktop_number;
 
             try {
+                this._restoreMonitor(open_window, saved_window_session);
+
                 this._restoreWindowGeometry(open_window, saved_window_session);
 
                 this._createEnoughWorkspace(desktop_number);
@@ -101,6 +103,28 @@ var MoveSession = class {
 
     }
 
+    _restoreMonitor(metaWindow, saved_window_session) {
+        const currentMonitorNumber = metaWindow.get_monitor();
+        // -1 if the window has been recently unmanaged and does not have a monitor
+        if (currentMonitorNumber === -1) {
+            return;
+        }
+
+        const monitorNumber = saved_window_session.monitor_number;
+        if (monitorNumber) {
+            return;
+        }
+
+        if (currentMonitorNumber != monitorNumber) {
+            if (this._log.isDebug()) {
+                const shellApp = this._windowTracker.get_window_app(metaWindow);
+                this._log.debug(`Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to monitor ${monitorNumber} from ${currentMonitorNumber}`);
+            }
+            metaWindow.move_to_monitor(monitorNumber);
+        }
+
+    }
+
     createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions) {
         const saved_window_session = this._getOneMatchedSavedWindow(metaWindow, saved_window_sessions);
         if (!saved_window_session) {
@@ -112,11 +136,13 @@ var MoveSession = class {
             return saved_window_session;
         }
 
+        this._restoreMonitor(metaWindow, saved_window_session);
+
         const desktop_number = saved_window_session.desktop_number;
         this._createEnoughWorkspace(desktop_number);
         if (this._log.isDebug()) {
             const shellApp = this._windowTracker.get_window_app(metaWindow);
-            this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number} from ${metaWindow.get_workspace().index()}`);
+            this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
         }
         metaWindow.change_workspace_by_index(desktop_number, false);
         return saved_window_session;
@@ -136,6 +162,7 @@ var MoveSession = class {
             this._sourceIds.push(sourceId);
         } else {
             const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                this._restoreMonitor(metaWindow, saved_window_session);
                 this._restoreWindowGeometry(metaWindow, saved_window_session);
                 const desktop_number = saved_window_session.desktop_number;
                 // It's necessary to move window again to ensure an app goes to its own workspace.
@@ -143,7 +170,7 @@ var MoveSession = class {
                 this._createEnoughWorkspace(desktop_number);
                 if (this._log.isDebug()) {
                     const shellApp = this._windowTracker.get_window_app(metaWindow);
-                    this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to ${desktop_number} from ${metaWindow.get_workspace().index()}`);
+                    this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
                 }
                 metaWindow.change_workspace_by_index(desktop_number, false);
 

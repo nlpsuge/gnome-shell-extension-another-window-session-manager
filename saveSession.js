@@ -69,6 +69,8 @@ var SaveSession = class {
                         const workspace = metaWindow.get_workspace();
                         sessionConfigObject.desktop_number = workspace.index();
                     }
+                    sessionConfigObject.monitor_number = metaWindow.get_monitor();
+                    sessionConfigObject.is_on_primary_monitor = metaWindow.is_on_primary_monitor();
                     sessionConfigObject.pid = pid;
                     sessionConfigObject.username = GLib.get_user_name();
                     const frameRect = metaWindow.get_frame_rect();
