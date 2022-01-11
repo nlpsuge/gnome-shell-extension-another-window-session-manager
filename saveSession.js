@@ -66,6 +66,7 @@ var SaveSession = class {
                     if (metaWindow.is_always_on_all_workspaces()) {
                         sessionConfigObject.desktop_number = -1;
                     } else {
+                        // If the window is on all workspaces, returns the currently active workspace.
                         const workspace = metaWindow.get_workspace();
                         sessionConfigObject.desktop_number = workspace.index();
                     }

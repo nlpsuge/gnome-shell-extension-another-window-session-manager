@@ -45,9 +45,9 @@ After confirm to save:
 2. Save open windows
 3. Restore saved open windows
 4. Restore window state, including `Always on Top`, `Always on Visible Workspace` and maximization
-5. Restore window workspace, monitor, size and position
+5. Restore window workspace, size and position
 6. Move windows to their own workspace according to a saved session
-7. Move windows to their own monitor according to a saved session
+7. Support multi-monitor
 8. Trash saved session
 9. Search saved session by the session name fuzzily
 10. ...
@@ -105,7 +105,7 @@ Note that I've marked `backups` as a reserved word, so you can't use it as a ses
       - [x] Move to belonging workspace automatically
       - [x] Restore window size and position ([issue 17](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/17))
       - [x] Restore window workspace, size and position of applications launched via a command line and don't have a recognizable `.desktop` file by `Shell.AppSystem.get_default().get_running()`.
-      - [x] Support dual-monitors ([issue 21](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/21))
+      - [x] Support multi-monitor ([issue 21](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/21))
 4. - Saved open windows list
       - [x] Save open windows button
       - [x] Restore button

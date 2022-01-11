@@ -103,6 +103,13 @@ var MoveSession = class {
 
     }
 
+    /**
+     * We need to move the window before changing the workspace, because
+     * the move itself could cause a workspace change if the window enters
+     * the primary monitor
+     * 
+     * @see https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/gnome-41/js/ui/workspace.js#L1483
+     */
     _restoreMonitor(metaWindow, saved_window_session) {
         const currentMonitorNumber = metaWindow.get_monitor();
         // -1 if the window has been recently unmanaged and does not have a monitor
@@ -110,19 +117,54 @@ var MoveSession = class {
             return;
         }
 
-        const monitorNumber = saved_window_session.monitor_number;
-        if (monitorNumber === undefined) {
+        const toMonitorNumber = saved_window_session.monitor_number;
+        if (toMonitorNumber === undefined) {
+            if (currentMonitorNumber !== primaryMonitorIndex) {
+                this._log.info(`${shellApp.get_name()} - ${metaWindow.get_title()} doesn't have the monitor number data, click the save open windows button to save it. Moving it to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
+                metaWindow.move_to_monitor(primaryMonitorIndex);
+            }
             return;
         }
 
-        if (currentMonitorNumber != monitorNumber) {
-            if (this._log.isDebug()) {
-                const shellApp = this._windowTracker.get_window_app(metaWindow);
-                this._log.debug(`Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to monitor ${monitorNumber} from ${currentMonitorNumber}`);
+        const shellApp = this._windowTracker.get_window_app(metaWindow);
+
+        const primaryMonitorIndex = global.display.get_primary_monitor()
+        // It's possible to save the unmanaged windows
+        if (toMonitorNumber === -1) {
+            if (currentMonitorNumber !== primaryMonitorIndex) {
+                this._log.info(`${shellApp.get_name()} - ${metaWindow.get_title()} is unmanaged when saving, moving it to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
+                metaWindow.move_to_monitor(primaryMonitorIndex);
             }
-            metaWindow.move_to_monitor(monitorNumber);
+            return;
         }
 
+        const is_on_primary_monitor = saved_window_session.is_on_primary_monitor;
+        if (is_on_primary_monitor) {
+            if (currentMonitorNumber !== primaryMonitorIndex) {
+                this._log.info(`Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
+                metaWindow.move_to_monitor(primaryMonitorIndex);
+            }
+            return;
+        }
+        
+        // It causes Gnome shell to crash, if we move a monitor to a non-existing monitor on X11 and Wayland!
+        // We move all windows on non-existing monitors to the primary monitor
+        const totalMonitors = global.display.get_n_monitors()
+        if (toMonitorNumber > totalMonitors - 1) {
+            if (currentMonitorNumber !== primaryMonitorIndex) {
+                this._log.info(`Monitor ${toMonitorNumber} doesn't exist. Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
+                metaWindow.move_to_monitor(primaryMonitorIndex);
+            }
+            return;
+        }
+
+        if (currentMonitorNumber !== toMonitorNumber) {
+            this._log.debug(`Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to monitor ${toMonitorNumber} from ${currentMonitorNumber}`);
+            // So, you don't want to unplug the monitor, which we are moving the window in to, at this moment. 🤣
+            metaWindow.move_to_monitor(toMonitorNumber);
+            return;
+        }
+        
     }
 
     createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions) {
