@@ -43,13 +43,14 @@ After confirm to save:
 # Main features
 1. Close open windows
 2. Save open windows
-3. Restore saved open windows and move windows to their own workspace automatically in the progress
+3. Restore saved open windows
 4. Restore window state, including `Always on Top`, `Always on Visible Workspace` and maximization
-5. Restore window size and position
+5. Restore window workspace, monitor, size and position
 6. Move windows to their own workspace according to a saved session
-7. Trash saved session
-8. Search saved session by the session name fuzzily
-9. ...
+7. Move windows to their own monitor according to a saved session
+8. Trash saved session
+9. Search saved session by the session name fuzzily
+10. ...
 
 # Panel menu items
 
@@ -63,7 +64,7 @@ After confirm to save:
 | <img src=icons/close-symbolic.svg width="14" height="14">    | Close the current open windows                               |
 
 # Dependencies
-This project uses `ps` to get some information from a process, install it via `dnf install procps-ng` if you don't have.
+This project uses `ps` and `pwdx` to get some information from a process, install it via `dnf install procps-ng` if you don't have.
 
 # Known issues
 
@@ -77,9 +78,9 @@ If the .desktop is missing from a session file, restoring an application relies 
 
 In this case this extension will generate a .desktop in the `journalctl` when you click the save button (<img src=icons/save-symbolic.svg width="14" height="14">). Search `Generated a .desktop file` in `journalctl /usr/bin/gnome-shell -r` to find it: `journalctl /usr/bin/gnome-shell -b -o cat --no-pager | grep 'Generated a .desktop file'`. To make it work, You need to copy it to `~/.local/share/applications`, and relaunch the app and save the session again. This extension should be able to restore the workspace, state, size and position of this application.
 
-**The generated .desktop might not always works, it's better to check whether the `Exec` is correct or not.** If you restore an app using a bad .desktop, this extension will give you a notification and log error logs in the `journalctl`.
+**The generated .desktop might not work sometimes, it's better to check whether the value of `Exec` is correct or not.** If you restore an app using a bad .desktop, this extension will give you a notification and log error level logs in the `journalctl`.
 
-I tested on Anki, VirtualBox machine and two .AppImage apps, they all have no .desktop and are launched in the terminal. By using the generated .desktop, Anki, VirtualBox machine works. One .AppImage app works. Another .AppImage app is `Wire_x86_64.AppImage` and doesn't work, because the command line returned is something like `/tmp/.mount_Wire-3xxxxx/wire-desktop`, file in the `/tmp` will be deleted during the OS shutdown and start.
+I tested on Anki, VirtualBox machine and two .AppImage apps, they all have no .desktop and are launched in the terminal. By using the generated .desktop, Anki, VirtualBox machine works. One .AppImage app works. Another .AppImage app is `Wire_x86_64.AppImage` and doesn't work, because the command line returned is something like `/tmp/.mount_Wire-3xxxxx/wire-desktop`, you can use it to launch Wire but files in the `/tmp` will be deleted during the OS shutdown and start.
 
 It's impossible / hard to query the command line from a process, the pid of a window might not be right too and I don't find a standard way for this.
 
@@ -103,8 +104,8 @@ Note that I've marked `backups` as a reserved word, so you can't use it as a ses
       - [x] Restore saved open windows
       - [x] Move to belonging workspace automatically
       - [x] Restore window size and position ([issue 17](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/17))
-      - [ ] Restore window workspace, size and position of applications launched via a command line and don't have a recognizable `.desktop` file by `Shell.AppSystem.get_default().get_running()`.
-      - [ ] Support dual-monitors ([issue 21](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/21))
+      - [x] Restore window workspace, size and position of applications launched via a command line and don't have a recognizable `.desktop` file by `Shell.AppSystem.get_default().get_running()`.
+      - [x] Support dual-monitors ([issue 21](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/21))
 4. - Saved open windows list
       - [x] Save open windows button
       - [x] Restore button
