@@ -27,21 +27,6 @@ if (!String.prototype.fill) {
   };
 }
 
-// test
-// gjs utils/string.js
-// _testFill();
-function _testFill() {
-    let str = 'Name=${appName} Comment=${appName} Type=Application Exec=${commandLine} Icon=${icon}';
-    // let str = '';
-    const strNew = str.fill({
-        appName: 'Anki',
-        commandLine: 'anki --no-sandbox -b /tmp/anki-tmp',
-        icon:''
-    });
-    log(str);
-    log(strNew);
-}
-
 
 
 
