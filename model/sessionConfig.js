@@ -52,6 +52,10 @@ var SessionConfigObject = class {
     desktop_file_id; // str
     // The full .desktop file path
     desktop_file_id_full_path; // str
+    // The index of the monitor that this window is on.
+    monitor_number;
+    // TODO Primary monitor can be changed, what if the primary monitor have been changed when restoring apps? The monitor number is the same as saved monitor_number?
+    is_on_primary_monitor;
 }
 
 var SessionConfig = class {
