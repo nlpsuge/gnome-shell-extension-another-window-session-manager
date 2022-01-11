@@ -1,3 +1,8 @@
+/* Restore Session Dialog */
+.restore-session-dialog {
+    width: 30em;
+}
+  
 
 /**
 * *-tooltip: Adapted from: https://github.com/GSConnect/gnome-shell-extension-gsconnect/blob/master/src/stylesheet.css
