@@ -5,7 +5,6 @@
  * 
  * Name=${appName} Comment=${appName} Type=Application Exec=${commandLine} Icon=${icon}
  * 
- * @see _testFill()
  */
 if (!String.prototype.fill) {
   String.prototype.fill = function() {
@@ -26,8 +25,4 @@ if (!String.prototype.fill) {
     return thisString
   };
 }
-
-
-
-
 
