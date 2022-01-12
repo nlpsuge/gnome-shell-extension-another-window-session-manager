@@ -94,6 +94,7 @@ var SaveSession = class {
                         // Shell.App does have an id like window:22, but it's useless for restoring
                         // If desktop_file_id is '', launch this application via command line
                         sessionConfigObject.desktop_file_id = '';
+                        sessionConfigObject.desktop_file_id_full_path = '';
 
                         // Generating a compatible desktop file for this app so that it can be recognized by `Shell.AppSystem.get_default().get_running()`
                         // And also use it to restore window state and move windows to their workspace etc

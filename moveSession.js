@@ -117,6 +117,8 @@ var MoveSession = class {
             return;
         }
 
+        const primaryMonitorIndex = global.display.get_primary_monitor()
+
         const toMonitorNumber = saved_window_session.monitor_number;
         if (toMonitorNumber === undefined) {
             if (currentMonitorNumber !== primaryMonitorIndex) {
@@ -128,7 +130,6 @@ var MoveSession = class {
 
         const shellApp = this._windowTracker.get_window_app(metaWindow);
 
-        const primaryMonitorIndex = global.display.get_primary_monitor()
         // It's possible to save the unmanaged windows
         if (toMonitorNumber === -1) {
             if (currentMonitorNumber !== primaryMonitorIndex) {
@@ -404,7 +405,6 @@ var MoveSession = class {
 
         if (this._sourceIds) {
             this._sourceIds.forEach(sourceId => {
-                log(`reming ${sourceId}`);
                 GLib.Source.remove(sourceId);
             });
             this._sourceIds = null;
