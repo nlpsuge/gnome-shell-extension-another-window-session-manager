@@ -5,6 +5,9 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const SessionConfig = Me.imports.model.sessionConfig;
+
+const UiHelper = Me.imports.ui.uiHelper;
+
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 // for make prototype affect
@@ -45,9 +48,7 @@ var SaveSession = class {
 
             const metaWindows = runningShellApp.get_windows();
             for (const metaWindow of metaWindows) {
-                if (metaWindow.is_attached_dialog()) {
-                    continue;
-                }
+                if (UiHelper.isDialog(metaWindow)) { continue; }
 
                 // TODO pid is 0 if not known 
                 // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
@@ -152,7 +153,7 @@ var SaveSession = class {
                     window_state.meta_maximized = metaWindow.get_maximized();
 
                     sessionConfig.x_session_config_objects.push(sessionConfigObject);    
-                    
+
                 } catch (e) {
                     logError(e, `Failed to build session`);
                     global.notify_error(`Failed to build session`, e.message);

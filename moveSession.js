@@ -74,20 +74,14 @@ var MoveSession = class {
 
                 this._createEnoughWorkspace(desktop_number);
 
-                // Due the fact that 
-                // moving windows across workspaces will lost the window states, 
-                // which are including `Always on Visible Workspace`, 
-                // on both X11 and Wayland, and then restoring 
-                // `Always on Visible Workspace` again on that window can cause 
-                // notifiable 'glitch', I mean the window will disappear and appear.
-                // So we check window state here, if the window is already 
-                // `Always on Visible Workspace`, don't move it.
+                // Sticky windows don't need moving, in fact moving would unstick them
+                // See: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/gnome-41/js/ui/windowManager.js#L1070
                 const is_sticky = saved_window_session.window_state.is_sticky;
-                if (!(is_sticky && open_window.is_on_all_workspaces)) {
+                if (is_sticky && open_window.is_on_all_workspaces()) {
+                    this._log.debug(`The window '${shellApp.get_name()} - ${title}' is already sticky on workspace ${desktop_number}`);
+                } else {
                     this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${open_window.get_workspace().index()}`);
                     open_window.change_workspace_by_index(desktop_number, false);
-                } else {
-                    this._log.debug(`The window '${shellApp.get_name()} - ${title}' is already sticky on workspace ${desktop_number}`);
                 }
 
                 // restore window state if necessary due to moving windows could lost window state
@@ -211,12 +205,14 @@ var MoveSession = class {
                 // It's necessary to move window again to ensure an app goes to its own workspace.
                 // In a sort of situation, some apps probably just don't want to move when call createEnoughWorkspaceAndMoveWindows() from `Meta.Display::window-created` signal.
                 this._createEnoughWorkspace(desktop_number);
-                if (this._log.isDebug()) {
-                    const shellApp = this._windowTracker.get_window_app(metaWindow);
+                const shellApp = this._windowTracker.get_window_app(metaWindow);
+                const is_sticky = saved_window_session.window_state.is_sticky;
+                if (is_sticky && metaWindow.is_on_all_workspaces()) {
+                    this._log.debug(`The window '${shellApp.get_name()} - ${metaWindow.get_title()}' is already sticky on workspace ${desktop_number}`);
+                } else {
                     this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
+                    metaWindow.change_workspace_by_index(desktop_number, false);
                 }
-                metaWindow.change_workspace_by_index(desktop_number, false);
-
                 // The window state get lost during moving the window, and we need to restore window state again.
                 this._restoreWindowState(metaWindow, saved_window_session);
 
