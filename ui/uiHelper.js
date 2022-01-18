@@ -6,6 +6,6 @@ function isDialog(metaWindow) {
         Meta.WindowType.MODAL_DIALOG,
     ];
     const winType = metaWindow.get_window_type();
-    return dialogTypes.includes(winType) ||
+    return dialogTypes.includes(winType) &&
         metaWindow.get_transient_for() != null;
 }
