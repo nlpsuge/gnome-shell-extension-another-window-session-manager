@@ -123,6 +123,7 @@ class AwsIndicator extends PanelMenu.Button {
             }
         }
         
+        let titleId;
         let metaWindowActor = metaWindow.get_compositor_private();
         // https://github.com/paperwm/PaperWM/blob/10215f57e8b34a044e10b7407cac8fac4b93bbbc/tiling.js#L2120
         // https://gjs-docs.gnome.org/meta8~8_api/meta.windowactor#signal-first-frame
@@ -151,8 +152,14 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
             
+            titleId = metaWindow.connect('notify::title', () => {
+                this._log.debug(`window-created -> first-frame -> title: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
+                const saved_window_sessions = shellAppData.saved_window_sessions;
+                this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
+            });
+            this._metaWindowConnectIds.push([metaWindow, titleId]);
+
             const saved_window_sessions = shellAppData.saved_window_sessions;
-            
             this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
         
             metaWindowActor.disconnect(firstFrameId);
@@ -205,8 +212,10 @@ class AwsIndicator extends PanelMenu.Button {
         let unmanagingId = metaWindow.connect('unmanaging', () => {
             // Fix ../gobject/gsignal.c:2732: instance '0x55629xxxxxx' has no handler with id '11000' when disable this extension right after restore apps
             this._signal.disconnectSafely(metaWindowActor, firstFrameId);
+            this._signal.disconnectSafely(metaWindow, titleId);
         });
 
+        this._metaWindowConnectIds.push([metaWindowActor, firstFrameId]);
         this._metaWindowConnectIds.push([metaWindow, shownId]);
         this._metaWindowConnectIds.push([metaWindow, unmanagingId]);
         
