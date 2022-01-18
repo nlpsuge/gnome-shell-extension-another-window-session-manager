@@ -20,6 +20,8 @@ var MoveSession = class {
 
         this._sourceIds = [];
 
+        this._delayRestoreGeometryId = 0;
+
     }
 
     moveWindows(sessionName) {
@@ -289,6 +291,7 @@ var MoveSession = class {
      * @see https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en
      */
     _restoreWindowGeometry(metaWindow, saved_window_session) {
+        let delay = false;
         const window_state = saved_window_session.window_state;
         const savedMetaMaximized = window_state.meta_maximized;
         if (savedMetaMaximized !== Meta.MaximizeFlags.BOTH) {
@@ -296,9 +299,25 @@ var MoveSession = class {
             const currentMetaMaximized = metaWindow.get_maximized();
             if (currentMetaMaximized) {
                 metaWindow.unmaximize(currentMetaMaximized);
+                if (Meta.is_wayland_compositor() && currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
+                    delay = true;
+                }
             }
         }
 
+        if (delay) {
+            // Fix: https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/25
+            // TODO Note that this is not a perfect solution to address the above issue.
+            this._delayRestoreGeometryId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+                this._restoreWindowGeometryIfNecessary(metaWindow, saved_window_session);
+                return GLib.SOURCE_REMOVE;
+            });
+        } else {
+            this._restoreWindowGeometryIfNecessary(metaWindow, saved_window_session);
+        }
+    }
+
+    _restoreWindowGeometryIfNecessary(metaWindow, saved_window_session) {
         const window_position = saved_window_session.window_position;
         if (window_position.provider === 'Meta') {
             const to_x = window_position.x_offset;
@@ -408,6 +427,11 @@ var MoveSession = class {
 
         if (this._windowTracker) {
             this._windowTracker = null;
+        }
+
+        if (this._delayRestoreGeometryId) {
+            GLib.Source.remove(this._delayRestoreGeometryId);
+            this._delayRestoreGeometryId = 0;
         }
 
     }

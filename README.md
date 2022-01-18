@@ -69,9 +69,8 @@ This project uses `ps` and `pwdx` to get some information from a process, instal
 # Known issues
 
 1. On both X11 and Wayland, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) continually during the process of restoring, the window size and position may can't be restored, and it may restore many instances of an application. **As a workaround, click the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) only once until all apps are restored.**
-2. On Wayland, if [a window is maximized along the left or right sides of the screen](https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en) before closed, its size and position can't be restored. **As a workaround, click the move button (<img src=icons/move-symbolic.svg width="14" height="14">) to restore their size and position.**
-3. On both X11 and Wayland, due to [this bug](https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134) within mutter, in Overview, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) then immediately click the newly created workspace, the Gnome Shell can crash. To fix this issue, the Overview will be toggled hidden after clicking the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) when in Overview. I will remove this behavior once I find a better solution or it's fixed in a new version of Gnome Shell.
-4. ...
+2. On both X11 and Wayland, due to [this bug](https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134) within mutter, in Overview, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) then immediately click the newly created workspace, the Gnome Shell can crash. To fix this issue, the Overview will be toggled hidden after clicking the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) when in Overview. I will remove this behavior once I find a better solution or it's fixed in a new version of Gnome Shell.
+3. ...
 
 # Support applications launched via a command line or applications that don't have a proper .desktop file
 If the .desktop is missing from a session file, restoring an application relies on the command line completely.
