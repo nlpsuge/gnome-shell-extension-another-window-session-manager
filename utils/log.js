@@ -28,7 +28,7 @@ var Log = class {
     }
 
     info(logContent) {
-        log(`[INFO][Another window session manager] ${logContent}`);
+        log(`[INFO ][Another window session manager] ${logContent}`);
     }
 
     destroy() {
