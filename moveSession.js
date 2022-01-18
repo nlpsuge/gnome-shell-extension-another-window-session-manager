@@ -20,6 +20,8 @@ var MoveSession = class {
 
         this._sourceIds = [];
 
+        this._delayRestoreGeometryId = 0;
+
     }
 
     moveWindows(sessionName) {
@@ -74,20 +76,14 @@ var MoveSession = class {
 
                 this._createEnoughWorkspace(desktop_number);
 
-                // Due the fact that 
-                // moving windows across workspaces will lost the window states, 
-                // which are including `Always on Visible Workspace`, 
-                // on both X11 and Wayland, and then restoring 
-                // `Always on Visible Workspace` again on that window can cause 
-                // notifiable 'glitch', I mean the window will disappear and appear.
-                // So we check window state here, if the window is already 
-                // `Always on Visible Workspace`, don't move it.
+                // Sticky windows don't need moving, in fact moving would unstick them
+                // See: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/gnome-41/js/ui/windowManager.js#L1070
                 const is_sticky = saved_window_session.window_state.is_sticky;
-                if (!(is_sticky && open_window.is_on_all_workspaces)) {
+                if (is_sticky && open_window.is_on_all_workspaces()) {
+                    this._log.debug(`The window '${shellApp.get_name()} - ${title}' is already sticky on workspace ${desktop_number}`);
+                } else {
                     this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${open_window.get_workspace().index()}`);
                     open_window.change_workspace_by_index(desktop_number, false);
-                } else {
-                    this._log.debug(`The window '${shellApp.get_name()} - ${title}' is already sticky on workspace ${desktop_number}`);
                 }
 
                 // restore window state if necessary due to moving windows could lost window state
@@ -103,6 +99,13 @@ var MoveSession = class {
 
     }
 
+    /**
+     * We need to move the window before changing the workspace, because
+     * the move itself could cause a workspace change if the window enters
+     * the primary monitor
+     * 
+     * @see https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/gnome-41/js/ui/workspace.js#L1483
+     */
     _restoreMonitor(metaWindow, saved_window_session) {
         const currentMonitorNumber = metaWindow.get_monitor();
         // -1 if the window has been recently unmanaged and does not have a monitor
@@ -110,19 +113,55 @@ var MoveSession = class {
             return;
         }
 
-        const monitorNumber = saved_window_session.monitor_number;
-        if (monitorNumber === undefined) {
+        const primaryMonitorIndex = global.display.get_primary_monitor()
+
+        const toMonitorNumber = saved_window_session.monitor_number;
+        if (toMonitorNumber === undefined) {
+            if (currentMonitorNumber !== primaryMonitorIndex) {
+                this._log.info(`${shellApp.get_name()} - ${metaWindow.get_title()} doesn't have the monitor number data, click the save open windows button to save it. Moving it to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
+                metaWindow.move_to_monitor(primaryMonitorIndex);
+            }
             return;
         }
 
-        if (currentMonitorNumber != monitorNumber) {
-            if (this._log.isDebug()) {
-                const shellApp = this._windowTracker.get_window_app(metaWindow);
-                this._log.debug(`Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to monitor ${monitorNumber} from ${currentMonitorNumber}`);
+        const shellApp = this._windowTracker.get_window_app(metaWindow);
+
+        // It's possible to save the unmanaged windows
+        if (toMonitorNumber === -1) {
+            if (currentMonitorNumber !== primaryMonitorIndex) {
+                this._log.info(`${shellApp.get_name()} - ${metaWindow.get_title()} is unmanaged when saving, moving it to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
+                metaWindow.move_to_monitor(primaryMonitorIndex);
             }
-            metaWindow.move_to_monitor(monitorNumber);
+            return;
         }
 
+        const is_on_primary_monitor = saved_window_session.is_on_primary_monitor;
+        if (is_on_primary_monitor) {
+            if (currentMonitorNumber !== primaryMonitorIndex) {
+                this._log.info(`Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
+                metaWindow.move_to_monitor(primaryMonitorIndex);
+            }
+            return;
+        }
+        
+        // It causes Gnome shell to crash, if we move a monitor to a non-existing monitor on X11 and Wayland!
+        // We move all windows on non-existing monitors to the primary monitor
+        const totalMonitors = global.display.get_n_monitors()
+        if (toMonitorNumber > totalMonitors - 1) {
+            if (currentMonitorNumber !== primaryMonitorIndex) {
+                this._log.info(`Monitor ${toMonitorNumber} doesn't exist. Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
+                metaWindow.move_to_monitor(primaryMonitorIndex);
+            }
+            return;
+        }
+
+        if (currentMonitorNumber !== toMonitorNumber) {
+            this._log.debug(`Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to monitor ${toMonitorNumber} from ${currentMonitorNumber}`);
+            // So, you don't want to unplug the monitor, which we are moving the window in to, at this moment. 🤣
+            metaWindow.move_to_monitor(toMonitorNumber);
+            return;
+        }
+        
     }
 
     createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions) {
@@ -168,12 +207,14 @@ var MoveSession = class {
                 // It's necessary to move window again to ensure an app goes to its own workspace.
                 // In a sort of situation, some apps probably just don't want to move when call createEnoughWorkspaceAndMoveWindows() from `Meta.Display::window-created` signal.
                 this._createEnoughWorkspace(desktop_number);
-                if (this._log.isDebug()) {
-                    const shellApp = this._windowTracker.get_window_app(metaWindow);
+                const shellApp = this._windowTracker.get_window_app(metaWindow);
+                const is_sticky = saved_window_session.window_state.is_sticky;
+                if (is_sticky && metaWindow.is_on_all_workspaces()) {
+                    this._log.debug(`The window '${shellApp.get_name()} - ${metaWindow.get_title()}' is already sticky on workspace ${desktop_number}`);
+                } else {
                     this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
+                    metaWindow.change_workspace_by_index(desktop_number, false);
                 }
-                metaWindow.change_workspace_by_index(desktop_number, false);
-
                 // The window state get lost during moving the window, and we need to restore window state again.
                 this._restoreWindowState(metaWindow, saved_window_session);
 
@@ -250,6 +291,7 @@ var MoveSession = class {
      * @see https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en
      */
     _restoreWindowGeometry(metaWindow, saved_window_session) {
+        let delay = false;
         const window_state = saved_window_session.window_state;
         const savedMetaMaximized = window_state.meta_maximized;
         if (savedMetaMaximized !== Meta.MaximizeFlags.BOTH) {
@@ -257,9 +299,25 @@ var MoveSession = class {
             const currentMetaMaximized = metaWindow.get_maximized();
             if (currentMetaMaximized) {
                 metaWindow.unmaximize(currentMetaMaximized);
+                if (Meta.is_wayland_compositor() && currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
+                    delay = true;
+                }
             }
         }
 
+        if (delay) {
+            // Fix: https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/25
+            // TODO Note that this is not a perfect solution to address the above issue.
+            this._delayRestoreGeometryId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+                this._restoreWindowGeometryIfNecessary(metaWindow, saved_window_session);
+                return GLib.SOURCE_REMOVE;
+            });
+        } else {
+            this._restoreWindowGeometryIfNecessary(metaWindow, saved_window_session);
+        }
+    }
+
+    _restoreWindowGeometryIfNecessary(metaWindow, saved_window_session) {
         const window_position = saved_window_session.window_position;
         if (window_position.provider === 'Meta') {
             const to_x = window_position.x_offset;
@@ -362,7 +420,6 @@ var MoveSession = class {
 
         if (this._sourceIds) {
             this._sourceIds.forEach(sourceId => {
-                log(`reming ${sourceId}`);
                 GLib.Source.remove(sourceId);
             });
             this._sourceIds = null;
@@ -370,6 +427,11 @@ var MoveSession = class {
 
         if (this._windowTracker) {
             this._windowTracker = null;
+        }
+
+        if (this._delayRestoreGeometryId) {
+            GLib.Source.remove(this._delayRestoreGeometryId);
+            this._delayRestoreGeometryId = 0;
         }
 
     }
