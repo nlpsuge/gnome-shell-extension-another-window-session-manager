@@ -16,7 +16,9 @@ function enable() {
     _indicator = new Indicator.AwsIndicator();
     Main.panel.addToStatusArea('Another Window Session Manager', _indicator);
 
+    _autostart = new Autostart.Autostart();
     _autostart.start();
+    
 }
 
 function disable() {
