@@ -31,6 +31,8 @@ var SessionConfigObject = class {
     desktop_number; // int
     pid; // int
     username; // str
+    // The effective user id
+    user_identifier; // str
     window_position = new WindowPosition(); // WindowPosition
     client_machine_name; // str
     window_title; // str

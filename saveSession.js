@@ -53,7 +53,7 @@ var SaveSession = class {
                 // TODO pid is 0 if not known 
                 // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
                 const pid = metaWindow.get_pid();
-                const input_cmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,command'];
+                const input_cmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,euid,command'];
                 try {
                     const proc = this._subprocessLauncher.spawnv(input_cmd);
                     // TODO Use async version in the future
@@ -259,12 +259,14 @@ var SaveSession = class {
             sessionConfigObject.process_create_time = stdoutArr.slice(0, 5).join(' ');
             sessionConfigObject.cpu_percent = stdoutArr.slice(5, 6).join();
             sessionConfigObject.memory_percent = stdoutArr.slice(6, 7).join();
-            sessionConfigObject.cmd = stdoutArr.slice(7);
+            sessionConfigObject.user_identifier = stdoutArr.slice(7, 8).join();
+            sessionConfigObject.cmd = stdoutArr.slice(8);
         } else {
             logError(new Error(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`));
             sessionConfigObject.process_create_time = null;
             sessionConfigObject.cpu_percent = null;
             sessionConfigObject.memory_percent = null;
+            sessionConfigObject.user_identifier = null;
             sessionConfigObject.cmd = null;
         }
     }
