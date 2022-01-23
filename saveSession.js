@@ -48,7 +48,7 @@ var SaveSession = class {
 
             const metaWindows = runningShellApp.get_windows();
             for (const metaWindow of metaWindows) {
-                if (UiHelper.isDialog(metaWindow)) { continue; }
+                if (this._ignoreWindows(metaWindow)) { continue; }
 
                 // TODO pid is 0 if not known 
                 // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
@@ -172,6 +172,26 @@ var SaveSession = class {
         } catch (e) {
             logError(e, `Failed to write session to disk`);
             global.notify_error(`Failed to write session to disk`, e.message);
+        }
+
+        return false;
+    }
+
+    _ignoreWindows(metaWindow) {
+        if (UiHelper.isDialog(metaWindow)) {
+            return true;
+        }
+
+        // The override-redirect windows is invisible to the users,
+        // and the workspace index is -1 and don't have proper x, y, width, height.
+        // See also:
+        // https://gjs-docs.gnome.org/meta9~9_api/meta.window#method-is_override_redirect
+        // https://wiki.tcl-lang.org/page/wm+overrideredirect
+        // https://docs.oracle.com/cd/E36784_01/html/E36843/windowapi-3.html
+        // https://stackoverflow.com/questions/38162932/what-does-overrideredirect-do
+        // https://ml.cddddr.org/cl-windows/msg00166.html
+        if (metaWindow.is_override_redirect()) {
+            return true;
         }
 
         return false;
