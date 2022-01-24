@@ -43,12 +43,20 @@ var SaveSession = class {
             // Debug
             // log(`Saving application ${appName} :  ${desktopAppInfoCommandline}`);
 
-            // TODO Not reliable, the result can be wrong?
             const n_windows = runningShellApp.get_n_windows();
 
-            const metaWindows = runningShellApp.get_windows();
+            const ignoredWindowsMap = new Map();
+            ignoredWindowsMap.set(runningShellApp, []);
+
+            let metaWindows = runningShellApp.get_windows();
+            metaWindows = metaWindows.filter(metaWindow => {
+                if (this._ignoreWindows(metaWindow)) {
+                    ignoredWindowsMap.get(runningShellApp).push(metaWindow);
+                    return false;
+                }
+                return true;
+            });
             for (const metaWindow of metaWindows) {
-                if (this._ignoreWindows(metaWindow)) { continue; }
 
                 // TODO pid is 0 if not known 
                 // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
@@ -85,7 +93,7 @@ var SaveSession = class {
                     sessionConfigObject.client_machine_name = GLib.get_host_name();
                     sessionConfigObject.window_title = metaWindow.get_title();
                     sessionConfigObject.app_name = appName;
-                    sessionConfigObject.windows_count = n_windows;
+                    sessionConfigObject.windows_count = n_windows - ignoredWindowsMap.get(runningShellApp).length;
                     if (desktopAppInfo) {
                         sessionConfigObject.desktop_file_id = desktopFileId;
                         // Save the .desktop full path, so we know which desktop is used by this app.
