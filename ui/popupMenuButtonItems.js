@@ -291,17 +291,14 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             track_hover: true,
             can_focus: true
         });
-        const clutterText = this.saveCurrentSessionEntry.clutter_text
-        clutterText.connect('key-press-event', this._onKeyPressEvent.bind(this));
+        const clutterText = this.saveCurrentSessionEntry.clutter_text;
+        clutterText.connect('activate', this._onTextActivate.bind(this));
         this.actor.add_child(this.saveCurrentSessionEntry);
 
     }
 
-    _onKeyPressEvent(entry, event) {
-        const symbol = event.get_key_symbol();
-        if (symbol == Clutter.KEY_Return || symbol == Clutter.KEY_KP_Enter || symbol == Clutter.KEY_ISO_Enter) {
-            this._gotoSaveSession();
-        }
+    _onTextActivate(entry, event) {
+        this._gotoSaveSession();
     }
 
     _gotoSaveSession() {
@@ -317,23 +314,18 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
         const [canSave, reason] = this._canSave(sessionName);
         if (!canSave) {
-            this.savingLabel.set_text(reason);
-            this._timeline.set_actor(this.savingLabel);
-            this._timeline.connect('new-frame', (_timeline, _frame) => {
-                this.savingLabel.show();
-                this.hideYesAndNoButtons();
-            });
-            this._timeline.start();
-            this._timeline.connect('completed', () => {
-                this._timeline.stop();
-                this.savingLabel.hide();
-                this.showYesAndNoButtons();
-            });
-
+            this._displayMessage(reason);
             return;
         }
 
-        this._saveSession.saveSession(sessionName);
+        try {
+            this._saveSession.saveSession(sessionName);
+        } catch (e) {
+            logError(e, `Failed to save session`);
+            global.notify_error(`Failed to save session`, e.message);
+            this._displayMessage(e.message);
+            return;
+        }
 
         // clear entry
         this.saveCurrentSessionEntry.set_text('');
@@ -354,6 +346,24 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         });
     }
 
+    _displayMessage(message) {
+        // To prevent saving session many times by holding and not releasing Enter
+        this.saveCurrentSessionEntry.hide();
+        this.savingLabel.set_text(message);
+        this._timeline.set_actor(this.savingLabel);
+        this._timeline.connect('new-frame', (_timeline, _frame) => {
+            this.savingLabel.show();
+            this.hideYesAndNoButtons();
+        });
+        this._timeline.start();
+        this._timeline.connect('completed', () => {
+            this._timeline.stop();
+            this.savingLabel.hide();
+            this.saveCurrentSessionEntry.show();
+            this.showYesAndNoButtons();
+        });
+    }
+
     _canSave(sessionName) {
         if (sessionName === FileUtils.sessions_backup_folder_name) {
             return [false, `ERROR: ${sessionName} is a reserved word, can't be used.`];
@@ -361,6 +371,10 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
         if (FileUtils.isDirectory(sessionName)) {
             return [false, `ERROR: Can't save windows using '${sessionName}', it's an existing directory!`];
+        }
+
+        if (sessionName.indexOf('/') != -1) {
+            return [false, `ERROR: Session names cannot contain '/'`];
         }
         return [true, ''];
     }
