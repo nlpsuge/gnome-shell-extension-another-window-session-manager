@@ -180,6 +180,7 @@ var SaveSession = class {
         } catch (e) {
             logError(e, `Failed to write session to disk`);
             global.notify_error(`Failed to write session to disk`, e.message);
+            throw e;
         }
 
         return false;
