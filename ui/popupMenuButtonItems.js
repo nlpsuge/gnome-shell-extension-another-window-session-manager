@@ -334,12 +334,14 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
         this.savingLabel.set_text(`Saving open windows as '${sessionName}' ...`);
         this._timeline.set_actor(this.savingLabel);
-        this._timeline.connect('new-frame', (_timeline, _frame) => {
+        const newFrameId = this._timeline.connect('new-frame', (_timeline, _frame) => {
+            this._timeline.disconnect(newFrameId);
             super.hideYesAndNoButtons();
             this.savingLabel.show();
         });
         this._timeline.start();
-        this._timeline.connect('completed', () => {
+        const completedId = this._timeline.connect('completed', () => {
+            this._timeline.disconnect(completedId);
             this._timeline.stop();
             this.savingLabel.hide();
             this.hideYesAndNoButtons();
@@ -351,12 +353,14 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this.saveCurrentSessionEntry.hide();
         this.savingLabel.set_text(message);
         this._timeline.set_actor(this.savingLabel);
-        this._timeline.connect('new-frame', (_timeline, _frame) => {
+        const newFrameId = this._timeline.connect('new-frame', (_timeline, _frame) => {
+            this._timeline.disconnect(newFrameId);
             this.savingLabel.show();
             this.hideYesAndNoButtons();
         });
         this._timeline.start();
-        this._timeline.connect('completed', () => {
+        const completedId = this._timeline.connect('completed', () => {
+            this._timeline.disconnect(completedId);
             this._timeline.stop();
             this.savingLabel.hide();
             this.saveCurrentSessionEntry.show();
