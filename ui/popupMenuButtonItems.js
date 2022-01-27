@@ -2,6 +2,8 @@
 
 const { GObject, St, Clutter } = imports.gi;
 
+const Main = imports.ui.main;
+
 const PopupMenu = imports.ui.popupMenu;
 
 const ExtensionUtils = imports.misc.extensionUtils;
@@ -135,6 +137,12 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         super.createYesAndNoButtons();
         
         this.yesButton.connect('clicked', () => {
+            // TODO Do this when enable_close_by_rules is true? 
+            this._parent.close();
+            if (Main.overview.visible) {
+                Main.overview.toggle();
+            }
+
             this.closeSession.closeWindows();
             this._hideConfirm();
 

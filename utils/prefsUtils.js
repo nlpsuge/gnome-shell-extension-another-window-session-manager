@@ -8,6 +8,10 @@ var PrefsUtils = class {
         this.settings = this._getSettings();
     }
 
+    getSettingString(settingName) {
+        return this.settings.get_string(settingName);
+    }
+
     _getSettings() {
         const _settings = ExtensionUtils.getSettings(
             'org.gnome.shell.extensions.another-window-session-manager');
