@@ -43,12 +43,20 @@ var SaveSession = class {
             // Debug
             // log(`Saving application ${appName} :  ${desktopAppInfoCommandline}`);
 
-            // TODO Not reliable, the result can be wrong?
             const n_windows = runningShellApp.get_n_windows();
 
-            const metaWindows = runningShellApp.get_windows();
+            const ignoredWindowsMap = new Map();
+            ignoredWindowsMap.set(runningShellApp, []);
+
+            let metaWindows = runningShellApp.get_windows();
+            metaWindows = metaWindows.filter(metaWindow => {
+                if (this._ignoreWindows(metaWindow)) {
+                    ignoredWindowsMap.get(runningShellApp).push(metaWindow);
+                    return false;
+                }
+                return true;
+            });
             for (const metaWindow of metaWindows) {
-                if (UiHelper.isDialog(metaWindow)) { continue; }
 
                 // TODO pid is 0 if not known 
                 // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
@@ -85,7 +93,7 @@ var SaveSession = class {
                     sessionConfigObject.client_machine_name = GLib.get_host_name();
                     sessionConfigObject.window_title = metaWindow.get_title();
                     sessionConfigObject.app_name = appName;
-                    sessionConfigObject.windows_count = n_windows;
+                    sessionConfigObject.windows_count = n_windows - ignoredWindowsMap.get(runningShellApp).length;
                     if (desktopAppInfo) {
                         sessionConfigObject.desktop_file_id = desktopFileId;
                         // Save the .desktop full path, so we know which desktop is used by this app.
@@ -172,6 +180,27 @@ var SaveSession = class {
         } catch (e) {
             logError(e, `Failed to write session to disk`);
             global.notify_error(`Failed to write session to disk`, e.message);
+            throw e;
+        }
+
+        return false;
+    }
+
+    _ignoreWindows(metaWindow) {
+        if (UiHelper.isDialog(metaWindow)) {
+            return true;
+        }
+
+        // The override-redirect windows is invisible to the users,
+        // and the workspace index is -1 and don't have proper x, y, width, height.
+        // See also:
+        // https://gjs-docs.gnome.org/meta9~9_api/meta.window#method-is_override_redirect
+        // https://wiki.tcl-lang.org/page/wm+overrideredirect
+        // https://docs.oracle.com/cd/E36784_01/html/E36843/windowapi-3.html
+        // https://stackoverflow.com/questions/38162932/what-does-overrideredirect-do
+        // https://ml.cddddr.org/cl-windows/msg00166.html
+        if (metaWindow.is_override_redirect()) {
+            return true;
         }
 
         return false;
