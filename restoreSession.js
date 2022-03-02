@@ -165,7 +165,7 @@ var RestoreSession = class {
         const running_apps = this._defaultAppSystem.get_running();
         for (const running_app of running_apps) {
             if (running_app.get_id() === app.get_id() && 
-                    running_app.get_state() === Shell.AppState.RUNNING) {
+                    running_app.get_state() >= Shell.AppState.STARTING) {
                 return true;
             }    
         }
