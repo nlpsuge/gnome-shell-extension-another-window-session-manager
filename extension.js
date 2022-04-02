@@ -10,13 +10,13 @@ const Autostart = Me.imports.ui.autostart;
 
 
 let _indicator;
-let _autostart;
+let _autostartServiceProvider;
 
 function enable() {
     _indicator = new Indicator.AwsIndicator();
     Main.panel.addToStatusArea('Another Window Session Manager', _indicator);
 
-    new Autostart.Autostart();
+    _autostartServiceProvider = new Autostart.AutostartServiceProvider();
     
 }
 
@@ -26,9 +26,9 @@ function disable() {
         _indicator = null;
     }
 
-    if (_autostart) {
-        _autostart.destroy();
-        _autostart = null;
+    if (_autostartServiceProvider) {
+        _autostartServiceProvider.disable();
+        _autostartServiceProvider = null;
     }
     
 }
