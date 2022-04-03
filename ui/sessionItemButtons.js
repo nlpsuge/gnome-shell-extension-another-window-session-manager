@@ -141,7 +141,7 @@ class SessionItemButtons extends GObject.Object {
         const _restoreSession = new RestoreSession.RestoreSession(this);
         _restoreSession.restoreSession(this.sessionItem._filename);
 
-        // The below bug is fixed on Gnome 42.
+        // The below bug is fixed in Gnome 42.
         // Leave Overview if we are in Overview to reduce or fix `Bug in window manager: Workspace does not exist to index!` in mutter
         // See: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134, which has been merged into Gnome 42
         if (GnomeVersion.isOlderThan42() && Main.overview.visible) {
