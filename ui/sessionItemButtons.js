@@ -10,6 +10,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const IconFinder = Me.imports.utils.iconFinder;
 const FileUtils = Me.imports.utils.fileUtils;
 const Tooltip = Me.imports.utils.tooltip;
+const GnomeVersion = Me.imports.utils.gnomeVersion;
 
 const SaveSession = Me.imports.saveSession;
 const RestoreSession = Me.imports.restoreSession;
@@ -140,10 +141,10 @@ class SessionItemButtons extends GObject.Object {
         const _restoreSession = new RestoreSession.RestoreSession(this);
         _restoreSession.restoreSession(this.sessionItem._filename);
 
-        // TODO Add to Settings or add an if in the future version when confirm the below bug is fixed.
+        // The below bug is fixed in Gnome 42.
         // Leave Overview if we are in Overview to reduce or fix `Bug in window manager: Workspace does not exist to index!` in mutter
-        // See: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134
-        if (Main.overview.visible) {
+        // See: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134, which has been merged into Gnome 42
+        if (GnomeVersion.isOlderThan42() && Main.overview.visible) {
             Main.overview.toggle();
         }
     }
