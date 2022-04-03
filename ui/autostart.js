@@ -86,7 +86,8 @@ var Autostart = GObject.registerClass(
 
         }
 
-        RestoreSessionAsync() {
+        // Call this method synchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession` 
+        RestoreSession() {
 
             this._log.info(`Restoring from session ${'session name'} automatically`);
             // TODO Read settings from Preferences
