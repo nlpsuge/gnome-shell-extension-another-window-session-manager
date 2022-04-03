@@ -1,6 +1,6 @@
 'use strict';
 
-/* exported Autostart, AutostartDialog */
+/* exported AutostartServiceProvider, AutostartService, AutostartDialog */
 
 const { Clutter, Gio, GLib, GObject, Meta, Shell, St } = imports.gi;
 
@@ -49,7 +49,7 @@ var AutostartServiceProvider = GObject.registerClass(
         onBusAcquired(connection, name) {
             this._log.debug(`DBus bus with name ${name} acquired!`);
 
-            this._autostartService = new Autostart();
+            this._autostartService = new AutostartService();
 
             // Gio.DBusExportedObject.wrapJSObject(interfaceInfo, jsObj) is a private method of gjs
             // See: https://gitlab.gnome.org/GNOME/gjs/-/blob/master/modules/core/overrides/Gio.js#L391
@@ -75,8 +75,8 @@ var AutostartServiceProvider = GObject.registerClass(
         }
     });
 
-var Autostart = GObject.registerClass(
-    class Autostart extends GObject.Object {
+var AutostartService = GObject.registerClass(
+    class AutostartService extends GObject.Object {
 
         _init() {
             super._init();
