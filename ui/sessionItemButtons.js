@@ -3,6 +3,7 @@
 const { GObject, St, Clutter } = imports.gi;
 
 const Main = imports.ui.main;
+const PopupMenu = imports.ui.popupMenu;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -66,6 +67,16 @@ class SessionItemButtons extends GObject.Object {
         // closeButton.connect('clicked', this._onClickClose.bind(this));
 
         this._addSeparator();
+
+        const autostartSwitcher = this._addAutostartSwitcher();
+        new Tooltip.Tooltip({
+            parent: autostartSwitcher,
+            markup: 'Restore at startup',
+        });
+        autostartSwitcher.connect('clicked', () => {
+            
+        });
+    
         const deleteButton = this._addDeleteButton();
         new Tooltip.Tooltip({
             parent: deleteButton,
@@ -76,6 +87,30 @@ class SessionItemButtons extends GObject.Object {
             FileUtils.trashSession(this.sessionItem._filename);
         });
 
+    }
+
+    _addAutostartSwitcher() {
+        const label = new St.Label({
+            text: _('Restore at startup'),
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this.sessionItem.actor.add_child(label);
+
+        this._autostartSwitch = new PopupMenu.Switch(false);
+
+        let button = new St.Button({
+            style_class: 'dnd-button',
+            can_focus: true,
+            x_align: Clutter.ActorAlign.END,
+            label_actor: label,
+            toggle_mode: true,
+            child: this._autostartSwitch,
+        });
+        this._autostartSwitch.bind_property('state',
+            button, 'checked',
+            GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE);
+        this.sessionItem.actor.add_child(button);
+        return button;
     }
 
     _addDeleteButton() {
