@@ -11,6 +11,7 @@ const PopupMenu = imports.ui.popupMenu;
 const PanelMenu = imports.ui.panelMenu;
 
 const MoveSession = Me.imports.moveSession;
+const RestoreSession = Me.imports.restoreSession;
 
 const FileUtils = Me.imports.utils.fileUtils;
 const SessionItem = Me.imports.ui.sessionItem;
@@ -65,8 +66,6 @@ class AwsIndicator extends PanelMenu.Button {
         // See: PopupMenu#itemActivated() => this.menu._getTopMenu().close
         this.menu.itemActivated = function(animate) {};
 
-        // Set a initial value to prevent error in `journalctl` when starting gnome-shell
-        this._restoringApps = new Map();
         this._moveSession = new MoveSession.MoveSession();
 
         this._metaWindowConnectIds = [];
@@ -97,7 +96,7 @@ class AwsIndicator extends PanelMenu.Button {
             const shellApp = this._windowTracker.get_window_app(metaWindow);
             if (shellApp) {
             
-                const shellAppData = this._restoringApps.get(shellApp);
+                const shellAppData = RestoreSession.restoringApps.get(shellApp);
                 if (shellAppData) {
                     const saved_window_sessions = shellAppData.saved_window_sessions;
 
@@ -146,7 +145,7 @@ class AwsIndicator extends PanelMenu.Button {
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> first-frame: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
-            const shellAppData = this._restoringApps.get(shellApp);
+            const shellAppData = RestoreSession.restoringApps.get(shellApp);
             if (!shellAppData) {
                 return;
             }
@@ -179,7 +178,7 @@ class AwsIndicator extends PanelMenu.Button {
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> shown: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
-            const shellAppData = this._restoringApps.get(shellApp);
+            const shellAppData = RestoreSession.restoringApps.get(shellApp);
             if (!shellAppData) {
                 return;
             }
