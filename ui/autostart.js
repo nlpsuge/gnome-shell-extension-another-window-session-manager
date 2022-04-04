@@ -18,6 +18,8 @@ const ModalDialog = imports.ui.modalDialog;
 
 const Log = Me.imports.utils.log;
 
+const RestoreSession = Me.imports.restoreSession;
+
 const autostartDbusXml = ByteArray.toString(
     Me.dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.Autostart.xml').load_contents(null)[1]
 );
@@ -94,7 +96,7 @@ var AutostartService = GObject.registerClass(
             // 1. Enable if restore when starts
             // 2. Restore which session
             this._autostartDialog = new AutostartDialog();
-            // this._autostartDialog.open();
+            this._autostartDialog.open();
         }
 
     });
@@ -113,13 +115,32 @@ var AutostartDialog = GObject.registerClass(
             this._confirmDialogContent = new Dialog.MessageDialogContent();
             this._confirmDialogContent.title = 'Restore session ${xx}';
 
-            this._checkBox = new CheckBox.CheckBox();
+            this.addButton({
+                action: this.cancel.bind(this),
+                label: _('Cancel'),
+                key: Clutter.KEY_Escape,
+            });
+
+            this.addButton({
+                action: this.confirm.bind(this),
+                label: _('Confirm'),
+                key: Clutter.KEY_Escape,
+            });
+
             // this._checkBox.connect('clicked', this._sync.bind(this));
-            this._confirmDialogContent.add_child(this._checkBox);
 
             this.contentLayout.add_child(this._confirmDialogContent);
 
 
+        }
+
+        confirm() {
+            // const _restoreSession = new RestoreSession.RestoreSession(this);
+            // _restoreSession.restoreSession(this.sessionItem._filename);
+        }
+
+        cancel() {
+            this.close();
         }
 
         _onOpened() {
