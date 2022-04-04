@@ -107,24 +107,31 @@ var AutostartDialog = GObject.registerClass(
         _init() {
             super._init({
                 styleClass: 'restore-session-dialog',
-                destroyOnClose: false
+                destroyOnClose: true
             });
+
+            this._sessionName = 'test';
 
             this.connect('opened', this._onOpened.bind(this));
 
             this._confirmDialogContent = new Dialog.MessageDialogContent();
-            this._confirmDialogContent.title = 'Restore session ${xx}';
+            this._confirmDialogContent.title = `Restore session '${this._sessionName}'`;
 
             this.addButton({
-                action: this.cancel.bind(this),
+                action: this._cancel.bind(this),
                 label: _('Cancel'),
                 key: Clutter.KEY_Escape,
             });
 
             this.addButton({
-                action: this.confirm.bind(this),
+                action: () => {
+                    this.close();
+                    let signalId = this.connect('closed', () => {
+                        this.disconnect(signalId);
+                        this._confirm();
+                    });
+                },
                 label: _('Confirm'),
-                key: Clutter.KEY_Escape,
             });
 
             // this._checkBox.connect('clicked', this._sync.bind(this));
@@ -134,12 +141,13 @@ var AutostartDialog = GObject.registerClass(
 
         }
 
-        confirm() {
-            // const _restoreSession = new RestoreSession.RestoreSession(this);
-            // _restoreSession.restoreSession(this.sessionItem._filename);
+        _confirm() {
+            const _restoreSession = new RestoreSession.RestoreSession();
+            _restoreSession.restoreSession(this._sessionName);
+
         }
 
-        cancel() {
+        _cancel() {
             this.close();
         }
 
