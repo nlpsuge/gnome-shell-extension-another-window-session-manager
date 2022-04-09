@@ -11,8 +11,6 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const Tooltip = Me.imports.utils.tooltip;
 
-const AwsmSwitch = Me.imports.ui.awsmSwitch;
-
 
 var SearchSessionItem = GObject.registerClass(
     class SearchSessionItem extends PopupMenu.PopupBaseMenuItem {
@@ -59,8 +57,8 @@ var SearchSessionItem = GObject.registerClass(
         }
         
         _filterAutoRestore() {
-            this._filterAutoRestoreSwitch = new AwsmSwitch.AwsmSwitch(false);
-            log(this._filterAutoRestoreSwitch);
+            this._filterAutoRestoreSwitch = new PopupMenu.Switch(false);
+            this._filterAutoRestoreSwitch.set_style_class_name('toggle-switch awsm-toggle-switch');
             let button = new St.Button({
                 style_class: 'dnd-button',
                 can_focus: true,

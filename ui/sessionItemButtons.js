@@ -19,7 +19,8 @@ const MoveSession = Me.imports.moveSession;
 const CloseSession = Me.imports.closeSession;
 
 const { Button } = Me.imports.ui.button;
-const AwsmSwitch = Me.imports.ui.awsmSwitch;
+
+const PrefsUtils = Me.imports.utils.prefsUtils;
 
 var SessionItemButtons = GObject.registerClass(
 class SessionItemButtons extends GObject.Object {
@@ -33,6 +34,8 @@ class SessionItemButtons extends GObject.Object {
         this._saveSession = new SaveSession.SaveSession();
         this._moveSession = new MoveSession.MoveSession();
         this._closeSession = new CloseSession.CloseSession();
+
+        this._settings = new PrefsUtils.PrefsUtils().getSettings();
     }
 
     addButtons() {
@@ -71,8 +74,9 @@ class SessionItemButtons extends GObject.Object {
             parent: autoRestoreSwitcher,
             markup: 'Restore at startup',
         });
-        autoRestoreSwitcher.connect('clicked', () => {
-            
+        autoRestoreSwitcher.connect('clicked', (button, event) => {
+            log(button);
+            // this._settings.
         });
 
         this._addSeparator();
@@ -91,7 +95,8 @@ class SessionItemButtons extends GObject.Object {
 
     _addAutostartSwitcher() {
 
-        this._autostartSwitch = new AwsmSwitch.AwsmSwitch(false);
+        this._autostartSwitch = new PopupMenu.Switch(false);
+        this._autostartSwitch.set_style_class_name('toggle-switch awsm-toggle-switch');
         let button = new St.Button({
             style_class: 'dnd-button',
             can_focus: true,
