@@ -16,6 +16,7 @@ var desktop_template_path = GLib.build_filenamev([Me.path, '/template/template.d
 var desktop_file_store_path_base = '~/.local/share/applications';
 var desktop_file_store_path = `${desktop_file_store_path_base}/__another-window-session-manager`;
 
+var recently_closed_session_path = GLib.build_filenamev([sessions_path, 'Recently Closed Session']);
 
 function get_sessions_path() {
     return sessions_path;

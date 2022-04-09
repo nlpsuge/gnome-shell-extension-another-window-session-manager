@@ -90,19 +90,12 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _addAutostartSwitcher() {
-        const label = new St.Label({
-            text: _('Restore at startup'),
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        this.sessionItem.actor.add_child(label);
 
         this._autostartSwitch = new PopupMenu.Switch(false);
-
         let button = new St.Button({
             style_class: 'dnd-button',
             can_focus: true,
             x_align: Clutter.ActorAlign.END,
-            label_actor: label,
             toggle_mode: true,
             child: this._autostartSwitch,
         });

@@ -267,6 +267,20 @@ class AwsIndicator extends PanelMenu.Button {
 
         this._log.debug('List all sessions to add session items');
 
+        // Recently Closed Session always on the top
+        const recently_closed_session_file = Gio.File.new_for_path(FileUtils.recently_closed_session_path);
+        let info = null;
+        try {
+            info = recently_closed_session_file.query_info(
+                [Gio.FILE_ATTRIBUTE_STANDARD_NAME, 
+                    Gio.FILE_ATTRIBUTE_TIME_MODIFIED].join(','),
+                Gio.FileQueryInfoFlags.NONE,
+                null);
+        } catch (ignored) {}
+        
+        let item = new SessionItem.SessionItem(info, recently_closed_session_file, this);
+        this._sessionsMenuSection.addMenuItem(item, this._itemIndex++);
+
         let sessionFileInfos = [];
         FileUtils.listAllSessions(null, false, this._prefsUtils.isDebug(),(file, info) => {
             // We have an interest in regular and text files
@@ -282,6 +296,10 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
 
+            // Skip the `Recently Closed Session` file since it has been added to the session list already.
+            if (file.equal(recently_closed_session_file)) {
+                return;
+            }
             
             let parent = file.get_parent();
             let parentPath;

@@ -1,3 +1,11 @@
+.toggle-switch {
+    background-image: url("./icons/toggle-off-symbolic.svg");
+}
+
+.toggle-switch:checked {
+    background-image: url("./icons/toggle-on-symbolic.svg");
+}
+
 /* Restore Session Dialog */
 .restore-session-dialog {
     width: 30em;

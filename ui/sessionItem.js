@@ -1,6 +1,6 @@
 'use strict';
 
-const { GObject, St, Clutter } = imports.gi;
+const { GObject, St, Clutter, GLib } = imports.gi;
 
 const PopupMenu = imports.ui.popupMenu;
 
@@ -17,12 +17,17 @@ class SessionItem extends PopupMenu.PopupMenuItem {
         super._init("");
 
         this._indicator = indicator;
-        this._filename = fileInfo.get_name();
-        this._filepath = file.get_path();
+
         this._modification_time = 'Unknown';
-        const modification_date_time = fileInfo.get_modification_date_time();
-        if (modification_date_time) {
-            this._modification_time = modification_date_time.to_local().format('%Y-%m-%d %T');
+        this._filepath = file.get_path();
+        if(fileInfo != null) {
+            this._filename = fileInfo.get_name(); 
+            const modification_date_time = fileInfo.get_modification_date_time();
+            if (modification_date_time) {
+                this._modification_time = modification_date_time.to_local().format('%Y-%m-%d %T');
+            }
+        } else {
+            this._filename = file.get_basename();
         }
 
         this.label.set_x_expand(true);
