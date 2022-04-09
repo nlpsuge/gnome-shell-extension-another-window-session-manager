@@ -1,8 +1,8 @@
-.toggle-switch {
+.awsm-toggle-switch {
     background-image: url("./icons/toggle-off-symbolic.svg");
 }
 
-.toggle-switch:checked {
+.awsm-toggle-switch:checked {
     background-image: url("./icons/toggle-on-symbolic.svg");
 }
 

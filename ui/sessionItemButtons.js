@@ -19,7 +19,7 @@ const MoveSession = Me.imports.moveSession;
 const CloseSession = Me.imports.closeSession;
 
 const { Button } = Me.imports.ui.button;
-
+const AwsmSwitch = Me.imports.ui.awsmSwitch;
 
 var SessionItemButtons = GObject.registerClass(
 class SessionItemButtons extends GObject.Object {
@@ -66,16 +66,16 @@ class SessionItemButtons extends GObject.Object {
         // const closeButton = this._addButton('close-symbolic.svg');
         // closeButton.connect('clicked', this._onClickClose.bind(this));
 
-        this._addSeparator();
-
-        const autostartSwitcher = this._addAutostartSwitcher();
+        const autoRestoreSwitcher = this._addAutostartSwitcher();
         new Tooltip.Tooltip({
-            parent: autostartSwitcher,
+            parent: autoRestoreSwitcher,
             markup: 'Restore at startup',
         });
-        autostartSwitcher.connect('clicked', () => {
+        autoRestoreSwitcher.connect('clicked', () => {
             
         });
+
+        this._addSeparator();
     
         const deleteButton = this._addDeleteButton();
         new Tooltip.Tooltip({
@@ -91,7 +91,7 @@ class SessionItemButtons extends GObject.Object {
 
     _addAutostartSwitcher() {
 
-        this._autostartSwitch = new PopupMenu.Switch(false);
+        this._autostartSwitch = new AwsmSwitch.AwsmSwitch(false);
         let button = new St.Button({
             style_class: 'dnd-button',
             can_focus: true,

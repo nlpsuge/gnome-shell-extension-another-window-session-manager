@@ -118,3 +118,4 @@ Note that I've marked `backups` as a reserved word, so you can't use it as a ses
 7. - [ ] Support restoring a saved session when startup ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
 8. - [ ] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
 9. - [ ] All TODO tags in the projects
+10.- [ ] Translation?
