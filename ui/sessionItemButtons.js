@@ -129,6 +129,7 @@ class SessionItemButtons extends GObject.Object {
             x_expand: false,
             y_expand: true,
             track_hover: true,
+            reactive: this.sessionItem._filename != FileUtils.recently_closed_session_name,
         });
         button.set_label('Delete');
         this.sessionItem.actor.add_child(button);
