@@ -103,7 +103,7 @@ var AutostartService = GObject.registerClass(
         RestoreSession() {
 
             if (!this._settings.get_boolean('enable-autorestore-sessions')) {
-                return "This function is disabled, please enable it through 'Preferences -> Restore sessions -> Restore at startup'";
+                return "ERROR: This function is disabled, please enable it through 'Preferences -> Restore sessions -> Restore at startup'";
             }
 
             this._log.info(`Restoring from session ${this._sessionName} automatically`);
@@ -181,8 +181,17 @@ var AutostartDialog = GObject.registerClass(
         }
 
         _onOpened() {
-            this._startTimer();
-            this._sync();
+            if (!this._sessionName) {
+                let open = this.state == ModalDialog.State.OPENING || this.state == ModalDialog.State.OPENED;
+                if (!open)
+                    return;
+
+                // TODO Use red color 
+                this._confirmDialogContent.description = "ERROR: You don't active any session to restore";
+            } else {
+                this._startTimer();
+                this._sync();
+            }
         }
 
         _sync() {
