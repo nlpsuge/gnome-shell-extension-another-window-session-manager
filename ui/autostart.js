@@ -131,7 +131,7 @@ var AutostartDialog = GObject.registerClass(
 
             this._sessionName = this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
 
-            this._totalSecondsToStayOpen = 15;
+            this._totalSecondsToStayOpen = this._settings.get_int('autorestore-sessions-timer');
             this._secondsLeft = 0;
 
             this.connect('opened', this._onOpened.bind(this));

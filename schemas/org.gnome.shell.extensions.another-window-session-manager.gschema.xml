@@ -32,6 +32,12 @@
       Set the timer on the AutostartDialog for some seconds, the upper value is 3600s
       </description>
     </key>
+    <key name='autostart-delay' type="i">
+      <default>20</default>
+      <summary>X-GNOME-Autostart-Delay</summary>
+      <description>
+      </description>
+    </key>
 
   </schema>
 </schemalist>

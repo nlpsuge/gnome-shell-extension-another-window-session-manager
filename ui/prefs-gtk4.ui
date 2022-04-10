@@ -6,6 +6,13 @@
     <property name="step-increment">1</property>
     <property name="page-increment">10</property>
   </object>
+  
+  <object class="GtkAdjustment" id="autostart_delay_adjustment">
+    <property name="upper">3600</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">10</property>
+  </object>
+
   <object class="GtkNotebook" id="prefs_notebook">
     <property name="focusable">1</property>
     <child>
@@ -78,7 +85,7 @@
                         <child>
                           <object class="GtkLabel" id="timer_on_the_autostart_dialog_multi_label">
                             <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">Timer on the autostart dialog</property>
+                            <property name="label" translatable="yes">Timer on the autostart dialog([0, 3600]s)</property>
                             <property name="use-markup">1</property>
                             <property name="xalign">0</property>
                             <layout>
@@ -101,10 +108,29 @@
                           </object>
                         </child>
                         <child>
-                          <placeholder/>
+                          <object class="GtkLabel" id="autostart_delay_multi_label">
+                            <property name="hexpand">1</property>
+                            <property name="label" translatable="yes">X-GNOME-Autostart-Delay([0, 3600]s)</property>
+                            <property name="use-markup">1</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
                         </child>
                         <child>
-                          <placeholder/>
+                          <object class="GtkSpinButton" id="autostart_delay_spinbutton">
+                            <property name="focusable">1</property>
+                            <property name="text" translatable="yes">20</property>
+                            <property name="adjustment">autostart_delay_adjustment</property>
+                            <property name="numeric">1</property>
+                            <property name="value">20</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
                         </child>
                         <child>
                           <placeholder/>

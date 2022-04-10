@@ -1,8 +1,13 @@
 'use strict';
 
-const { Gtk, GObject, Gio } = imports.gi;
+const { Gtk, GObject, Gio, GLib } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
+
+const FileUtils = Me.imports.utils.fileUtils;
+const Log = Me.imports.utils.log;
+
+Me.imports.utils.string;
 
 const Prefs = GObject.registerClass(
     {
@@ -15,6 +20,8 @@ const Prefs = GObject.registerClass(
             this._settings = ExtensionUtils.getSettings(
                 'org.gnome.shell.extensions.another-window-session-manager');
 
+            this._log = new Log.Log();
+
             this.render_ui();
             this._bindSettings();
         }
@@ -26,6 +33,28 @@ const Prefs = GObject.registerClass(
                 'active',
                 Gio.SettingsBindFlags.DEFAULT
             );
+
+            this._settings.bind(
+                'enable-autorestore-sessions',
+                this.restore_at_startup_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
+                'autorestore-sessions-timer',
+                this.timer_on_the_autostart_dialog_spinbutton,
+                'value',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
+                'autostart-delay',
+                this.autostart_delay_spinbutton,
+                'value',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
         }
 
         render_ui() {
@@ -36,7 +65,50 @@ const Prefs = GObject.registerClass(
 
             this.debugging_mode_switch = this._builder.get_object('debugging_mode_switch');
 
-            
+            this.timer_on_the_autostart_dialog_spinbutton = this._builder.get_object('timer_on_the_autostart_dialog_spinbutton');
+            this.autostart_delay_spinbutton = this._builder.get_object('autostart_delay_spinbutton');
+
+            this.restore_at_startup_switch = this._builder.get_object('restore_at_startup_switch');
+            this.restore_at_startup_switch.connect('notify::active', (widget) => {
+                const active = widget.active;
+                this._settings.set_boolean('enable-autorestore-sessions', active);
+                this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(active);
+                this.autostart_delay_spinbutton.set_sensitive(active);
+                this._log.info('xxx1xx');
+                if (active) {
+                    this._installAutostartDesktopFile();
+                }
+            });
+            const restore_at_startup_switch_state = this._settings.get_boolean('enable-autorestore-sessions');
+            this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(restore_at_startup_switch_state);
+            this.autostart_delay_spinbutton.set_sensitive(restore_at_startup_switch_state);
+        }
+
+        _installAutostartDesktopFile() {
+            this._log.info('xxx');
+            const argument = {
+                autostartDelay: this._settings.get_int('autostart-delay'),
+            };
+            const autostartDesktopContents = FileUtils.loadAutostartDesktopTemplate().fill(argument);
+            const autostart_restore_desktop_file = Gio.File.new_for_path(FileUtils.autostart_restore_desktop_file_path);
+            const autostart_restore_desktop_file_path_parent = autostart_restore_desktop_file.get_parent().get_path();
+            if (GLib.mkdir_with_parents(autostart_restore_desktop_file_path_parent, 0o744) === 0) {
+                let [success, tag] = autostart_restore_desktop_file.replace_contents(
+                    autostartDesktopContents,
+                    null,
+                    false,
+                    Gio.FileCreateFlags.REPLACE_DESTINATION,
+                    null
+                );
+    
+                if (success) {
+                    this._log.info(`Installed the autostart desktop file: ${FileUtils.autostart_restore_desktop_file_path}!`);
+                } else {
+                    this._log.error(`Failed to install the autostart desktop file: ${FileUtils.autostart_restore_desktop_file_path}`)
+                }
+            } else {
+                this._log.error(`Failed to create folder: ${autostart_restore_desktop_file_path_parent}`);
+            }
         }
         
     }
