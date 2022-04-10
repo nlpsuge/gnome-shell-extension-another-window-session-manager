@@ -9,6 +9,8 @@ const ByteArray = imports.byteArray;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
+const EndSessionDialog = imports.ui.endSessionDialog;
+
 const Gettext = imports.gettext;
 
 const Main = imports.ui.main;
@@ -19,6 +21,8 @@ const ModalDialog = imports.ui.modalDialog;
 const Log = Me.imports.utils.log;
 
 const RestoreSession = Me.imports.restoreSession;
+
+const PrefsUtils = Me.imports.utils.prefsUtils;
 
 const autostartDbusXml = ByteArray.toString(
     Me.dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.Autostart.xml').load_contents(null)[1]
@@ -74,6 +78,11 @@ var AutostartServiceProvider = GObject.registerClass(
             // when disable and enable this extension
             this._autostartDbusImpl.flush();
             this._autostartDbusImpl.unexport();
+
+            if (this._autostartService) {
+                this._autostartService._disable();
+                this._autostartService = null;
+            }
         }
     });
 
@@ -91,7 +100,7 @@ var AutostartService = GObject.registerClass(
         // Call this method synchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession` 
         RestoreSession() {
 
-            this._log.info(`Restoring from session ${'session name'} automatically`);
+            this._log.info(`Restoring from session ${this._sessionName} automatically`);
             // TODO Read settings from Preferences
             // 1. Enable if restore when starts
             // 2. Restore which session
@@ -99,8 +108,16 @@ var AutostartService = GObject.registerClass(
             this._autostartDialog.open();
         }
 
+        _disable() {
+            if (this._autostartDialog) {
+                this._autostartDialog.destroy();
+                this._autostartDialog = null;
+            }
+        }
+
     });
 
+// Based on endSessionDialog in Gnome shell
 var AutostartDialog = GObject.registerClass(
     class AutostartDialog extends ModalDialog.ModalDialog {
 
@@ -110,7 +127,12 @@ var AutostartDialog = GObject.registerClass(
                 destroyOnClose: true
             });
 
-            this._sessionName = 'test';
+            this._settings = new PrefsUtils.PrefsUtils().getSettings();
+
+            this._sessionName = this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+
+            this._totalSecondsToStayOpen = 15;
+            this._secondsLeft = 0;
 
             this.connect('opened', this._onOpened.bind(this));
 
@@ -144,7 +166,6 @@ var AutostartDialog = GObject.registerClass(
         _confirm() {
             const _restoreSession = new RestoreSession.RestoreSession();
             _restoreSession.restoreSession(this._sessionName);
-
         }
 
         _cancel() {
@@ -152,6 +173,7 @@ var AutostartDialog = GObject.registerClass(
         }
 
         _onOpened() {
+            this._startTimer();
             this._sync();
         }
 
@@ -160,14 +182,44 @@ var AutostartDialog = GObject.registerClass(
             if (!open)
                 return;
 
-            const desc = Gettext.ngettext("The session ${} will be restored in %d second",
-                "The session ${} will be restored in %d seconds", 15).format(15)
+            const displayTime = EndSessionDialog._roundSecondsToInterval(this._totalSecondsToStayOpen,
+                                                                         this._secondsLeft,
+                                                                         1);
+            const desc = Gettext.ngettext(this._sessionName + ' will be restored in %d second',
+                this._sessionName + ' will be restored in %d seconds', displayTime).format(displayTime);
             this._confirmDialogContent.description = desc;
 
         }
 
-        destroy() {
+        _startTimer() {
+            let startTime = GLib.get_monotonic_time();
+            this._secondsLeft = this._totalSecondsToStayOpen;
+    
+            this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
+                let currentTime = GLib.get_monotonic_time();
+                let secondsElapsed = (currentTime - startTime) / 1000000;
+    
+                this._secondsLeft = this._totalSecondsToStayOpen - secondsElapsed;
+                if (this._secondsLeft > 0) {
+                    this._sync();
+                    return GLib.SOURCE_CONTINUE;
+                }
+    
+                this._confirm();
+                this.close();
+                this._timerId = 0;
+    
+                return GLib.SOURCE_REMOVE;
+            });
+            GLib.Source.set_name_by_id(this._timerId, '[gnome-shell-extension-another-window-session-manager] this._confirm');
+        }
 
+        destroy() {
+            if (this._timerId > 0) {
+                GLib.source_remove(this._timerId);
+                this._timerId = 0;
+            }
+            this._secondsLeft = 0;
         }
 
 
