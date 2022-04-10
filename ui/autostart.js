@@ -96,7 +96,7 @@ var AutostartService = GObject.registerClass(
             this._autostartDialog = null;
 
             this._settings = new PrefsUtils.PrefsUtils().getSettings();
-
+            this._sessionName = this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
         }
 
         // Call this method synchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession` 

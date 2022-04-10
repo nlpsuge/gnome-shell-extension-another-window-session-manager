@@ -51,6 +51,7 @@ class SessionItemButtons extends GObject.Object {
         saveButton.connect('clicked', this._onClickSave.bind(this));
 
         const restoreButton = this._addButton('restore-symbolic.svg');
+        restoreButton.set_reactive(this.sessionItem._available);
         new Tooltip.Tooltip({
             parent: restoreButton,
             markup: 'Restore windows from the saved session',
@@ -58,6 +59,7 @@ class SessionItemButtons extends GObject.Object {
         restoreButton.connect('clicked', this._onClickRestore.bind(this));
 
         const moveButton = this._addButton('move-symbolic.svg');
+        moveButton.set_reactive(this.sessionItem._available);
         new Tooltip.Tooltip({
             parent: moveButton,
             markup: 'Move windows to their workspace by the saved session',
@@ -113,6 +115,7 @@ class SessionItemButtons extends GObject.Object {
             x_align: Clutter.ActorAlign.END,
             toggle_mode: true,
             child: this._autostartSwitch,
+            reactive: this.sessionItem._available
         });
         this._autostartSwitch.bind_property('state',
             button, 'checked',
