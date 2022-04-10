@@ -2,6 +2,8 @@
 
 const ExtensionUtils = imports.misc.extensionUtils;
 
+var SETTINGS_AUTORESTORE_SESSIONS = 'autorestore-sessions';
+
 var PrefsUtils = class {
 
     constructor() {

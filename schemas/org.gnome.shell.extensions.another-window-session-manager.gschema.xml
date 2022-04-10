@@ -10,5 +10,12 @@
       Enable the debugging mode to see what happened, for debugging or issue reporting or development purpose
       </description>
     </key>
+
+    <key name='autorestore-sessions' type="s">
+      <default>''</default>
+      <summary>Session(s) restored on startup</summary>
+      <description>
+      </description>
+    </key>
   </schema>
 </schemalist>

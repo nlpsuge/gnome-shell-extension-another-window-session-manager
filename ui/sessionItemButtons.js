@@ -75,8 +75,17 @@ class SessionItemButtons extends GObject.Object {
             markup: 'Restore at startup',
         });
         autoRestoreSwitcher.connect('clicked', (button, event) => {
-            log(button);
-            // this._settings.
+            const state = this._autostartSwitch.state;
+            if (state) {
+                this._settings.set_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS, this.sessionItem._filename);
+            } else {
+                this._settings.set_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS, '');
+            }
+        });
+
+        this._settings.connect(`changed::${PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS}`, (settings) => {
+            const toggled = this.sessionItem._filename == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+            this._autostartSwitch.state = toggled;
         });
 
         this._addSeparator();
@@ -95,7 +104,8 @@ class SessionItemButtons extends GObject.Object {
 
     _addAutostartSwitcher() {
 
-        this._autostartSwitch = new PopupMenu.Switch(false);
+        const toggled = this.sessionItem._filename == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+        this._autostartSwitch = new PopupMenu.Switch(toggled);
         this._autostartSwitch.set_style_class_name('toggle-switch awsm-toggle-switch');
         let button = new St.Button({
             style_class: 'dnd-button',
