@@ -52,6 +52,12 @@ var SearchSessionItem = GObject.registerClass(
         }
 
         _addFilters() {
+            const filterLabel = new St.Label({
+                text: 'Filter: ',
+                x_align: Clutter.ActorAlign.CENTER,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            this.add_child(filterLabel);
             this._filterAutoRestore();
             
         }

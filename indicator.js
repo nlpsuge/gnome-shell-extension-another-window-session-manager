@@ -33,6 +33,7 @@ class AwsIndicator extends PanelMenu.Button {
 
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._log = new Log.Log();
+        this._settings = this._prefsUtils.getSettings();
 
         this._signal = new Signal.Signal();
         
@@ -228,6 +229,8 @@ class AwsIndicator extends PanelMenu.Button {
         this._searchSessionItem = new SearchSessionItem.SearchSessionItem();
         const searchEntryText = this._searchSessionItem._entry.get_clutter_text()
         searchEntryText.connect('text-changed', this._onSearch.bind(this));
+        this._searchSessionItem._filterAutoRestoreSwitch.connect('notify::state', this._onAutoRestoreSwitchChanged.bind(this));
+
         this.menu.addMenuItem(this._searchSessionItem, this._itemIndex++);
                 
         this._addScrollableSessionsMenuSection();
@@ -379,7 +382,31 @@ class AwsIndicator extends PanelMenu.Button {
         this._addSessionItems();
     }
 
+    _onAutoRestoreSwitchChanged() {
+        this._search();
+        this._filterAutoRestore();
+    }
+
+    _filterAutoRestore() {
+        const switchState = this._searchSessionItem._filterAutoRestoreSwitch.state;
+        if (switchState) {
+            const menuItems = this._sessionsMenuSection._getMenuItems();
+            for (const menuItem of menuItems) {
+                const sessionName = menuItem._filename;
+                if (menuItem.actor.visible) {
+                    const visible = sessionName == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+                    menuItem.actor.visible = visible;
+                }
+            }
+        }
+    }
+
     _onSearch() {
+        this._search();
+        this._filterAutoRestore();
+    }
+
+    _search() {
         this._searchSessionItem._clearIcon.show();
 
         let searchText = this._searchSessionItem._entry.text;
