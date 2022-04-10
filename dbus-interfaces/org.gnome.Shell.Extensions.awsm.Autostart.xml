@@ -3,6 +3,8 @@
 
 <node>
     <interface name="org.gnome.Shell.Extensions.awsm.Autostart">
-        <method name="RestoreSession"/>
+        <method name="RestoreSession">
+            <arg type="s" name="message" direction="out"/>
+        </method>
     </interface>
 </node>

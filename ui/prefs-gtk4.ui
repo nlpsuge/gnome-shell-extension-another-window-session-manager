@@ -62,7 +62,8 @@
                         <child>
                           <object class="GtkLabel" id="restore_at_startup_multi_label">
                             <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">Restore at startup</property>
+                            <property name="label" translatable="yes">Restore at startup
+(Install a .desktop to ~/.config/autostart if enabled)</property>
                             <property name="use-markup">1</property>
                             <property name="xalign">0</property>
                             <layout>
@@ -110,7 +111,8 @@
                         <child>
                           <object class="GtkLabel" id="autostart_delay_multi_label">
                             <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">X-GNOME-Autostart-Delay([0, 3600]s)</property>
+                            <property name="label" translatable="yes">X-GNOME-Autostart-Delay([0, 3600]s)
+(Update the above .desktop if changed)</property>
                             <property name="use-markup">1</property>
                             <property name="xalign">0</property>
                             <layout>

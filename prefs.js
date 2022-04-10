@@ -24,6 +24,11 @@ const Prefs = GObject.registerClass(
 
             this.render_ui();
             this._bindSettings();
+            
+            // Set sensitive AFTER this._bindSettings() to make it work
+            const restore_at_startup_switch_state = this._settings.get_boolean('enable-autorestore-sessions');
+            this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(restore_at_startup_switch_state);
+            this.autostart_delay_spinbutton.set_sensitive(restore_at_startup_switch_state);
         }
 
         _bindSettings() {
@@ -55,6 +60,16 @@ const Prefs = GObject.registerClass(
                 Gio.SettingsBindFlags.DEFAULT
             );
 
+            this._settings.connect('changed::enable-autorestore-sessions', (settings) => {
+                if (this._settings.get_boolean('enable-autorestore-sessions')) {
+                    this._installAutostartDesktopFile();
+                }
+            });
+
+            this._settings.connect('changed::autostart-delay', (settings) => {
+                this._installAutostartDesktopFile();
+            });
+
         }
 
         render_ui() {
@@ -71,21 +86,14 @@ const Prefs = GObject.registerClass(
             this.restore_at_startup_switch = this._builder.get_object('restore_at_startup_switch');
             this.restore_at_startup_switch.connect('notify::active', (widget) => {
                 const active = widget.active;
-                this._settings.set_boolean('enable-autorestore-sessions', active);
                 this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(active);
                 this.autostart_delay_spinbutton.set_sensitive(active);
-                this._log.info('xxx1xx');
-                if (active) {
-                    this._installAutostartDesktopFile();
-                }
+                
             });
-            const restore_at_startup_switch_state = this._settings.get_boolean('enable-autorestore-sessions');
-            this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(restore_at_startup_switch_state);
-            this.autostart_delay_spinbutton.set_sensitive(restore_at_startup_switch_state);
+            
         }
 
         _installAutostartDesktopFile() {
-            this._log.info('xxx');
             const argument = {
                 autostartDelay: this._settings.get_int('autostart-delay'),
             };

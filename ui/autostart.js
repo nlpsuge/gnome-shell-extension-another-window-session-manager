@@ -95,10 +95,16 @@ var AutostartService = GObject.registerClass(
             this._log = new Log.Log();
             this._autostartDialog = null;
 
+            this._settings = new PrefsUtils.PrefsUtils().getSettings();
+
         }
 
         // Call this method synchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession` 
         RestoreSession() {
+
+            if (!this._settings.get_boolean('enable-autorestore-sessions')) {
+                return "This function is disabled, please enable it through 'Preferences -> Restore sessions -> Restore at startup'";
+            }
 
             this._log.info(`Restoring from session ${this._sessionName} automatically`);
             // TODO Read settings from Preferences
@@ -106,6 +112,8 @@ var AutostartService = GObject.registerClass(
             // 2. Restore which session
             this._autostartDialog = new AutostartDialog();
             this._autostartDialog.open();
+
+            return 'Restoring...';
         }
 
         _disable() {
