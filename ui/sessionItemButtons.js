@@ -147,6 +147,9 @@ class SessionItemButtons extends GObject.Object {
         });
 
         button.set_label(this.sessionItem._modification_time);
+        if (!this.sessionItem._available) {
+            button.set_style('color: red;');
+        }
         this.sessionItem.actor.add_child(button);
 
     }

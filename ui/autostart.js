@@ -23,6 +23,8 @@ const Log = Me.imports.utils.log;
 const RestoreSession = Me.imports.restoreSession;
 
 const PrefsUtils = Me.imports.utils.prefsUtils;
+const FileUtils = Me.imports.utils.fileUtils;
+
 
 const autostartDbusXml = ByteArray.toString(
     Me.dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.Autostart.xml').load_contents(null)[1]
@@ -106,14 +108,14 @@ var AutostartService = GObject.registerClass(
                 return "ERROR: This function is disabled, please enable it through 'Preferences -> Restore sessions -> Restore at startup'";
             }
 
-            this._log.info(`Restoring from session ${this._sessionName} automatically`);
+            this._log.info(`Opening dialog to restore session '${this._sessionName}'`);
             // TODO Read settings from Preferences
             // 1. Enable if restore when starts
             // 2. Restore which session
             this._autostartDialog = new AutostartDialog();
             this._autostartDialog.open();
 
-            return 'Restoring...';
+            return 'Opening dialog to restore ...';
         }
 
         _disable() {
@@ -153,7 +155,7 @@ var AutostartDialog = GObject.registerClass(
                 key: Clutter.KEY_Escape,
             });
 
-            this.addButton({
+            this._confirmButton = this.addButton({
                 action: () => {
                     this.close();
                     let signalId = this.connect('closed', () => {
@@ -181,13 +183,18 @@ var AutostartDialog = GObject.registerClass(
         }
 
         _onOpened() {
+            let open = this.state == ModalDialog.State.OPENING || this.state == ModalDialog.State.OPENED;
+            if (!open)
+                return;
+                
             if (!this._sessionName) {
-                let open = this.state == ModalDialog.State.OPENING || this.state == ModalDialog.State.OPENED;
-                if (!open)
-                    return;
-
-                // TODO Use red color 
                 this._confirmDialogContent.description = "ERROR: You don't active any session to restore";
+                this._confirmDialogContent._description.set_style('color:red;');
+                this._confirmButton.set_reactive(false);
+            } else if (!FileUtils.sessionExists(this._sessionName)) {
+                this._confirmDialogContent.description = `ERROR: Session '${this._sessionName}' does not exist`;
+                this._confirmDialogContent._description.set_style('color:red;');
+                this._confirmButton.set_reactive(false);
             } else {
                 this._startTimer();
                 this._sync();
@@ -195,15 +202,12 @@ var AutostartDialog = GObject.registerClass(
         }
 
         _sync() {
-            let open = this.state == ModalDialog.State.OPENING || this.state == ModalDialog.State.OPENED;
-            if (!open)
-                return;
 
             const displayTime = EndSessionDialog._roundSecondsToInterval(this._totalSecondsToStayOpen,
                                                                          this._secondsLeft,
                                                                          1);
-            const desc = Gettext.ngettext(this._sessionName + ' will be restored in %d second',
-                this._sessionName + ' will be restored in %d seconds', displayTime).format(displayTime);
+            const desc = Gettext.ngettext('\'' + this._sessionName + '\' will be restored in %d second',
+                '\'' + this._sessionName + '\' will be restored in %d seconds', displayTime).format(displayTime);
             this._confirmDialogContent.description = desc;
 
         }

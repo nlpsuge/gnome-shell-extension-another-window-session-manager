@@ -90,9 +90,16 @@ function listAllSessions(sessionPath, recursion, debug, callback) {
     
 }
 
-function trashSession(sessionName) {
+function sessionExists(sessionName) {
     const sessionFilePath = GLib.build_filenamev([sessions_path, sessionName]);
-    if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
+    if (GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
+        return true;
+    }
+    return false;
+}
+
+function trashSession(sessionName) {
+    if (!sessionExists(sessionName)) {
         return true;
     }
     
