@@ -1,9 +1,9 @@
 .awsm-toggle-switch {
-    background-image: url("./icons/toggle-off-symbolic.svg");
+    background-image: url("./icons/toggle-off-autorestore-symbolic.svg");
 }
 
 .awsm-toggle-switch:checked {
-    background-image: url("./icons/toggle-on-symbolic.svg");
+    background-image: url("./icons/toggle-on-autorestore-symbolic.svg");
 }
 
 /* Restore Session Dialog */
