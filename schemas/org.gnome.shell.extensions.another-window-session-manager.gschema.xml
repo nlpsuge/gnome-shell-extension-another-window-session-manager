@@ -36,6 +36,7 @@
       <default>20</default>
       <summary>Autostart delay</summary>
       <description>
+      A specified amount of time to delay to execute the target command.
       </description>
     </key>
 
