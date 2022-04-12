@@ -29,6 +29,10 @@ const Prefs = GObject.registerClass(
             const restore_at_startup_switch_state = this._settings.get_boolean('enable-autorestore-sessions');
             this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(restore_at_startup_switch_state);
             this.autostart_delay_spinbutton.set_sensitive(restore_at_startup_switch_state);
+
+            this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(
+                !this._settings.get_boolean('restore-at-startup-without-asking')
+            );
         }
 
         _bindSettings() {
@@ -42,6 +46,13 @@ const Prefs = GObject.registerClass(
             this._settings.bind(
                 'enable-autorestore-sessions',
                 this.restore_at_startup_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
+                'restore-at-startup-without-asking',
+                this.restore_at_startup_without_asking_switch,
                 'active',
                 Gio.SettingsBindFlags.DEFAULT
             );
@@ -66,6 +77,12 @@ const Prefs = GObject.registerClass(
                 }
             });
 
+            this._settings.connect('changed::restore-at-startup-without-asking', (settings) => {
+                this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(
+                    !this._settings.get_boolean('restore-at-startup-without-asking')
+                );
+            });
+
             this._settings.connect('changed::autostart-delay', (settings) => {
                 this._installAutostartDesktopFile();
             });
@@ -86,9 +103,22 @@ const Prefs = GObject.registerClass(
             this.restore_at_startup_switch = this._builder.get_object('restore_at_startup_switch');
             this.restore_at_startup_switch.connect('notify::active', (widget) => {
                 const active = widget.active;
-                this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(active);
+                this.restore_at_startup_without_asking_switch.set_sensitive(active);
+                const enableTimerSpinButton = active && !this._settings.get_boolean('restore-at-startup-without-asking');
+                if (enableTimerSpinButton) {
+                    this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(true);
+                } else {
+                    this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(false);
+                }
+                
                 this.autostart_delay_spinbutton.set_sensitive(active);
                 
+            });
+
+            this.restore_at_startup_without_asking_switch = this._builder.get_object('restore_at_startup_without_asking_switch');
+            this.restore_at_startup_without_asking_switch.connect('notify::active', (widget) => {
+                const active = widget.active;
+                this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(!active);           
             });
             
         }

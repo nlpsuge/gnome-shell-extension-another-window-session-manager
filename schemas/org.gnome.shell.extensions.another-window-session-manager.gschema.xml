@@ -25,6 +25,13 @@
       `~/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop`.
       </description>
     </key>
+    <key name='restore-at-startup-without-asking' type="b">
+      <default>false</default>
+      <summary>Restore at startup without asking</summary>
+      <description>
+      Restore immediately at startup without asking
+      </description>
+    </key>
     <key name='autorestore-sessions-timer' type="i">
       <default>10</default>
       <summary>Set the timer on the AutostartDialog for some seconds</summary>
