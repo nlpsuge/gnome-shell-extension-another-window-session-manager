@@ -1,3 +1,16 @@
+.awsm-toggle-switch {
+    background-image: url("./icons/toggle-off-autorestore-symbolic.svg");
+}
+
+.awsm-toggle-switch:checked {
+    background-image: url("./icons/toggle-on-autorestore-symbolic.svg");
+}
+
+/* Restore Session Dialog */
+.restore-session-dialog {
+    width: 30em;
+}
+  
 
 /**
 * *-tooltip: Adapted from: https://github.com/GSConnect/gnome-shell-extension-gsconnect/blob/master/src/stylesheet.css

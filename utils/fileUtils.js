@@ -13,8 +13,14 @@ var sessions_path = GLib.build_filenamev([config_path_base, 'sessions']);
 var sessions_backup_folder_name = 'backups';
 var sessions_backup_path = GLib.build_filenamev([sessions_path, sessions_backup_folder_name]);
 var desktop_template_path = GLib.build_filenamev([Me.path, '/template/template.desktop']);
+var desktop_template_path_restore_at_autostart = GLib.build_filenamev([Me.path, '/template/_gnome-shell-extension-another-window-session-manager.desktop']);
 var desktop_file_store_path_base = '~/.local/share/applications';
 var desktop_file_store_path = `${desktop_file_store_path_base}/__another-window-session-manager`;
+
+var recently_closed_session_name = 'Recently Closed Session';
+var recently_closed_session_path = GLib.build_filenamev([sessions_path, recently_closed_session_name]);
+
+var autostart_restore_desktop_file_path = GLib.build_filenamev([home_dir,'/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop']);
 
 
 function get_sessions_path() {
@@ -84,9 +90,16 @@ function listAllSessions(sessionPath, recursion, debug, callback) {
     
 }
 
-function trashSession(sessionName) {
+function sessionExists(sessionName) {
     const sessionFilePath = GLib.build_filenamev([sessions_path, sessionName]);
-    if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
+    if (GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
+        return true;
+    }
+    return false;
+}
+
+function trashSession(sessionName) {
+    if (!sessionExists(sessionName)) {
         return true;
     }
     
@@ -113,8 +126,16 @@ function isDirectory(sessionName) {
     return false;
 }
 
+function loadAutostartDesktopTemplate() {
+    return loadTemplate(desktop_template_path_restore_at_autostart);
+}
+
 function loadDesktopTemplate() {
-    const desktop_template_file = Gio.File.new_for_path(desktop_template_path);
+    return loadTemplate(desktop_template_path);
+}
+
+function loadTemplate(path) {
+    const desktop_template_file = Gio.File.new_for_path(path);
     let [success, contents] = desktop_template_file.load_contents(null);
     if (success) {
         if (contents instanceof Uint8Array) {
@@ -127,7 +148,6 @@ function loadDesktopTemplate() {
 
     return '';
 }
-
 
 // test
 // let index = 0;

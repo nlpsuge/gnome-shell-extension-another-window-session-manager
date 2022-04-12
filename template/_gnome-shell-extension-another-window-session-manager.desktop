@@ -1,0 +1,12 @@
+# Do NOT modify this file, which could be overridden or deleted by this extension.
+
+
+[Desktop Entry]
+Name=Restore saved session(s) at startup
+Comment=Restore saved session(s) at startup
+Icon=
+Exec=bash -c 'sleep ${autostartDelay} && gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession'
+Terminal=false
+Type=Application
+# This option does not work on my machine, so I use `sleep` instead ...
+X-GNOME-Autostart-Delay=

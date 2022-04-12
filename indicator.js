@@ -11,6 +11,7 @@ const PopupMenu = imports.ui.popupMenu;
 const PanelMenu = imports.ui.panelMenu;
 
 const MoveSession = Me.imports.moveSession;
+const RestoreSession = Me.imports.restoreSession;
 
 const FileUtils = Me.imports.utils.fileUtils;
 const SessionItem = Me.imports.ui.sessionItem;
@@ -32,6 +33,7 @@ class AwsIndicator extends PanelMenu.Button {
 
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._log = new Log.Log();
+        this._settings = this._prefsUtils.getSettings();
 
         this._signal = new Signal.Signal();
         
@@ -65,8 +67,6 @@ class AwsIndicator extends PanelMenu.Button {
         // See: PopupMenu#itemActivated() => this.menu._getTopMenu().close
         this.menu.itemActivated = function(animate) {};
 
-        // Set a initial value to prevent error in `journalctl` when starting gnome-shell
-        this._restoringApps = new Map();
         this._moveSession = new MoveSession.MoveSession();
 
         this._metaWindowConnectIds = [];
@@ -97,7 +97,7 @@ class AwsIndicator extends PanelMenu.Button {
             const shellApp = this._windowTracker.get_window_app(metaWindow);
             if (shellApp) {
             
-                const shellAppData = this._restoringApps.get(shellApp);
+                const shellAppData = RestoreSession.restoringApps.get(shellApp);
                 if (shellAppData) {
                     const saved_window_sessions = shellAppData.saved_window_sessions;
 
@@ -146,7 +146,7 @@ class AwsIndicator extends PanelMenu.Button {
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> first-frame: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
-            const shellAppData = this._restoringApps.get(shellApp);
+            const shellAppData = RestoreSession.restoringApps.get(shellApp);
             if (!shellAppData) {
                 return;
             }
@@ -179,7 +179,7 @@ class AwsIndicator extends PanelMenu.Button {
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> shown: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
-            const shellAppData = this._restoringApps.get(shellApp);
+            const shellAppData = RestoreSession.restoringApps.get(shellApp);
             if (!shellAppData) {
                 return;
             }
@@ -229,6 +229,8 @@ class AwsIndicator extends PanelMenu.Button {
         this._searchSessionItem = new SearchSessionItem.SearchSessionItem();
         const searchEntryText = this._searchSessionItem._entry.get_clutter_text()
         searchEntryText.connect('text-changed', this._onSearch.bind(this));
+        this._searchSessionItem._filterAutoRestoreSwitch.connect('notify::state', this._onAutoRestoreSwitchChanged.bind(this));
+
         this.menu.addMenuItem(this._searchSessionItem, this._itemIndex++);
                 
         this._addScrollableSessionsMenuSection();
@@ -268,6 +270,20 @@ class AwsIndicator extends PanelMenu.Button {
 
         this._log.debug('List all sessions to add session items');
 
+        // Recently Closed Session always on the top
+        const recently_closed_session_file = Gio.File.new_for_path(FileUtils.recently_closed_session_path);
+        let info = null;
+        try {
+            info = recently_closed_session_file.query_info(
+                [Gio.FILE_ATTRIBUTE_STANDARD_NAME, 
+                    Gio.FILE_ATTRIBUTE_TIME_MODIFIED].join(','),
+                Gio.FileQueryInfoFlags.NONE,
+                null);
+        } catch (ignored) {}
+        
+        let item = new SessionItem.SessionItem(info, recently_closed_session_file, this);
+        this._sessionsMenuSection.addMenuItem(item, this._itemIndex++);
+
         let sessionFileInfos = [];
         FileUtils.listAllSessions(null, false, this._prefsUtils.isDebug(),(file, info) => {
             // We have an interest in regular and text files
@@ -283,6 +299,10 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
 
+            // Skip the `Recently Closed Session` file since it has been added to the session list already.
+            if (file.equal(recently_closed_session_file)) {
+                return;
+            }
             
             let parent = file.get_parent();
             let parentPath;
@@ -362,7 +382,31 @@ class AwsIndicator extends PanelMenu.Button {
         this._addSessionItems();
     }
 
+    _onAutoRestoreSwitchChanged() {
+        this._search();
+        this._filterAutoRestore();
+    }
+
+    _filterAutoRestore() {
+        const switchState = this._searchSessionItem._filterAutoRestoreSwitch.state;
+        if (switchState) {
+            const menuItems = this._sessionsMenuSection._getMenuItems();
+            for (const menuItem of menuItems) {
+                const sessionName = menuItem._filename;
+                if (menuItem.actor.visible) {
+                    const visible = sessionName == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+                    menuItem.actor.visible = visible;
+                }
+            }
+        }
+    }
+
     _onSearch() {
+        this._search();
+        this._filterAutoRestore();
+    }
+
+    _search() {
         this._searchSessionItem._clearIcon.show();
 
         let searchText = this._searchSessionItem._entry.text;

@@ -39,6 +39,8 @@ After confirm to save:
 
 ![image](https://user-images.githubusercontent.com/2271720/147727180-633fa9e0-4b66-4763-8cf1-f365ef77f7b3.png)
 
+## Activate the current session to be restored at startup
+![image](https://user-images.githubusercontent.com/2271720/162792703-20da002b-b590-4df5-964e-9c586e8915bc.png)
 
 # Main features
 1. Close open windows
@@ -62,6 +64,10 @@ After confirm to save:
 | <img src=icons/restore-symbolic.svg width="14" height="14">  | Restore the saved session using the item's name               |
 | <img src=icons/move-symbolic.svg width="14" height="14">     | Move the open windows using the item's name                  |
 | <img src=icons/close-symbolic.svg width="14" height="14">    | Close the current open windows                               |
+| <img src=icons/toggle-on-autorestore-symbolic.svg width="24" height="13">    | Activate the current session to be restored at startup |
+| <img src=https://user-images.githubusercontent.com/2271720/162792222-0fc7e6ca-1382-49cf-975a-f53d878d0479.png width="24" height="13">    | Inactivate the current session to be restored at startup |
+| <img src=icons/autorestore-symbolic.svg width="13" height="13">    | Indicate the autorestore button       |
+
 
 # Dependencies
 This project uses `ps` and `pwdx` to get some information from a process, install it via `dnf install procps-ng` if you don't have.
@@ -115,6 +121,7 @@ Note that I've marked `backups` as a reserved word, so you can't use it as a ses
 6. - [ ] Settings
       - [x] Debugging mode
       - [ ] whitelist using for closing application with multiple windows
-7. - [ ] Support restoring a saved session when startup ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
+7. - [x] Support restoring a saved session at startup ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
 8. - [ ] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
 9. - [ ] All TODO tags in the projects
+10.- [ ] Translation?
