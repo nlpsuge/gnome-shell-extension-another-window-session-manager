@@ -34,7 +34,7 @@
     </key>
     <key name='autostart-delay' type="i">
       <default>20</default>
-      <summary>X-GNOME-Autostart-Delay</summary>
+      <summary>Autostart delay</summary>
       <description>
       </description>
     </key>

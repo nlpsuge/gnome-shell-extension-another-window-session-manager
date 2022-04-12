@@ -2,7 +2,8 @@
 Name=Restore saved session(s) at startup
 Comment=Restore saved session(s) at startup
 Icon=
-Exec=gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession
+Exec=bash -c 'sleep ${autostartDelay} && gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession'
 Terminal=false
 Type=Application
-X-GNOME-Autostart-Delay=${autostartDelay}
+# This option does not work on my machine, so I use `sleep` instead ...
+X-GNOME-Autostart-Delay=
