@@ -33,7 +33,7 @@
       </description>
     </key>
     <key name='autostart-delay' type="i">
-      <default>20</default>
+      <default>5</default>
       <summary>Autostart delay</summary>
       <description>
       A specified amount of time to delay to execute the target command.

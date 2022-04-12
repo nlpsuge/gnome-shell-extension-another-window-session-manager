@@ -31,7 +31,7 @@ class SessionItem extends PopupMenu.PopupMenuItem {
             }
         } else {
             this._filename = file.get_basename();
-            this._modification_time = '( Please save this session before using )';
+            this._modification_time = '( Please save this session before using it )';
             
             this._available = false;
         }
