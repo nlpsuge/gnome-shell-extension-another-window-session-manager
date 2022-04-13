@@ -88,6 +88,8 @@ Please do not modify `_gnome-shell-extension-another-window-session-manager.desk
 # Dependencies
 This project uses `ps` and `pwdx` to get some information from a process, install it via `dnf install procps-ng` if you don't have.
 
+And it uses `gdbus` to call the remote method, which is provided by this exension, to implement the `restore on start` feature. `gdbus` is part of `glib2`.
+
 # Known issues
 
 1. On both X11 and Wayland, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) continually during the process of restoring, the window size and position may can't be restored, and it may restore many instances of an application. **As a workaround, click the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) only once until all apps are restored.**
