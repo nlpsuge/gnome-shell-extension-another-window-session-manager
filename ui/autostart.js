@@ -101,7 +101,7 @@ var AutostartService = GObject.registerClass(
             this._sessionName = this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
         }
 
-        // Call this method synchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession` 
+        // Call this method asynchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession` 
         RestoreSession() {
 
             if (!this._settings.get_boolean('enable-autorestore-sessions')) {
@@ -169,10 +169,7 @@ var AutostartDialog = GObject.registerClass(
                 label: _('Confirm'),
             });
 
-            // this._checkBox.connect('clicked', this._sync.bind(this));
-
             this.contentLayout.add_child(this._confirmDialogContent);
-
 
         }
 
