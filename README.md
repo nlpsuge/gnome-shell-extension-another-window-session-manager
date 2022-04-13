@@ -22,12 +22,12 @@ This extension is based on several [Gnome technologies](https://www.gnome.org/te
 ## Close open windows
 Click item to close open windows:
 
-![image](https://user-images.githubusercontent.com/2271720/147727060-c5b64c45-7b00-4343-a28d-28d88003be87.png)
+![image](https://user-images.githubusercontent.com/2271720/163229388-5504c439-ae4a-445b-a3f7-aa768af3975d.png)
 
 
 After confirm to close:
 
-![image](https://user-images.githubusercontent.com/2271720/147727104-436ea99b-3539-4eae-b1c4-a3fa83f8734d.png)
+![image](https://user-images.githubusercontent.com/2271720/163229434-2c06b9d2-2b19-4205-80e8-58c2ae68a0cd.png)
 
 ## Save open windows
 Click item to save open windows as a session:
@@ -37,7 +37,7 @@ Click item to save open windows as a session:
 
 After confirm to save:
 
-![image](https://user-images.githubusercontent.com/2271720/147727180-633fa9e0-4b66-4763-8cf1-f365ef77f7b3.png)
+![image](https://user-images.githubusercontent.com/2271720/163229511-f83df883-5afe-47ae-8855-fef68586e5a4.png)
 
 ## Activate the current session to be restored at startup
 ![image](https://user-images.githubusercontent.com/2271720/162792703-20da002b-b590-4df5-964e-9c586e8915bc.png)
