@@ -93,7 +93,7 @@ Please do not modify `_gnome-shell-extension-another-window-session-manager.desk
 # Dependencies
 This project uses `ps` and `pwdx` to get some information from a process, install it via `dnf install procps-ng` if you don't have.
 
-And it uses `gdbus` to call the remote method, which is provided by this exension, to implement the `restore on start` feature. `gdbus` is part of `glib2`.
+And it uses `gdbus` to call the remote method, which is provided by this exension, to implement the `restore at start` feature. `gdbus` is part of `glib2`.
 
 # Known issues
 
