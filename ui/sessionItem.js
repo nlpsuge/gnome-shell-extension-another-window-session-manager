@@ -27,7 +27,8 @@ class SessionItem extends PopupMenu.PopupMenuItem {
             if (modification_date_time) {
                 this._modification_time = modification_date_time.to_local().format('%Y-%m-%d %T');
             } else {
-                this._modification_time = 'Unknown';
+                this._modification_time = '( Unknown )';
+                this._available = false;
             }
         } else {
             this._filename = file.get_basename();
