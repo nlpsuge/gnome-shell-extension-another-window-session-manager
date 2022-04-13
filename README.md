@@ -17,7 +17,7 @@ This extension is based on several [Gnome technologies](https://www.gnome.org/te
 # Screenshot
 
 ## Overview
-![image](https://user-images.githubusercontent.com/2271720/147721596-0e84626c-8c10-4331-99ac-f0eb3b2db7d3.png)
+![image](https://user-images.githubusercontent.com/2271720/163019716-2177ca8e-97b7-4a6c-9c4a-74a2326642be.png)
 
 ## Close open windows
 Click item to close open windows:
@@ -42,17 +42,33 @@ After confirm to save:
 ## Activate the current session to be restored at startup
 ![image](https://user-images.githubusercontent.com/2271720/162792703-20da002b-b590-4df5-964e-9c586e8915bc.png)
 
+## Preferences
+
+### Restore sessions
+To modify the delay, timer, and how to restore a session:
+![image](https://user-images.githubusercontent.com/2271720/163179151-03cf6778-77dc-449c-a705-89d7b9a18d05.png)
+
+
 # Main features
 1. Close open windows
-2. Save open windows
-3. Restore saved open windows
-4. Restore window state, including `Always on Top`, `Always on Visible Workspace` and maximization
-5. Restore window workspace, size and position
-6. Move windows to their own workspace according to a saved session
-7. Support multi-monitor
-8. Trash saved session
-9. Search saved session by the session name fuzzily
-10. ...
+1. Save open windows
+1. Restore session(s)
+1. Restore a session at startup (See also: [#9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9#issuecomment-1097012874)). Please note that this feature is **disabled by default**.
+1. Restore window state, including `Always on Top`, `Always on Visible Workspace` and maximization
+1. Restore window workspace, size and position
+1. Move windows to their own workspace according to a saved session
+1. Support multi-monitor
+1. Trash saved session
+1. Search saved session by the session name fuzzily
+1. ...
+
+## How to use `Restore a session at startup`?
+
+To make it work, you must enable it through `Restore sessions -> Restore at startup` in the Preferences AND active a session by clicking <img src=https://user-images.githubusercontent.com/2271720/162792222-0fc7e6ca-1382-49cf-975a-f53d878d0479.png width="24" height="13"> in the popup menu.
+
+While you enable it through `Restore sessions -> Restore at startup`, it creates a `_gnome-shell-extension-another-window-session-manager.desktop` under the folder `~/.config/autostart/`. 
+
+Please do not modify `_gnome-shell-extension-another-window-session-manager.desktop`, all changes by yourself could be overidden or deleted.
 
 # Panel menu items
 
@@ -103,25 +119,27 @@ They are all in `~/.config/another-window-session-manager/sessions`. When use an
 Note that I've marked `backups` as a reserved word, so you can't use it as a session name when saving a session. But you do have the freedom to manually create a file named `backups` in `~/.config/another-window-session-manager/sessions`. But this extension will only backup the session file that you are clicking the save button and you will receive an error log in the `journalctl` and an error notification every time you save an existing session.
 
 # TODO
+1. - Close open windows
+     - [ ] Close all windows on the current workspace. Who needs this feature? Hand up.🙋
 1. - Save open windows
      - [x] Save open windows 
-3. - Restore saved open windows
+1. - Restore saved open windows
       - [x] Restore saved open windows
       - [x] Move to belonging workspace automatically
       - [x] Restore window size and position ([issue 17](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/17))
       - [x] Restore window workspace, size and position of applications launched via a command line and don't have a recognizable `.desktop` file by `Shell.AppSystem.get_default().get_running()`.
       - [x] Support multi-monitor ([issue 21](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/21))
-4. - Saved open windows list
+1. - Saved open windows list
       - [x] Save open windows button
       - [x] Restore button
       - [ ] Rename button (double click text to rename?)
       - [x] Move button
       - [x] Delete button
-5. - [x] Move windows according to a saved session.
-6. - [ ] Settings
+1. - [x] Move windows according to a saved session.
+1. - [ ] Settings
       - [x] Debugging mode
       - [ ] whitelist using for closing application with multiple windows
-7. - [x] Support restoring a saved session at startup ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
-8. - [ ] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
-9. - [ ] All TODO tags in the projects
-10.- [ ] Translation?
+1. - [x] Support restoring a saved session at startup ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
+1. - [ ] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
+1. - [ ] All TODO tags in the projects
+1. - [ ] Translation?
