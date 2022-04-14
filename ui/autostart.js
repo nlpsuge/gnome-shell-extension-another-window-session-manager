@@ -26,10 +26,6 @@ const PrefsUtils = Me.imports.utils.prefsUtils;
 const FileUtils = Me.imports.utils.fileUtils;
 
 
-const autostartDbusXml = ByteArray.toString(
-    Me.dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.Autostart.xml').load_contents(null)[1]
-);
-
 var AutostartServiceProvider = GObject.registerClass(
     class AutostartServiceProvider extends GObject.Object {
 
@@ -38,6 +34,9 @@ var AutostartServiceProvider = GObject.registerClass(
 
             this._log = new Log.Log();
             
+            this._autostartDbusXml = ByteArray.toString(
+                Me.dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.Autostart.xml').load_contents(null)[1]);
+
             this._autostartService = null;
             this._autostartDbusImpl = null;
 
@@ -61,7 +60,7 @@ var AutostartServiceProvider = GObject.registerClass(
 
             // Gio.DBusExportedObject.wrapJSObject(interfaceInfo, jsObj) is a private method of gjs
             // See: https://gitlab.gnome.org/GNOME/gjs/-/blob/master/modules/core/overrides/Gio.js#L391
-            this._autostartDbusImpl = Gio.DBusExportedObject.wrapJSObject(autostartDbusXml, this._autostartService);
+            this._autostartDbusImpl = Gio.DBusExportedObject.wrapJSObject(this._autostartDbusXml, this._autostartService);
             this._autostartDbusImpl.export(connection, '/org/gnome/Shell/Extensions/awsm');
 
         }

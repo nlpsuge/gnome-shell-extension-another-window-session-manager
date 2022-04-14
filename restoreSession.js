@@ -182,6 +182,11 @@ var RestoreSession = class {
     }
 
     destroy() {
+        if (restoringApps) {
+            restoringApps.clear();
+            restoringApps = null;
+        }
+
         if (this._restoredApps) {
             this._restoredApps.clear();
             this._restoredApps = null;
