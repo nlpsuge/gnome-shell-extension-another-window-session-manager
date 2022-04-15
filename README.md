@@ -17,17 +17,17 @@ This extension is based on several [Gnome technologies](https://www.gnome.org/te
 # Screenshot
 
 ## Overview
-![image](https://user-images.githubusercontent.com/2271720/147721596-0e84626c-8c10-4331-99ac-f0eb3b2db7d3.png)
+![image](https://user-images.githubusercontent.com/2271720/163019716-2177ca8e-97b7-4a6c-9c4a-74a2326642be.png)
 
 ## Close open windows
 Click item to close open windows:
 
-![image](https://user-images.githubusercontent.com/2271720/147727060-c5b64c45-7b00-4343-a28d-28d88003be87.png)
+![image](https://user-images.githubusercontent.com/2271720/163229388-5504c439-ae4a-445b-a3f7-aa768af3975d.png)
 
 
 After confirm to close:
 
-![image](https://user-images.githubusercontent.com/2271720/147727104-436ea99b-3539-4eae-b1c4-a3fa83f8734d.png)
+![image](https://user-images.githubusercontent.com/2271720/163229434-2c06b9d2-2b19-4205-80e8-58c2ae68a0cd.png)
 
 ## Save open windows
 Click item to save open windows as a session:
@@ -37,20 +37,43 @@ Click item to save open windows as a session:
 
 After confirm to save:
 
-![image](https://user-images.githubusercontent.com/2271720/147727180-633fa9e0-4b66-4763-8cf1-f365ef77f7b3.png)
+![image](https://user-images.githubusercontent.com/2271720/163229511-f83df883-5afe-47ae-8855-fef68586e5a4.png)
+
+## Activate the current session to be restored at startup
+![image](https://user-images.githubusercontent.com/2271720/162792703-20da002b-b590-4df5-964e-9c586e8915bc.png)
+
+## Preferences
+
+### Restore sessions
+To modify the delay, timer, and how to restore a session:
+![image](https://user-images.githubusercontent.com/2271720/163179151-03cf6778-77dc-449c-a705-89d7b9a18d05.png)
 
 
 # Main features
 1. Close open windows
-2. Save open windows
-3. Restore saved open windows
-4. Restore window state, including `Always on Top`, `Always on Visible Workspace` and maximization
-5. Restore window workspace, size and position
-6. Move windows to their own workspace according to a saved session
-7. Support multi-monitor
-8. Trash saved session
-9. Search saved session by the session name fuzzily
-10. ...
+1. Save open windows
+1. Restore session(s)
+1. Restore a session at startup (See also: [#9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9#issuecomment-1097012874)). Please note that this feature is **disabled by default**.
+1. Restore window state, including `Always on Top`, `Always on Visible Workspace` and maximization
+1. Restore window workspace, size and position
+1. Move windows to their own workspace according to a saved session
+1. Support multi-monitor
+1. Trash saved session
+1. Search saved session by the session name fuzzily
+1. ...
+
+## How to `Restore a session at startup`?
+
+To make it work, you must enable it through `Restore sessions -> Restore at startup` in the Preferences AND active a session by clicking <img src=https://user-images.githubusercontent.com/2271720/162792222-0fc7e6ca-1382-49cf-975a-f53d878d0479.png width="24" height="13"> in the popup menu.
+
+While you enable it through `Restore sessions -> Restore at startup`, it creates a `_gnome-shell-extension-another-window-session-manager.desktop` under the folder `~/.config/autostart/`. 
+
+Test the settings in command line via:
+```Bash
+gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession
+```
+
+Please do not modify `_gnome-shell-extension-another-window-session-manager.desktop`, all changes by yourself could be overidden or deleted.
 
 # Panel menu items
 
@@ -62,14 +85,20 @@ After confirm to save:
 | <img src=icons/restore-symbolic.svg width="14" height="14">  | Restore the saved session using the item's name               |
 | <img src=icons/move-symbolic.svg width="14" height="14">     | Move the open windows using the item's name                  |
 | <img src=icons/close-symbolic.svg width="14" height="14">    | Close the current open windows                               |
+| <img src=icons/toggle-on-autorestore-symbolic.svg width="24" height="13">    | Activate the current session to be restored at startup |
+| <img src=https://user-images.githubusercontent.com/2271720/162792222-0fc7e6ca-1382-49cf-975a-f53d878d0479.png width="24" height="13">    | Inactivate the current session to be restored at startup |
+| <img src=icons/autorestore-symbolic.svg width="13" height="13">    | Indicate the autorestore button       |
+
 
 # Dependencies
 This project uses `ps` and `pwdx` to get some information from a process, install it via `dnf install procps-ng` if you don't have.
 
+And it uses `gdbus` to call the remote method, which is provided by this exension, to implement the `restore at start` feature. `gdbus` is part of `glib2`.
+
 # Known issues
 
 1. On both X11 and Wayland, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) continually during the process of restoring, the window size and position may can't be restored, and it may restore many instances of an application. **As a workaround, click the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) only once until all apps are restored.**
-2. On both X11 and Wayland, due to [this bug](https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134) within mutter, in Overview, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) then immediately click the newly created workspace, the Gnome Shell can crash. To fix this issue, the Overview will be toggled hidden after clicking the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) when in Overview. I will remove this behavior once I find a better solution or it's fixed in a new version of Gnome Shell.
+2. ~~On both X11 and Wayland, due to [this bug](https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134) within mutter, in Overview, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) then immediately click the newly created workspace, the Gnome Shell can crash. To fix this issue, the Overview will be toggled hidden after clicking the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) when in Overview. I will remove this behavior once I find a better solution or it's fixed in a new version of Gnome Shell.~~ ([Fixed in Gnome 42](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/pull/38))
 3. ...
 
 # Support applications launched via a command line or applications that don't have a proper .desktop file
@@ -97,24 +126,27 @@ They are all in `~/.config/another-window-session-manager/sessions`. When use an
 Note that I've marked `backups` as a reserved word, so you can't use it as a session name when saving a session. But you do have the freedom to manually create a file named `backups` in `~/.config/another-window-session-manager/sessions`. But this extension will only backup the session file that you are clicking the save button and you will receive an error log in the `journalctl` and an error notification every time you save an existing session.
 
 # TODO
+1. - Close open windows
+     - [ ] Close all windows on the current workspace. Who needs this feature? Hand up.🙋
 1. - Save open windows
      - [x] Save open windows 
-3. - Restore saved open windows
+1. - Restore saved open windows
       - [x] Restore saved open windows
       - [x] Move to belonging workspace automatically
       - [x] Restore window size and position ([issue 17](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/17))
       - [x] Restore window workspace, size and position of applications launched via a command line and don't have a recognizable `.desktop` file by `Shell.AppSystem.get_default().get_running()`.
       - [x] Support multi-monitor ([issue 21](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/21))
-4. - Saved open windows list
+1. - Saved open windows list
       - [x] Save open windows button
       - [x] Restore button
       - [ ] Rename button (double click text to rename?)
       - [x] Move button
       - [x] Delete button
-5. - [x] Move windows according to a saved session.
-6. - [ ] Settings
+1. - [x] Move windows according to a saved session.
+1. - [ ] Settings
       - [x] Debugging mode
       - [ ] whitelist using for closing application with multiple windows
-7. - [ ] Support restoring a saved session when startup ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
-8. - [ ] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
-9. - [ ] All TODO tags in the projects
+1. - [x] Support restoring a saved session at startup ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
+1. - [ ] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
+1. - [ ] All TODO tags in the projects
+1. - [ ] Translation?

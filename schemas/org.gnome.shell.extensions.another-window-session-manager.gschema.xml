@@ -17,5 +17,41 @@
       Rules that are used to close applications
       </description>
     </key>
+    <key name='autorestore-sessions' type="s">
+      <default>''</default>
+      <summary>Session(s) restored on startup</summary>
+      <description>
+      </description>
+    </key>
+    <key name='enable-autorestore-sessions' type="b">
+      <default>false</default>
+      <summary>Enable to restore session(s) on startup</summary>
+      <description>
+      Enable to restore session(s) on startup and install 
+      `~/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop`.
+      </description>
+    </key>
+    <key name='restore-at-startup-without-asking' type="b">
+      <default>false</default>
+      <summary>Restore at startup without asking</summary>
+      <description>
+      Restore immediately at startup without asking
+      </description>
+    </key>
+    <key name='autorestore-sessions-timer' type="i">
+      <default>10</default>
+      <summary>Set the timer on the AutostartDialog for some seconds</summary>
+      <description>
+      Set the timer on the AutostartDialog for some seconds, the upper value is 3600s
+      </description>
+    </key>
+    <key name='autostart-delay' type="i">
+      <default>5</default>
+      <summary>Autostart delay</summary>
+      <description>
+      A specified amount of time to delay to execute the target command.
+      </description>
+    </key>
+
   </schema>
 </schemalist>

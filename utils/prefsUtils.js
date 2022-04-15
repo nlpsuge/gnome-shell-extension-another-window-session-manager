@@ -2,20 +2,21 @@
 
 const ExtensionUtils = imports.misc.extensionUtils;
 
+var SETTINGS_AUTORESTORE_SESSIONS = 'autorestore-sessions';
+
 var PrefsUtils = class {
 
     constructor() {
-        this.settings = this._getSettings();
+        this.settings = ExtensionUtils.getSettings(
+            'org.gnome.shell.extensions.another-window-session-manager');
     }
 
     getSettingString(settingName) {
         return this.settings.get_string(settingName);
     }
 
-    _getSettings() {
-        const _settings = ExtensionUtils.getSettings(
-            'org.gnome.shell.extensions.another-window-session-manager');
-        return _settings;
+    getSettings() {
+        return this.settings;
     }
 
     isDebug() {

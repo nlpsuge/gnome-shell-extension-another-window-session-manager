@@ -173,7 +173,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.closingLabel = new St.Label({
             style_class: 'confirm-before-operate',
             text: 'Closing open windows ...',
-            x_expand: true,
+            x_expand: false,
             x_align: Clutter.ActorAlign.CENTER,
         });
         this.actor.add_child(this.closingLabel);
@@ -197,8 +197,8 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     _addConfirm() {
         this.confirmLabel = new St.Label({
             style_class: 'confirm-before-operate',
-            text: 'Are you sure to close open windows?',
-            x_expand: true,
+            text: 'Confirm?',
+            x_expand: false,
             x_align: Clutter.ActorAlign.START,
         });
         this.actor.add_child(this.confirmLabel);
@@ -271,7 +271,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     _addSavingPrompt() {
         this.savingLabel = new St.Label({
             style_class: 'confirm-before-operate',
-            x_expand: true,
+            x_expand: false,
             x_align: Clutter.ActorAlign.CENTER,
         });
         this.actor.add_child(this.savingLabel);

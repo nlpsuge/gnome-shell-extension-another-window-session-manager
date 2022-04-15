@@ -11,23 +11,18 @@ const Me = ExtensionUtils.getCurrentExtension();
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 
+// All launching apps by Shell.App#launch()
+var restoringApps = new Map();
 
 var RestoreSession = class {
 
-    constructor(sessionItemButtons) {
+    constructor() {
         this._log = new Log.Log();
 
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
         this._windowTracker = Shell.WindowTracker.get_default();        
 
-        // All launching apps info by Shell.App#launch()
-        if (sessionItemButtons) {
-            sessionItemButtons.sessionItem._indicator._restoringApps = new Map();
-            this._restoringApps = sessionItemButtons.sessionItem._indicator._restoringApps;
-        } else {
-            this._restoringApps = new Map();
-        }        
 
         // All launched apps info by Shell.App#launch()
         this._restoredApps = new Map();
@@ -78,11 +73,11 @@ var RestoreSession = class {
                     if (desktop_file_id) {
                         const shell_app = this._defaultAppSystem.lookup_app(desktop_file_id)
                         if (shell_app) {
-                            const restoringShellAppData = this._restoringApps.get(shell_app);
+                            const restoringShellAppData = restoringApps.get(shell_app);
                             if (restoringShellAppData) {
                                 restoringShellAppData.saved_window_sessions.push(session_config_object);
                             } else {
-                                this._restoringApps.set(shell_app, {
+                                restoringApps.set(shell_app, {
                                     saved_window_sessions: [session_config_object]
                                 });
                             }
@@ -145,8 +140,8 @@ var RestoreSession = class {
 
         if (this._appIsRunning(shellApp)) {
             this._log.debug(`${shellApp.get_name()} is running, skipping`)
-            // Delete shellApp from this._restoringApps to prevent it move the same app when close and open it manually.
-            this._restoringApps.delete(shellApp);
+            // Delete shellApp from restoringApps to prevent it move the same app when close and open it manually.
+            restoringApps.delete(shellApp);
             return [true, true];
         }
 
@@ -165,7 +160,7 @@ var RestoreSession = class {
         const running_apps = this._defaultAppSystem.get_running();
         for (const running_app of running_apps) {
             if (running_app.get_id() === app.get_id() && 
-                    running_app.get_state() === Shell.AppState.RUNNING) {
+                    running_app.get_state() >= Shell.AppState.STARTING) {
                 return true;
             }    
         }
@@ -187,14 +182,14 @@ var RestoreSession = class {
     }
 
     destroy() {
+        if (restoringApps) {
+            restoringApps.clear();
+            restoringApps = null;
+        }
+
         if (this._restoredApps) {
             this._restoredApps.clear();
             this._restoredApps = null;
-        }
-
-        if (this._restoringApps) {
-            this._restoringApps.clear();
-            this._restoringApps = null;
         }
 
         if (this._defaultAppSystem) {
