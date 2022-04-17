@@ -150,5 +150,8 @@ Note that I've marked `backups` as a reserved word, so you can't use it as a ses
 1. - [ ] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
 1. - [ ] All TODO tags in the projects
 1. - [ ] Translation?
-1. - [ ] A client tool called `awsm-client` (See: https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/34)
+1. - [ ] A client tool called `awsm-client` (See: [issue 34](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/34))
+1. - [ ] Fix any typo or grammar errors.
+1. - [ ] Open the Preferences on the popup menu 
+1. - [ ] Open the session file from the popup menu
 
