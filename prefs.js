@@ -9,6 +9,8 @@ const Log = Me.imports.utils.log;
 
 Me.imports.utils.string;
 
+const PrefsCloseWindow = Me.imports.prefsCloseWindow;
+
 const Prefs = GObject.registerClass(
     {
         GTypeName: 'AnotherWindowSessionManagerPrefs',
@@ -22,10 +24,13 @@ const Prefs = GObject.registerClass(
 
             this._log = new Log.Log();
 
+            new PrefsCloseWindow.UICloseWindows().build();
+
             this.render_ui();
             this._bindSettings();
             
             // Set sensitive AFTER this._bindSettings() to make it work
+            
             const restore_at_startup_switch_state = this._settings.get_boolean('enable-autorestore-sessions');
             this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(restore_at_startup_switch_state);
             this.autostart_delay_spinbutton.set_sensitive(restore_at_startup_switch_state);
@@ -33,6 +38,7 @@ const Prefs = GObject.registerClass(
             this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(
                 !this._settings.get_boolean('restore-at-startup-without-asking')
             );
+            
         }
 
         _bindSettings() {

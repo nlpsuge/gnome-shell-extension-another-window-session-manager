@@ -17,6 +17,91 @@
     <property name="focusable">1</property>
     <child>
       <object class="GtkNotebookPage">
+        <property name="child">
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkListBoxRow" id="close_by_rules_multi_row">
+                <property name="focusable">1</property>
+                <property name="child">
+                  <object class="GtkGrid" id="close_by_rules_multi_grid1">
+                    <property name="margin-top">12</property>
+                    <property name="margin-bottom">12</property>
+                    <property name="row-spacing">6</property>
+                    <property name="column-spacing">32</property>
+                    <child>
+                      <object class="GtkLabel" id="close_by_rules_multi_label">
+                        <property name="hexpand">1</property>
+                        <property name="label" translatable="yes">Close by rules</property>
+                        <property name="use-markup">1</property>
+                        <property name="xalign">0</property>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">0</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSwitch" id="close_by_rules_switch">
+                        <property name="focusable">1</property>
+                        <property name="halign">end</property>
+                        <property name="valign">center</property>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">0</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkListBox" id='close_by_rules_list_box'>
+                        <child>
+                          <object class="GtkListBoxRow">
+                            <property name="focusable">1</property>
+                            <property name="halign">start</property>
+                            <child>
+                              <placeholder/>
+                            </child>
+                          </object>
+                        </child>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">1</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </property>
+        <property name="tab">
+          <object class="GtkLabel">
+            <property name="label" translatable="yes">Close windows</property>
+          </object>
+        </property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkNotebookPage">
         <property name="position">1</property>
         <property name="child">
           <object class="GtkBox">
