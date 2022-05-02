@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk" version="4.0"/>
+  <object class="GtkListStore" id="close_rule_model_liststore">
+    <columns>
+      <column type="gboolean"/>
+      <column type="gchararray"/>
+      <column type="gchararray"/>
+      <column type="gchararray"/>
+      <column type="gchararray"/>
+    </columns>
+  </object>
   <object class="GtkAdjustment" id="timer_on_the_autostart_dialog_adjustment">
     <property name="upper">3600</property>
     <property name="step-increment">1</property>
@@ -24,7 +33,7 @@
               <object class="GtkListBoxRow" id="close_by_rules_multi_row">
                 <property name="focusable">1</property>
                 <property name="child">
-                  <object class="GtkGrid" id="close_by_rules_multi_grid1">
+                  <object class="GtkGrid" id="close_by_rules_multi_grid">
                     <property name="margin-top">12</property>
                     <property name="margin-bottom">12</property>
                     <property name="row-spacing">6</property>
@@ -52,25 +61,117 @@
                         </layout>
                       </object>
                     </child>
+                    
                     <child>
-                      <object class="GtkListBox" id='close_by_rules_list_box'>
-                        <child>
-                          <object class="GtkListBoxRow">
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBoxRow" id="add_close_by_rules_multi_row">
+                <property name="focusable">1</property>
+                <property name="child">
+                  <object class="GtkGrid" id="add_close_by_rules_multi_grid">
+                    <property name="margin-top">12</property>
+                    <property name="margin-bottom">12</property>
+                    <property name="row-spacing">6</property>
+                    <property name="column-spacing">32</property>
+                    <child>
+                      <object class="GtkScrolledWindow">
+                        <property name="focusable">1</property>
+                        <property name="child">
+                          <object class="GtkTreeView" id="close_rule_tree_view">
                             <property name="focusable">1</property>
-                            <property name="halign">start</property>
+                            <property name="hexpand">1</property>
+                            <property name="vscroll-policy">natural</property>
+                            <property name="model">close_rule_model_liststore</property>
+                            <child internal-child="selection">
+                              <object class="GtkTreeSelection"/>
+                            </child>
                             <child>
-                              <placeholder/>
+                              <object class="GtkTreeViewColumn" id="enabled">
+                                <property name="title" translatable="yes">Enabled</property>
+                                <property name="clickable">1</property>
+                                <property name="reorderable">1</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkTreeViewColumn" id="app_name">
+                                <property name="resizable">1</property>
+                                <property name="title" translatable="yes">App Name</property>
+                                <property name="reorderable">1</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkTreeViewColumn" id="app_id">
+                                <property name="visible">0</property>
+                                <property name="resizable">1</property>
+                                <property name="title" translatable="yes">App ID</property>
+                                <property name="reorderable">1</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkTreeViewColumn" id="path">
+                                <property name="visible">0</property>
+                                <property name="resizable">1</property>
+                                <property name="title" translatable="yes">Path</property>
+                                <property name="reorderable">1</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkTreeViewColumn" id="close_rule">
+                                <property name="resizable">1</property>
+                                <property name="title" translatable="yes">Rule</property>
+                                <property name="clickable">1</property>
+                                <property name="reorderable">1</property>
+                              </object>
                             </child>
                           </object>
-                        </child>
+                        </property>
                         <layout>
                           <property name="column">0</property>
-                          <property name="row">1</property>
+                          <property name="row">2</property>
                         </layout>
                       </object>
                     </child>
                     <child>
-                      <placeholder/>
+                      <object class="GtkBox">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object class="GtkButton">
+                            <property name="label" translatable="yes">Add Rule...</property>
+                            <property name="focusable">1</property>
+                            <property name="receives-default">1</property>
+                          </object>
+                          
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">2</property>
+                        </layout>
+                      </object>
                     </child>
                     <child>
                       <placeholder/>
