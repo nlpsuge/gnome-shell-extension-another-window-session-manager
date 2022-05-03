@@ -10,8 +10,15 @@
       Enable the debugging mode to see what happened, for debugging or issue reporting or development purpose
       </description>
     </key>
-    <key name="close-windows-rules-shortcut" type="s">
-      <default>'[]'</default>
+    <key name='close-by-rules' type='b'>
+      <default>true</default>
+      <summary>Enable or disable the ability of closing windows by customed rules, such as a shortcut</summary>
+      <description>
+      
+      </description>
+    </key>
+    <key name="close-windows-rules" type="s">
+      <default>'{}'</default>
       <summary>Rules that are used to close applications</summary>
       <description>
       Rules that are used to close applications
@@ -52,6 +59,6 @@
       A specified amount of time to delay to execute the target command.
       </description>
     </key>
-
+    
   </schema>
 </schemalist>

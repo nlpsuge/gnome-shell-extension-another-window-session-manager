@@ -55,9 +55,9 @@ var CloseSession = class {
             return false;
         }
 
-        const _rulesShortCutsString = this._prefsUtils.getSettingString('close-windows-rules-shortcut');
-        const _rulesShortCuts = new Map(JSON.parse(_rulesShortCutsString));
-        const shortCut = _rulesShortCuts.get(`${app.get_id()}:${app.get_name()}`);
+        const _rules = this._prefsUtils.getSettingString('close-windows-rules');
+        const _rulesMap = new Map(JSON.parse(_rules));
+        const shortCut = _rulesMap.get(`${app.get_id()}:${app.get_name()}`);
         if (shortCut) {
             const windows = app.get_windows();
             if (windows.length) {

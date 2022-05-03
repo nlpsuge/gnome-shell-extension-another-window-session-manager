@@ -3,10 +3,17 @@
   <requires lib="gtk" version="4.0"/>
   <object class="GtkListStore" id="close_rule_model_liststore">
     <columns>
+      <!-- column-name enabled -->
       <column type="gboolean"/>
+      <!-- column-name app_name -->
       <column type="gchararray"/>
+      <!-- column-name app_id -->
       <column type="gchararray"/>
+      <!-- column-name path -->
       <column type="gchararray"/>
+      <!-- column-name type -->
+      <column type="gchararray"/>
+      <!-- column-name close_rule -->
       <column type="gchararray"/>
     </columns>
   </object>
@@ -91,7 +98,7 @@
                     <property name="row-spacing">6</property>
                     <property name="column-spacing">32</property>
                     <child>
-                      <object class="GtkScrolledWindow">
+                      <object class="GtkScrolledWindow" id='close_rule_scrolled_window'>
                         <property name="focusable">1</property>
                         <property name="child">
                           <object class="GtkTreeView" id="close_rule_tree_view">
@@ -107,6 +114,15 @@
                                 <property name="title" translatable="yes">Enabled</property>
                                 <property name="clickable">1</property>
                                 <property name="reorderable">1</property>
+                                <child>
+                                  <!-- <object class="GtkCellRendererText" id="cellrenderertext_enabled">
+                                    <property name="editable">True</property>
+                                  </object> -->
+                                  <object class="GtkCellRendererToggle" id="rule_enabled_checkbox_renderer"/>
+                                  <attributes>
+                                    <attribute name="active">0</attribute>
+                                  </attributes>
+                                </child>
                               </object>
                             </child>
                             <child>
@@ -114,22 +130,67 @@
                                 <property name="resizable">1</property>
                                 <property name="title" translatable="yes">App Name</property>
                                 <property name="reorderable">1</property>
+                                <child>
+                                  <object class="GtkCellRendererText" id="cellrenderertext_app_name">
+                                    <property name="editable">True</property>
+                                    <!-- <signal name="edited" handler="on_cell_edited" swapped="no"/> -->
+                                  </object>
+                                  <attributes>
+                                    <attribute name="text">1</attribute>
+                                  </attributes>
+                                </child>
                               </object>
                             </child>
                             <child>
                               <object class="GtkTreeViewColumn" id="app_id">
-                                <property name="visible">0</property>
+                              
+                                <!-- <property name="visible">0</property> -->
                                 <property name="resizable">1</property>
                                 <property name="title" translatable="yes">App ID</property>
                                 <property name="reorderable">1</property>
+                                <child>
+                                  <object class="GtkCellRendererText" id="cellrenderertext_app_id">
+                                    <property name="editable">False</property>
+                                    <!-- <signal name="edited" handler="on_cell_edited" swapped="no"/> -->
+                                  </object>
+                                  <attributes>
+                                    <attribute name="text">2</attribute>
+                                  </attributes>
+                                </child>
                               </object>
                             </child>
                             <child>
                               <object class="GtkTreeViewColumn" id="path">
-                                <property name="visible">0</property>
+                                <!-- <property name="visible">0</property> -->
                                 <property name="resizable">1</property>
                                 <property name="title" translatable="yes">Path</property>
                                 <property name="reorderable">1</property>
+                                <child>
+                                  <object class="GtkCellRendererText" id="cellrenderertext_path">
+                                    <property name="editable">False</property>
+                                    <!-- <signal name="edited" handler="on_cell_edited" swapped="no"/> -->
+                                  </object>
+                                  <attributes>
+                                    <attribute name="text">3</attribute>
+                                  </attributes>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkTreeViewColumn" id="type">
+                                <!-- <property name="visible">0</property> -->
+                                <property name="resizable">1</property>
+                                <property name="title" translatable="yes">Type</property>
+                                <property name="reorderable">1</property>
+                                <child>
+                                  <object class="GtkCellRendererText" id="cellrenderertext_type">
+                                    <property name="editable">False</property>
+                                    <!-- <signal name="edited" handler="on_cell_edited" swapped="no"/> -->
+                                  </object>
+                                  <attributes>
+                                    <attribute name="text">4</attribute>
+                                  </attributes>
+                                </child>
                               </object>
                             </child>
                             <child>
@@ -138,6 +199,15 @@
                                 <property name="title" translatable="yes">Rule</property>
                                 <property name="clickable">1</property>
                                 <property name="reorderable">1</property>
+                                <child>
+                                  <object class="GtkCellRendererAccel" id="cellrendereraccel_close_rule">
+                                    <property name="editable">True</property>
+                                    <!-- <signal name="edited" handler="on_cell_edited" swapped="no"/> -->
+                                  </object>
+                                  <attributes>
+                                    <attribute name="text">5</attribute>
+                                  </attributes>
+                                </child>
                               </object>
                             </child>
                           </object>
@@ -154,7 +224,7 @@
                         <property name="can-focus">False</property>
                         <property name="orientation">vertical</property>
                         <child>
-                          <object class="GtkButton">
+                          <object class="GtkButton" id="close_by_rules_add_rule_button">
                             <property name="label" translatable="yes">Add Rule...</property>
                             <property name="focusable">1</property>
                             <property name="receives-default">1</property>
