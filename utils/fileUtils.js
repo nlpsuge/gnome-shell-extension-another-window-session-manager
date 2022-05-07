@@ -104,6 +104,7 @@ function trashSession(sessionName) {
     }
     
     let trashed = false;
+    const sessionFilePath = GLib.build_filenamev([sessions_path, sessionName]);
     try {
         const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
         trashed = sessionPathFile.trash(null);
