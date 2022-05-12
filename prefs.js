@@ -24,9 +24,8 @@ const Prefs = GObject.registerClass(
 
             this._log = new Log.Log();
 
-            new PrefsCloseWindow.UICloseWindows().build();
-
             this.render_ui();
+            new PrefsCloseWindow.UICloseWindows(this._builder).init();
             this._bindSettings();
             
             // Set sensitive AFTER this._bindSettings() to make it work
@@ -77,6 +76,13 @@ const Prefs = GObject.registerClass(
                 Gio.SettingsBindFlags.DEFAULT
             );
 
+            this._settings.bind(
+                'close-by-rules',
+                this.close_by_rules_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
             this._settings.connect('changed::enable-autorestore-sessions', (settings) => {
                 if (this._settings.get_boolean('enable-autorestore-sessions')) {
                     this._installAutostartDesktopFile();
@@ -93,6 +99,9 @@ const Prefs = GObject.registerClass(
                 this._installAutostartDesktopFile();
             });
 
+            this._settings.connect('changed::close-by-rules', (settings) => {
+                log('cccc');
+            });
         }
 
         render_ui() {
@@ -127,6 +136,14 @@ const Prefs = GObject.registerClass(
                 this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(!active);           
             });
             
+            this.close_rule_tree_view = this._builder.get_object('close_rule_tree_view');
+            this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
+            this.close_by_rules_switch.connect('notify::active', (widget) => {
+                const active = widget.active;
+                log('xxxxx');
+            });
+
+
         }
 
         _installAutostartDesktopFile() {

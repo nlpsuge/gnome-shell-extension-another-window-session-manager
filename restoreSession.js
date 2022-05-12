@@ -46,13 +46,13 @@ var RestoreSession = class {
 
         this._log.info(`Restoring saved session from ${session_file_path}`);
         try {
-            this.restoreSessionFromPath(session_file_path);
+            this.restoreSessionFromFile(session_file_path);
         } catch (e) {
             logError(e, `Failed to restore ${session_file_path}`);
         }
     }
 
-    restoreSessionFromPath(session_file_path) {
+    restoreSessionFromFile(session_file_path) {
         const session_file = Gio.File.new_for_path(session_file_path);
         let [success, contents] = session_file.load_contents(null);
         if (success) {
