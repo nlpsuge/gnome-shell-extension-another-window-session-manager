@@ -52,10 +52,18 @@ class UICloseWindows extends GObject.Object {
         action.connect('activate', this._onRemoveActivated.bind(this));
         this._actionGroup.add_action(action);
 
-        action = new Gio.SimpleAction({ name: 'update' });
-        action.connect('activate', () => {
-            this._settings.set_string("close-windows-rules",
-                this._getRuleRows().map(row => `${row.id}:${row.value}`));
+        action = new Gio.SimpleAction({ 
+            name: 'update', 
+            parameter_type: new GLib.VariantType('a{sv}'),
+        });
+        action.connect('activate', (action, param) => {
+            const newRuleRow = param.recursiveUnpack();
+            const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
+            let oldCloseWindowsRulesObj =  JSON.parse(oldCloseWindowsRules);
+            oldCloseWindowsRulesObj[newRuleRow.appDesktopFilePath].enabled = newRuleRow.enabled;
+            // oldCloseWindowsRulesObj[newRuleRow.appDesktopFilePath].value = newRuleRow.value;
+            const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
+            this._settings.set_string('close-windows-rules', newCloseWindowsRules);
         });
         this._actionGroup.add_action(action);
         this._updateAction = action;
@@ -126,8 +134,10 @@ class UICloseWindows extends GObject.Object {
 
             if (row)
                 row.set({ value : GLib.Variant.new_strv([ruleDetail.value]) });
-            else if (appInfo)
-                this.close_by_rules_list_box.insert(new RuleRow(appInfo, ruleDetail), index);
+            else if (appInfo) {
+                const newRuleRow = new RuleRow(appInfo, ruleDetail);
+                this.close_by_rules_list_box.insert(newRuleRow, index);
+            }
         }
 
         const removed = oldRules.filter((oldRuleDetail) => {
@@ -203,6 +213,16 @@ const RuleRow = GObject.registerClass({
             child: box,
         });
         this._appInfo = appInfo;
+        this._ruleDetail = ruleDetail;
+
+        this._enabledCheckButton = new Gtk.CheckButton({
+            active: ruleDetail.enabled,
+        })
+        // `flags` contains GObject.BindingFlags.BIDIRECTIONAL so we don't need to set `enable` manually
+        this.bind_property('enabled',
+            this._enabledCheckButton, 'active',
+            GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL);
+        box.append(this._enabledCheckButton);
 
         const icon = new Gtk.Image({
             gicon: appInfo.get_icon(),
@@ -222,17 +242,22 @@ const RuleRow = GObject.registerClass({
 
         const _model = new Gtk.ListStore();
         _model.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
-        let iter = _model.append();
-        // https://docs.gtk.org/gtk4/method.ListStore.set.html
-        _model.set(iter, [0], ['Shortcut', 'Shortcut']);
         const combo = new Gtk.ComboBox({
             model: _model,
             halign: Gtk.Align.START
         });
-        combo.set_active_iter(iter);
-        this.bind_property('value',
-            combo, 'value',
-            GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL);
+        // https://stackoverflow.com/questions/21568268/how-to-use-the-gtk-combobox-in-gjs
+        // https://tecnocode.co.uk/misc/platform-demos/combobox.js.xhtml
+        let renderer = new Gtk.CellRendererText();
+        // Pack the renderers into the combobox in the order we want to see
+        combo.pack_start(renderer, true);
+        // Set the renderers to use the information from our liststore
+        combo.add_attribute(renderer, 'text', 1);
+        let iter = _model.append();
+        // https://docs.gtk.org/gtk4/method.ListStore.set.html
+        _model.set(iter, [0, 1], ['Shortcut', 'Shortcut']);
+        // Set the first row in the combobox to be active on startup
+        combo.set_active(0);
         box.append(combo);
 
         const button = new Gtk.Button({
@@ -243,7 +268,23 @@ const RuleRow = GObject.registerClass({
         box.append(button);
 
         this.connect('notify::value',
-            () => this.activate_action('rules.update', null));
+            () => this.activate_action('rules.update', new GLib.Variant('a{sv}', {
+                appDesktopFilePath: GLib.Variant.new_string(this.appDesktopFilePath),
+                enabled: GLib.Variant.new_boolean(this._enabledCheckButton.get_active()),
+                value: this.value,
+            })));
+        this.connect('notify::enabled',
+            () => {
+                this.activate_action('rules.update', new GLib.Variant('a{sv}',{
+                    appDesktopFilePath: GLib.Variant.new_string(this.appDesktopFilePath),
+                    enabled: GLib.Variant.new_boolean(this._enabledCheckButton.get_active()),
+                    value: this.value,
+                }))
+            });
+    }
+
+    get enabled() {
+        return this._ruleDetail.enabled;
     }
 
     get appName() {
