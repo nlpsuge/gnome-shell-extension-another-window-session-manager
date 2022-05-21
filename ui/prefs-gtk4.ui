@@ -92,6 +92,8 @@
                               <object class="GtkListBox" id="close_by_rules_list_box">
                                 <property name="hexpand">True</property>
                                 <property name="vexpand">True</property>
+                                <!-- <property name="show-separators">True</property> -->
+                                
                               </object>
                             </child>
                             <child>

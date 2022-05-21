@@ -218,6 +218,9 @@ const RuleRow = GObject.registerClass({
         this._appInfo = appInfo;
         this._ruleDetail = ruleDetail;
 
+        this._rendererAccelBox = null;
+        this._lastNextArrow = null;
+
         this._enabledCheckButton = new Gtk.CheckButton({
             active: ruleDetail.enabled,
         })
@@ -289,7 +292,7 @@ const RuleRow = GObject.registerClass({
     }
 
     _append_accel() {
-        const rendererAccelBox = new Gtk.Box({
+        this._rendererAccelBox = new Gtk.Box({
             spacing: 6,
             margin_top: 6,
             margin_bottom: 6,
@@ -301,27 +304,27 @@ const RuleRow = GObject.registerClass({
 
         let rendererAccel = new Gtk.ShortcutLabel();
         rendererAccel.accelerator = "Escape";
-        rendererAccelBox.append(rendererAccel);
+        this._rendererAccelBox.append(rendererAccel);
 
         let next = new Gtk.Label({
             label: '→',
             halign: Gtk.Align.CENTER
         });
-        rendererAccelBox.append(next);
+        this._rendererAccelBox.append(next);
 
         rendererAccel = new Gtk.ShortcutLabel();
         rendererAccel.accelerator = "<Ctrl>Q";
-        rendererAccelBox.append(rendererAccel);
+        this._rendererAccelBox.append(rendererAccel);
 
         next = new Gtk.Label({
             label: '→',
             halign: Gtk.Align.CENTER,
         });
-        rendererAccelBox.append(next);
+        this._rendererAccelBox.append(next);
 
         rendererAccel = new Gtk.ShortcutLabel();
         rendererAccel.accelerator = "w";
-        rendererAccelBox.append(rendererAccel);
+        this._rendererAccelBox.append(rendererAccel);
         
         const addAccelButton = new Gtk.Button({
             label: 'Add accelerator',
@@ -340,7 +343,7 @@ const RuleRow = GObject.registerClass({
         rendererAccelOptBox.append(deleteAccelButton);
 
         addAccelButton.connect('clicked', () => {
-            const next = new Gtk.Label({
+            this._lastNextArrow = new Gtk.Label({
                 label: '→',
                 halign: Gtk.Align.CENTER,
             });
@@ -352,16 +355,17 @@ const RuleRow = GObject.registerClass({
             newAccelButton.add_controller(eventControllerKey);
             eventControllerKey.connect('key-pressed', this._onKeyPressed.bind(this));
 
-            rendererAccelBox.append(next);
-            rendererAccelBox.append(newAccelButton);
+            this._rendererAccelBox.append(this._lastNextArrow);
+            this._rendererAccelBox.append(newAccelButton);
 
+            this._rendererAccelBox.get_root().get_surface().inhibit_system_shortcuts(null);
             const focused = newAccelButton.grab_focus();
             this._log.debug(`Grab the focus for setting the accelerator: ${focused}`);
         });
         
 
         const box = new Gtk.Box();
-        box.append(rendererAccelBox);
+        box.append(this._rendererAccelBox);
         box.append(rendererAccelOptBox);
 
         const frame = new Gtk.Frame();
@@ -376,7 +380,8 @@ const RuleRow = GObject.registerClass({
 
         // Backspace resets the new shortcut
         if (mask === 0 && keyval === Gdk.KEY_BackSpace) {
-            _eventControllerKey.get_widget().set_label('New accelerator...');
+            this._rendererAccelBox.remove(this._lastNextArrow);
+            this._rendererAccelBox.remove(_eventControllerKey.get_widget());
             return Gdk.EVENT_STOP;
         }
 
@@ -387,7 +392,10 @@ const RuleRow = GObject.registerClass({
             keycode,
             mask
         );
-        _eventControllerKey.get_widget().set_label(Gtk.accelerator_get_label(keyval, mask));
+        const accelLabel = Gtk.accelerator_get_label(keyval, mask);
+        _eventControllerKey.get_widget().set_label(accelLabel);
+        log(`${keyval} ${keycode} ${state} ${accelLabel}`);
+
         return Gdk.EVENT_STOP;
     }
 
