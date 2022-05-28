@@ -393,14 +393,14 @@ const RuleRow = GObject.registerClass({
         }
 
         if (!Gtk.accelerator_valid(keyval, mask)) return Gdk.EVENT_STOP;
-        const shortCut = Gtk.accelerator_get_label(keyval, mask);
-        _eventControllerKey.get_widget().set_label(shortCut);
-        log(`5 ${keyval} ${keycode} ${state} ${mask} ${shortCut}`);
+        const shortcut = Gtk.accelerator_get_label(keyval, mask);
+        _eventControllerKey.get_widget().set_label(shortcut);
+        log(`5 ${keyval} ${keycode} ${state} ${mask} ${shortcut}`);
 
         const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
         let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
         const ruleValues = oldCloseWindowsRulesObj[this.appDesktopFilePath].value;
-        ruleValues[this.get_n_accelerators(this._rendererAccelBox)] = {shortCut: shortCut};
+        ruleValues[this.get_n_accelerators(this._rendererAccelBox)] = {shortcut: shortcut};
         const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
         this._settings.set_string('close-windows-rules', newCloseWindowsRules);
 
