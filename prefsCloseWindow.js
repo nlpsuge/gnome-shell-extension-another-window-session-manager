@@ -305,30 +305,27 @@ const RuleRow = GObject.registerClass({
         });
 
         const rules = this._ruleDetail.value;
-
-        let rendererAccel = new Gtk.ShortcutLabel();
-        rendererAccel.accelerator = "Escape";
-        this._rendererAccelBox.append(rendererAccel);
-
-        let next = new Gtk.Label({
-            label: '→',
-            halign: Gtk.Align.CENTER
-        });
-        this._rendererAccelBox.append(next);
-
-        rendererAccel = new Gtk.ShortcutLabel();
-        rendererAccel.accelerator = "<Ctrl>Q";
-        this._rendererAccelBox.append(rendererAccel);
-
-        next = new Gtk.Label({
-            label: '→',
-            halign: Gtk.Align.CENTER,
-        });
-        this._rendererAccelBox.append(next);
-
-        rendererAccel = new Gtk.ShortcutLabel();
-        rendererAccel.accelerator = "w";
-        this._rendererAccelBox.append(rendererAccel);
+        const ruleOrders = Object.keys(rules);
+        const maxRuleOrder = Math.max(...ruleOrders);
+        for (const ruleOrder of ruleOrders) {
+            const rule = rules[ruleOrder];
+            const shortcut = rule.shortcut;
+            const accelButton = new Gtk.Button({
+                label: shortcut,
+            });
+            accelButton._rule = rule;
+            const eventControllerKey = new Gtk.EventControllerKey();
+            accelButton.add_controller(eventControllerKey);
+            eventControllerKey.connect('key-pressed', this._onKeyPressed.bind(this));
+            this._rendererAccelBox.append(accelButton);
+            if (ruleOrder < maxRuleOrder) {
+                let next = new Gtk.Label({
+                    label: '→',
+                    halign: Gtk.Align.CENTER
+                });
+                this._rendererAccelBox.append(next);
+            }
+        }
 
         const addAccelButton = new Gtk.Button({
             label: 'Add accelerator',
@@ -400,7 +397,17 @@ const RuleRow = GObject.registerClass({
         const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
         let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
         const ruleValues = oldCloseWindowsRulesObj[this.appDesktopFilePath].value;
-        ruleValues[this.get_n_accelerators(this._rendererAccelBox)] = {shortcut: shortcut};
+        const _rule = _eventControllerKey.get_widget()._rule;
+        let order;
+        if (_rule) {
+            order = _rule.order;
+        } else {
+            order = this.get_n_accelerators(this._rendererAccelBox);
+        }
+        ruleValues[order] = {
+            shortcut: shortcut,
+            order: order
+        };
         const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
         this._settings.set_string('close-windows-rules', newCloseWindowsRules);
 
@@ -422,8 +429,7 @@ const RuleRow = GObject.registerClass({
             return 0;
         }
 
-        // 1 for the first child
-        let count = 1;
+        let count = 0;
         let next = firstChild.get_next_sibling();
         while (next != null) {
             if (next.label !== '→') {
