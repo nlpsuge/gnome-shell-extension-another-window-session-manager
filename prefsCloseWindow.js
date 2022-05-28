@@ -389,11 +389,8 @@ const RuleRow = GObject.registerClass({
     }
 
     _onKeyPressed(_eventControllerKey, keyval, keycode, state) {
-        log(`1 ${keyval} ${keycode} ${state} ${Gtk.accelerator_get_default_mod_mask()}`);
         let mask = state & Gtk.accelerator_get_default_mod_mask();
-        log(`2 ${keyval} ${keycode} ${state} ${mask}`);
         mask &= ~Gdk.ModifierType.LOCK_MASK;
-        log(`3 ${keyval} ${keycode} ${state} ${mask}`);
 
         // Backspace resets the new shortcut
         if (mask === 0 && keyval === Gdk.KEY_BackSpace) {
@@ -404,7 +401,6 @@ const RuleRow = GObject.registerClass({
         if (!Gtk.accelerator_valid(keyval, mask)) return Gdk.EVENT_STOP;
         const shortcut = Gtk.accelerator_get_label(keyval, mask);
         _eventControllerKey.get_widget().set_label(shortcut);
-        log(`5 ${keyval} ${keycode} ${state} ${mask} ${shortcut}`);
 
         const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
         let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
