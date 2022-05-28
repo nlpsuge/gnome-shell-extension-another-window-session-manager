@@ -1,3 +1,5 @@
+'use strict';
+
 const { Meta } = imports.gi;
 
 function isDialog(metaWindow) {

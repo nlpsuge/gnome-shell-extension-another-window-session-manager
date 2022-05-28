@@ -83,7 +83,7 @@ var UICloseWindows = GObject.registerClass(
                 if (appInfo) {
                     const closeWindowsRules = new CloseWindowsRules.CloseWindowsRules();
                     closeWindowsRules.type = 'shortcut';
-                    closeWindowsRules.value = '';
+                    closeWindowsRules.value = {};
                     closeWindowsRules.appId = appInfo.get_id();
                     closeWindowsRules.appName = appInfo.get_name();
                     closeWindowsRules.appDesktopFilePath = appInfo.get_filename();
@@ -132,9 +132,10 @@ var UICloseWindows = GObject.registerClass(
                 const appInfo = row
                     ? null : Gio.DesktopAppInfo.new_from_filename(ruleDetail.appDesktopFilePath);
 
-                if (row)
-                    row.set({ value: GLib.Variant.new_strv([ruleDetail.value]) });
-                else if (appInfo) {
+                if (row) {
+                    // TODO
+                    // row.set({ value: GLib.Variant.new_strv(ruleDetail.value) });
+                } else if (appInfo) {
                     const newRuleRow = new RuleRow(appInfo, ruleDetail);
                     this.close_by_rules_list_box.insert(newRuleRow, index);
                 }
@@ -200,6 +201,8 @@ const RuleRow = GObject.registerClass({
 }, class RuleRow extends Gtk.ListBoxRow {
     _init(appInfo, ruleDetail) {
         this._log = new Log.Log();
+        this._prefsUtils = new PrefsUtils.PrefsUtils();
+        this._settings = this._prefsUtils.getSettings();
 
         const box = new Gtk.Box({
             spacing: 6,
@@ -212,7 +215,8 @@ const RuleRow = GObject.registerClass({
 
         super._init({
             activatable: false,
-            value: GLib.Variant.new_strv([ruleDetail.value]),
+            // TODO
+            // value: GLib.Variant.new_strv(ruleDetail.value),
             child: box,
         });
         this._appInfo = appInfo;
@@ -325,7 +329,7 @@ const RuleRow = GObject.registerClass({
         rendererAccel = new Gtk.ShortcutLabel();
         rendererAccel.accelerator = "w";
         this._rendererAccelBox.append(rendererAccel);
-        
+
         const addAccelButton = new Gtk.Button({
             label: 'Add accelerator',
         });
@@ -362,7 +366,7 @@ const RuleRow = GObject.registerClass({
             const focused = newAccelButton.grab_focus();
             this._log.debug(`Grab the focus for setting the accelerator: ${focused}`);
         });
-        
+
 
         const box = new Gtk.Box();
         box.append(this._rendererAccelBox);
@@ -375,8 +379,11 @@ const RuleRow = GObject.registerClass({
     }
 
     _onKeyPressed(_eventControllerKey, keyval, keycode, state) {
+        log(`1 ${keyval} ${keycode} ${state} ${Gtk.accelerator_get_default_mod_mask()}`);
         let mask = state & Gtk.accelerator_get_default_mod_mask();
+        log(`2 ${keyval} ${keycode} ${state} ${mask}`);
         mask &= ~Gdk.ModifierType.LOCK_MASK;
+        log(`3 ${keyval} ${keycode} ${state} ${mask}`);
 
         // Backspace resets the new shortcut
         if (mask === 0 && keyval === Gdk.KEY_BackSpace) {
@@ -386,18 +393,48 @@ const RuleRow = GObject.registerClass({
         }
 
         if (!Gtk.accelerator_valid(keyval, mask)) return Gdk.EVENT_STOP;
-        const accel = Gtk.accelerator_name_with_keycode(
-            null,
-            keyval,
-            keycode,
-            mask
-        );
-        const accelLabel = Gtk.accelerator_get_label(keyval, mask);
-        _eventControllerKey.get_widget().set_label(accelLabel);
-        log(`${keyval} ${keycode} ${state} ${accelLabel}`);
+        const shortCut = Gtk.accelerator_get_label(keyval, mask);
+        _eventControllerKey.get_widget().set_label(shortCut);
+        log(`5 ${keyval} ${keycode} ${state} ${mask} ${shortCut}`);
+
+        const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
+        let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
+        const ruleValues = oldCloseWindowsRulesObj[this.appDesktopFilePath].value;
+        ruleValues[this.get_n_accelerators(this._rendererAccelBox)] = shortCut;
+        const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
+        this._settings.set_string('close-windows-rules', newCloseWindowsRules);
 
         return Gdk.EVENT_STOP;
     }
+
+    /**
+     * 
+     * @param {Gtk.Widget} widget 
+     * @returns The amount of the underlying children in a widget
+     */
+    get_n_accelerators(widget) {
+        if (!widget) {
+            return 0;
+        }
+        
+        const firstChild = widget.get_first_child();
+        if (!firstChild) {
+            return 0;
+        }
+
+        // 1 for the first child
+        let count = 1;
+        let next = firstChild.get_next_sibling();
+        while (next != null) {
+            if (next.label !== '→') {
+                count++;
+            }
+            next = next.get_next_sibling();
+        }
+
+        return count;
+    }
+
 
     get enabled() {
         return this._ruleDetail.enabled;
