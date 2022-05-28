@@ -443,6 +443,7 @@ const RuleRow = GObject.registerClass({
 
         // The current widget is in the middle
         if (previousWidgetRemoved && nextWidgetRemoved) {
+            previousWidgetRemoved.get_prev_sibling().grab_focus();
             this._rendererAccelBox.remove(previousWidgetRemoved);
             this._rendererAccelBox.remove(currentWidgetRemoved);
             return;
@@ -460,6 +461,7 @@ const RuleRow = GObject.registerClass({
         }
         // The current widget is in the last
         if (!nextWidgetRemoved) {
+            previousWidgetRemoved.get_prev_sibling().grab_focus();
             this._rendererAccelBox.remove(previousWidgetRemoved);
         }
         this._rendererAccelBox.remove(currentWidgetRemoved);
