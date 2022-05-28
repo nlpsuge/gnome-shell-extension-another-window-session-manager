@@ -330,7 +330,8 @@ const RuleRow = GObject.registerClass({
             label: 'Add accelerator',
         });
         const deleteAccelButton = new Gtk.Button({
-            label: 'Delete',
+            label: 'Delete accelerator',
+            icon_name: 'edit-clear-symbolic',
         });
         const rendererAccelOptBox = new Gtk.Box({
             spacing: 6,
@@ -376,7 +377,10 @@ const RuleRow = GObject.registerClass({
             const focused = newAccelButton.grab_focus();
             this._log.debug(`Grab the focus for setting the accelerator: ${focused}`);
         });
-
+        // Delete from the last accelerator button
+        deleteAccelButton.connect('clicked', () => {
+            this._removeAccelerator(this._rendererAccelBox.get_last_child());
+        });
 
         const box = new Gtk.Box();
         box.append(this._rendererAccelBox);
@@ -418,6 +422,9 @@ const RuleRow = GObject.registerClass({
     }
 
     _removeAccelerator(currentWidgetRemoved) {
+        if (!currentWidgetRemoved) {
+            return;
+        }
         this._removeAcceleratorSettings(currentWidgetRemoved);
         this._removeAcceleratorButtons(currentWidgetRemoved);
     }
