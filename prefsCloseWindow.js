@@ -223,7 +223,6 @@ const RuleRow = GObject.registerClass({
         this._ruleDetail = ruleDetail;
 
         this._rendererAccelBox = null;
-        this._lastNextArrow = null;
 
         this._enabledCheckButton = new Gtk.CheckButton({
             active: ruleDetail.enabled,
@@ -344,19 +343,19 @@ const RuleRow = GObject.registerClass({
         rendererAccelOptBox.append(deleteAccelButton);
 
         addAccelButton.connect('clicked', () => {
-            this._lastNextArrow = new Gtk.Label({
-                label: '→',
-                halign: Gtk.Align.CENTER,
-            });
-
+            if (this._get_n_accelerators(this._rendererAccelBox) > 0) {
+                const lastNextArrow = new Gtk.Label({
+                    label: '→',
+                    halign: Gtk.Align.CENTER,
+                });
+                this._rendererAccelBox.append(lastNextArrow);
+            }
             const newAccelButton = new Gtk.Button({
                 label: 'New accelerator...',
             });
             const eventControllerKey = new Gtk.EventControllerKey();
             newAccelButton.add_controller(eventControllerKey);
             eventControllerKey.connect('key-pressed', this._onKeyPressed.bind(this));
-
-            this._rendererAccelBox.append(this._lastNextArrow);
             this._rendererAccelBox.append(newAccelButton);
 
             this._rendererAccelBox.get_root().get_surface().inhibit_system_shortcuts(null);
@@ -384,8 +383,7 @@ const RuleRow = GObject.registerClass({
 
         // Backspace resets the new shortcut
         if (mask === 0 && keyval === Gdk.KEY_BackSpace) {
-            this._rendererAccelBox.remove(this._lastNextArrow);
-            this._rendererAccelBox.remove(_eventControllerKey.get_widget());
+            this._removeAcceleratorButtons(_eventControllerKey.get_widget());
             return Gdk.EVENT_STOP;
         }
 
@@ -402,7 +400,7 @@ const RuleRow = GObject.registerClass({
         if (_rule) {
             order = _rule.order;
         } else {
-            order = this.get_n_accelerators(this._rendererAccelBox);
+            order = this._get_n_accelerators(this._rendererAccelBox);
         }
         ruleValues[order] = {
             shortcut: shortcut,
@@ -414,12 +412,40 @@ const RuleRow = GObject.registerClass({
         return Gdk.EVENT_STOP;
     }
 
+    _removeAcceleratorButtons(currentWidgetRemoved) {
+        const previousWidgetRemoved = currentWidgetRemoved.get_prev_sibling();
+        const nextWidgetRemoved = currentWidgetRemoved.get_next_sibling();
+
+        // The current widget is in the middle
+        if (previousWidgetRemoved && nextWidgetRemoved) {
+            this._rendererAccelBox.remove(previousWidgetRemoved);
+            this._rendererAccelBox.remove(currentWidgetRemoved);
+            return;
+        }
+
+        // Only one accelerator
+        if (!previousWidgetRemoved && !nextWidgetRemoved) {
+            this._rendererAccelBox.remove(currentWidgetRemoved);
+            return;
+        }
+
+        // The current widget is in the beginning
+        if (!previousWidgetRemoved) {
+            this._rendererAccelBox.remove(nextWidgetRemoved);
+        }
+        // The current widget is in the last
+        if (!nextWidgetRemoved) {
+            this._rendererAccelBox.remove(previousWidgetRemoved);
+        }
+        this._rendererAccelBox.remove(currentWidgetRemoved);
+    }
+
     /**
      * 
      * @param {Gtk.Widget} widget 
      * @returns The amount of the underlying children in a widget
      */
-    get_n_accelerators(widget) {
+    _get_n_accelerators(widget) {
         if (!widget) {
             return 0;
         }
@@ -429,7 +455,8 @@ const RuleRow = GObject.registerClass({
             return 0;
         }
 
-        let count = 0;
+        // 1 for the first child
+        let count = 1;
         let next = firstChild.get_next_sibling();
         while (next != null) {
             if (next.label !== '→') {
