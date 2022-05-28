@@ -400,7 +400,7 @@ const RuleRow = GObject.registerClass({
         const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
         let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
         const ruleValues = oldCloseWindowsRulesObj[this.appDesktopFilePath].value;
-        ruleValues[this.get_n_accelerators(this._rendererAccelBox)] = shortCut;
+        ruleValues[this.get_n_accelerators(this._rendererAccelBox)] = {shortCut: shortCut};
         const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
         this._settings.set_string('close-windows-rules', newCloseWindowsRules);
 
