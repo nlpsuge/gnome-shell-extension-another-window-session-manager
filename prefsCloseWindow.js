@@ -353,6 +353,20 @@ const RuleRow = GObject.registerClass({
             const newAccelButton = new Gtk.Button({
                 label: 'New accelerator...',
             });
+            
+            let order;
+            const previousAcceleratorButton = this._rendererAccelBox.get_last_child()?.get_prev_sibling();
+            if (previousAcceleratorButton) {
+                order = previousAcceleratorButton._rule.order + 1
+            } else {
+                // The vert first accelerator...
+                order = 1;
+            }
+
+            newAccelButton._rule = {
+                order: order,
+            };
+            
             const eventControllerKey = new Gtk.EventControllerKey();
             newAccelButton.add_controller(eventControllerKey);
             eventControllerKey.connect('key-pressed', this._onKeyPressed.bind(this));
@@ -383,7 +397,7 @@ const RuleRow = GObject.registerClass({
 
         // Backspace resets the new shortcut
         if (mask === 0 && keyval === Gdk.KEY_BackSpace) {
-            this._removeAcceleratorButtons(_eventControllerKey.get_widget());
+            this._removeAccelerator(_eventControllerKey.get_widget());
             return Gdk.EVENT_STOP;
         }
 
@@ -395,13 +409,8 @@ const RuleRow = GObject.registerClass({
         const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
         let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
         const ruleValues = oldCloseWindowsRulesObj[this.appDesktopFilePath].value;
-        const _rule = _eventControllerKey.get_widget()._rule;
-        let order;
-        if (_rule) {
-            order = _rule.order;
-        } else {
-            order = this._get_n_accelerators(this._rendererAccelBox);
-        }
+        const _currentAcceleratorRule = _eventControllerKey.get_widget()._rule;
+        let order = _currentAcceleratorRule.order;
         ruleValues[order] = {
             shortcut: shortcut,
             order: order
@@ -410,6 +419,26 @@ const RuleRow = GObject.registerClass({
         this._settings.set_string('close-windows-rules', newCloseWindowsRules);
 
         return Gdk.EVENT_STOP;
+    }
+
+    _removeAccelerator(currentWidgetRemoved) {
+        this._removeAcceleratorSettings(currentWidgetRemoved);
+        this._removeAcceleratorButtons(currentWidgetRemoved);
+    }
+
+    _removeAcceleratorSettings(currentWidgetRemoved) {
+        const _rule = currentWidgetRemoved._rule;
+        if (!_rule) {
+            return;
+        }
+
+        const order =_rule.order;
+        const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
+        let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
+        const ruleValues = oldCloseWindowsRulesObj[this.appDesktopFilePath].value;
+        delete ruleValues[order];
+        const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
+        this._settings.set_string('close-windows-rules', newCloseWindowsRules);
     }
 
     _removeAcceleratorButtons(currentWidgetRemoved) {
