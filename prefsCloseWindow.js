@@ -70,7 +70,11 @@ var UICloseWindows = GObject.registerClass(
 
             this._rulesChangedId = this._settings.connect(
                 'changed::close-windows-rules',
-                this._sync.bind(this));
+                (settings) => {
+                    // TODO Add new accelerator automatically after adding a new rule
+                    // this._sync(true);
+                    this._sync();
+                });
             this._sync();
 
         }
@@ -115,7 +119,7 @@ var UICloseWindows = GObject.registerClass(
             return [...this.close_by_rules_list_box].filter(row => !!row.appDesktopFilePath);
         }
 
-        _sync() {
+        _sync(autoNewAccelerator = false) {
             const oldRules = this._getRuleRows();
             const newRules = JSON.parse(this._settings.get_string('close-windows-rules'));
 
@@ -138,6 +142,11 @@ var UICloseWindows = GObject.registerClass(
                 } else if (appInfo) {
                     const newRuleRow = new RuleRow(appInfo, ruleDetail);
                     this.close_by_rules_list_box.insert(newRuleRow, index);
+                    if (autoNewAccelerator) {
+                        // TODO Fix the below error when autoNewAccelerator is true in the case of adding the new accelerator button after adding a new rule: 
+                        // this._rendererAccelBox.get_root().get_surface() is null
+                        newRuleRow._addNewAccel();
+                    }
                 }
             }
 
@@ -345,40 +354,7 @@ const RuleRow = GObject.registerClass({
         rendererAccelOptBox.append(addAccelButton);
         rendererAccelOptBox.append(deleteAccelButton);
 
-        addAccelButton.connect('clicked', () => {
-            if (this._get_n_accelerators(this._rendererAccelBox) > 0) {
-                const lastNextArrow = new Gtk.Label({
-                    label: '→',
-                    halign: Gtk.Align.CENTER,
-                });
-                this._rendererAccelBox.append(lastNextArrow);
-            }
-            const newAccelButton = new Gtk.Button({
-                label: 'New accelerator...',
-            });
-            
-            let order;
-            const previousAcceleratorButton = this._rendererAccelBox.get_last_child()?.get_prev_sibling();
-            if (previousAcceleratorButton) {
-                order = previousAcceleratorButton._rule.order + 1
-            } else {
-                // The vert first accelerator...
-                order = 1;
-            }
-
-            newAccelButton._rule = {
-                order: order,
-            };
-            
-            const eventControllerKey = new Gtk.EventControllerKey();
-            newAccelButton.add_controller(eventControllerKey);
-            eventControllerKey.connect('key-pressed', this._onKeyPressed.bind(this));
-            this._rendererAccelBox.append(newAccelButton);
-
-            this._rendererAccelBox.get_root().get_surface().inhibit_system_shortcuts(null);
-            const focused = newAccelButton.grab_focus();
-            this._log.debug(`Grab the focus for setting the accelerator: ${focused}`);
-        });
+        addAccelButton.connect('clicked', this._addNewAccel.bind(this));
         // Delete from the last accelerator button
         deleteAccelButton.connect('clicked', () => {
             this._removeAccelerator(this._rendererAccelBox.get_last_child());
@@ -392,6 +368,41 @@ const RuleRow = GObject.registerClass({
         frame.set_child(box);
 
         this._box.append(frame);
+    }
+
+    _addNewAccel() {
+        if (this._get_n_accelerators(this._rendererAccelBox) > 0) {
+            const lastNextArrow = new Gtk.Label({
+                label: '→',
+                halign: Gtk.Align.CENTER,
+            });
+            this._rendererAccelBox.append(lastNextArrow);
+        }
+        const newAccelButton = new Gtk.Button({
+            label: 'New accelerator...',
+        });
+        
+        let order;
+        const previousAcceleratorButton = this._rendererAccelBox.get_last_child()?.get_prev_sibling();
+        if (previousAcceleratorButton) {
+            order = previousAcceleratorButton._rule.order + 1
+        } else {
+            // The vert first accelerator...
+            order = 1;
+        }
+
+        newAccelButton._rule = {
+            order: order,
+        };
+        
+        const eventControllerKey = new Gtk.EventControllerKey();
+        newAccelButton.add_controller(eventControllerKey);
+        eventControllerKey.connect('key-pressed', this._onKeyPressed.bind(this));
+        this._rendererAccelBox.append(newAccelButton);
+
+        this._rendererAccelBox.get_root().get_surface().inhibit_system_shortcuts(null);
+        const focused = newAccelButton.grab_focus();
+        this._log.debug(`Grab the focus for setting the accelerator: ${focused}`);
     }
 
     _onKeyPressed(_eventControllerKey, keyval, keycode, state) {

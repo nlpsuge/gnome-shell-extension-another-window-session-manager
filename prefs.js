@@ -133,6 +133,8 @@ const Prefs = GObject.registerClass(
                 this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(!active);           
             });
 
+            this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
+
         }
 
         _installAutostartDesktopFile() {
