@@ -413,6 +413,9 @@ const RuleRow = GObject.registerClass({
         let order = _currentAcceleratorRule.order;
         ruleValues[order] = {
             shortcut: shortcut,
+            keyval: keyval,
+            keycode: keycode,
+            state: state,
             order: order
         };
         const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);

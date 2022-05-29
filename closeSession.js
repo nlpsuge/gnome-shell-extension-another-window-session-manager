@@ -11,12 +11,16 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Log = Me.imports.utils.log;
 const PrefsUtils = Me.imports.utils.prefsUtils;
 
+const Constants = Me.imports.constants;
+
 var enable_close_by_rules = true;
 
 var CloseSession = class {
     constructor() {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
+        this._settings = this._prefsUtils.getSettings();
+        this._enable_close_by_rules = this._settings.get_boolean('close-by-rules');
 
         this._skip_app_with_multiple_windows = true;
         this._defaultAppSystem = Shell.AppSystem.get_default();
@@ -66,7 +70,13 @@ var CloseSession = class {
         if (rules.type === 'shortcut') {
             for (const order in rules.value) {
                 const rule = rules.value[order];
-                const shortcut = rule.shortcut;
+                let shortcut = rule.shortcut;
+                // The shift key is not pressed
+                if (!(rule.state & Constants.GDK_SHIFT_MASK)) {
+                    const keys = shortcut.split('+');
+                    keys[keys.length - 1] = keys[keys.length - 1].toLowerCase();
+                    shortcut = keys.join('+');
+                }
                 const windows = app.get_windows();
                 if (windows.length) {
                     Main.activateWindow(windows[0]);
