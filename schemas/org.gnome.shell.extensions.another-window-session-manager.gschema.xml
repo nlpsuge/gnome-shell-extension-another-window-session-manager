@@ -10,7 +10,7 @@
       Enable the debugging mode to see what happened, for debugging or issue reporting or development purpose
       </description>
     </key>
-    <key name='close-by-rules' type='b'>
+    <key name='enable-close-by-rules' type='b'>
       <default>true</default>
       <summary>Enable or disable the ability of closing windows by customed rules, such as a shortcut</summary>
       <description>

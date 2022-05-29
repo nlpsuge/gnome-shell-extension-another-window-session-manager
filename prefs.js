@@ -77,7 +77,7 @@ const Prefs = GObject.registerClass(
             );
 
             this._settings.bind(
-                'close-by-rules',
+                'enable-close-by-rules',
                 this.close_by_rules_switch,
                 'active',
                 Gio.SettingsBindFlags.DEFAULT
@@ -99,9 +99,6 @@ const Prefs = GObject.registerClass(
                 this._installAutostartDesktopFile();
             });
 
-            this._settings.connect('changed::close-by-rules', (settings) => {
-                log('cccc');
-            });
         }
 
         render_ui() {

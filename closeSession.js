@@ -13,14 +13,12 @@ const PrefsUtils = Me.imports.utils.prefsUtils;
 
 const Constants = Me.imports.constants;
 
-var enable_close_by_rules = true;
 
 var CloseSession = class {
     constructor() {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
-        this._enable_close_by_rules = this._settings.get_boolean('close-by-rules');
 
         this._skip_app_with_multiple_windows = true;
         this._defaultAppSystem = Shell.AppSystem.get_default();
@@ -55,7 +53,7 @@ var CloseSession = class {
     }
 
     _tryCloseByRules(app) {
-        if (!enable_close_by_rules) {
+        if (!this._settings.get_boolean('enable-close-by-rules')) {
             return false;
         }
 
