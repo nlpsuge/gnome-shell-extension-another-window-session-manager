@@ -55,23 +55,32 @@ var CloseSession = class {
             return false;
         }
 
-        const _rules = this._prefsUtils.getSettingString('close-windows-rules');
-        const _rulesMap = new Map(JSON.parse(_rules));
-        const shortCut = _rulesMap.get(`${app.get_id()}:${app.get_name()}`);
-        if (shortCut) {
-            const windows = app.get_windows();
-            if (windows.length) {
-                Main.activateWindow(windows[0]);
-            } else {
-                app.activate(global.get_current_time());
-            }
-            const cmd = `ydotool key ${shortCut}`
-            this._log.info(`Closing the app ${app.get_name()} by sending a shortcut ${shortCut}: ${cmd}`);
-            Util.trySpawnCommandLine(`${cmd}`);
-            return true;
+        const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
+        const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
+        const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
+        if (!rules) {
+            return false;
         }
 
-        return false;
+        let success = false;
+        if (rules.type === 'shortcut') {
+            for (const order in rules.value) {
+                const rule = rules.value[order];
+                const shortcut = rule.shortcut;
+                const windows = app.get_windows();
+                if (windows.length) {
+                    Main.activateWindow(windows[0]);
+                } else {
+                    app.activate(global.get_current_time());
+                }
+                const cmd = `xdotool key ${shortcut}`
+                this._log.info(`Closing the app ${app.get_name()} by sending a shortcut ${shortcut}: ${cmd}`);
+                Util.trySpawnCommandLine(`${cmd}`);
+                success = true;
+            }
+            
+        }
+        return success;
     }
 
     _skip_multiple_windows(shellApp) {
