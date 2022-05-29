@@ -60,7 +60,7 @@ var CloseSession = class {
         const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
         const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
         const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
-        if (!rules) {
+        if (!rules || !rules.enabled) {
             return false;
         }
 

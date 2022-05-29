@@ -277,19 +277,21 @@ const RuleRow = GObject.registerClass({
             icon_name: 'edit-delete-symbolic',
         });
         box.append(buttonRemove);
-
+        
+        // TODO Not used, can be deleted?
         this.connect('notify::value',
             () => this.activate_action('rules.update', new GLib.Variant('a{sv}', {
                 appDesktopFilePath: GLib.Variant.new_string(this.appDesktopFilePath),
                 enabled: GLib.Variant.new_boolean(this._enabledCheckButton.get_active()),
-                value: this.value,
+                // value: this.value,
             })));
+
         this.connect('notify::enabled',
             () => {
                 this.activate_action('rules.update', new GLib.Variant('a{sv}', {
                     appDesktopFilePath: GLib.Variant.new_string(this.appDesktopFilePath),
                     enabled: GLib.Variant.new_boolean(this._enabledCheckButton.get_active()),
-                    value: this.value,
+                    // value: this.value,
                 }))
             });
     }
