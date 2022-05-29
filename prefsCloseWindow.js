@@ -400,6 +400,7 @@ const RuleRow = GObject.registerClass({
         eventControllerKey.connect('key-pressed', this._onKeyPressed.bind(this));
         this._rendererAccelBox.append(newAccelButton);
 
+        // TODO Calling this._rendererAccelBox.get_root().get_surface().restore_system_shortcuts(null); after this?
         this._rendererAccelBox.get_root().get_surface().inhibit_system_shortcuts(null);
         const focused = newAccelButton.grab_focus();
         this._log.debug(`Grab the focus for setting the accelerator: ${focused}`);
