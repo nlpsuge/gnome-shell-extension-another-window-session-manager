@@ -264,7 +264,7 @@ class AwsIndicator extends PanelMenu.Button {
     _addSessionItems() {
         if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
             // TODO Empty session
-            log(`${this._sessions_path} not found! It's harmless, please save some windows in the panel menu to create it automatically.`);
+            this._log.info(`${this._sessions_path} not found! It's harmless, please save some windows in the panel menu to create it automatically.`);
             return;
         }
 
