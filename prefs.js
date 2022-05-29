@@ -132,14 +132,6 @@ const Prefs = GObject.registerClass(
                 const active = widget.active;
                 this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(!active);           
             });
-            
-            this.close_rule_tree_view = this._builder.get_object('close_rule_tree_view');
-            this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
-            this.close_by_rules_switch.connect('notify::active', (widget) => {
-                const active = widget.active;
-                log('xxxxx');
-            });
-
 
         }
 
