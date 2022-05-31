@@ -72,8 +72,12 @@ var CloseSession = class {
                 // The shift key is not pressed
                 if (!(rule.state & Constants.GDK_SHIFT_MASK)) {
                     const keys = shortcut.split('+');
-                    keys[keys.length - 1] = keys[keys.length - 1].toLowerCase();
-                    shortcut = keys.join('+');
+                    const lastKey = keys[keys.length - 1];
+                    // Only handle letters which the length is 1, ignoring keys like Return, Escape etc.
+                    if (lastKey.length === 1) {
+                        keys[keys.length - 1] = lastKey.toLowerCase();
+                        shortcut = keys.join('+');
+                    }
                 }
                 const windows = app.get_windows();
                 if (windows.length) {
