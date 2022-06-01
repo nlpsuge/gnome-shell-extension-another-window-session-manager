@@ -79,20 +79,34 @@ var CloseSession = class {
                         shortcut = keys.join('+');
                     }
                 }
-                const windows = app.get_windows();
-                if (windows.length) {
-                    Main.activateWindow(windows[0]);
+                // Leave the overview first, so the keys can be sent to the activated windows
+                if (Main.overview.visible) {
+                    Main.overview.hide();
+                    const hiddenId = Main.overview.connect('hidden', 
+                        () => {
+                            Main.overview.disconnect(hiddenId);
+                            this._activateAndCloseWindows(app, shortcut);
+                        });
                 } else {
-                    app.activate(global.get_current_time());
+                    this._activateAndCloseWindows(app, shortcut);
                 }
-                const cmd = `xdotool key ${shortcut}`
-                this._log.info(`Closing the app ${app.get_name()} by sending a shortcut ${shortcut}: ${cmd}`);
-                Util.trySpawnCommandLine(`${cmd}`);
                 success = true;
             }
             
         }
         return success;
+    }
+
+    _activateAndCloseWindows(app, shortcut) {
+        const windows = app.get_windows();
+        if (windows.length) {
+            Main.activateWindow(windows[0]);
+        } else {
+            app.activate(global.get_current_time());
+        }
+        const cmd = `xdotool key ${shortcut}`;
+        this._log.info(`Closing the app ${app.get_name()} by sending a shortcut ${shortcut}: ${cmd}`);
+        Util.trySpawnCommandLine(`${cmd}`);
     }
 
     _skip_multiple_windows(shellApp) {
