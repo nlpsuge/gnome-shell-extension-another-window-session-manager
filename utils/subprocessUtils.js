@@ -19,64 +19,6 @@ function readOutput(stream, lineBuffer) {
     });
 }
 
-var trySpawnCommandLineSync = function(commandLine) {
-    try {
-        let [state, stdout, stderr, exit_status] = GLib.spawn_command_line_sync(commandLine);
-        
-        if (stdout instanceof Uint8Array) {
-            stdout = imports.byteArray.toString(stdout);
-        }
-        if (stderr instanceof Uint8Array) {
-            stderr = imports.byteArray.toString(stderr);
-        }
-        return [state, stdout, stderr, exit_status];
-
-    } catch (e) {
-        logError(e);
-    }
-    // Failed
-    return [1];
-}
-
-// Based on:
-// 1. https://gjs.guide/guides/gio/subprocesses.html#asynchronous-communication
-// 2. https://gitlab.gnome.org/GNOME/gnome-shell/blob/8fda3116f03d95fabf3fac6d082b5fa268158d00/js/misc/util.js:L111
-var trySpawnSync = function(commandLineArray) {
-    try {
-        let [state, stdout, stderr, exit_status] = GLib.spawn_sync(
-            // Working directory, passing %null to use the parent's
-            null,
-            // An array of arguments
-            commandLineArray,
-            // Process ENV, passing %null to use the parent's
-            null,
-            // Flags; we need to use PATH so `ls` can be found and also need to know
-            // when the process has finished to check the output and status.
-            GLib.SpawnFlags.SEARCH_PATH,
-            // Child setup function
-            () => {
-                try {
-                    global.context.restore_rlimit_nofile();
-                } catch (err) {
-                }
-            }
-        );
-        
-        if (stdout instanceof Uint8Array) {
-            stdout = imports.byteArray.toString(stdout);
-        }
-        if (stderr instanceof Uint8Array) {
-            stderr = imports.byteArray.toString(stderr);
-        }
-        return [state, stdout, stderr, exit_status];
-
-    } catch (e) {
-        logError(e);
-    }
-    // Failed
-    return [1];
-}
-
 // Based on:
 // 1. https://gjs.guide/guides/gio/subprocesses.html#asynchronous-communication
 // 2. https://gitlab.gnome.org/GNOME/gnome-shell/blob/8fda3116f03d95fabf3fac6d082b5fa268158d00/js/misc/util.js:L111
@@ -134,14 +76,12 @@ var trySpawnAsync = function(commandLineArray, callBackOnSuccess, callBackOnFail
         // we set for the read loop, so we get all the output
         GLib.child_watch_add(GLib.PRIORITY_DEFAULT_IDLE, pid, (pid, status) => {
             if (status === 0) {
-                log('success ' + stdoutLines.join('\n'));
                 if (callBackOnSuccess) {
-                    callBackOnSuccess();
+                    callBackOnSuccess(stdoutLines.join('\n'));
                 }
             } else {
-                logError(new Error(stderrLines.join('\n')));
                 if (callBackOnFailure) {
-                    callBackOnFailure();
+                    callBackOnFailure(stderrLines.join('\n'));
                 }
             }
 
@@ -202,67 +142,3 @@ var trySpawnAsync = function(commandLineArray, callBackOnSuccess, callBackOnFail
     });
 }
 
-
-/**
- * Execute a command asynchronously and return the output from `stdout` on
- * success or throw an error with output from `stderr` on failure.
- *
- * If given, @input will be passed to `stdin` and @cancellable can be used to
- * stop the process before it finishes.
- *
- * @param {string[]} argv - a list of string arguments
- * @param {string} [input] - Input to write to `stdin` or %null to ignore
- * @param {Gio.Cancellable} [cancellable] - optional cancellable object
- * @returns {Promise<string>} - The process output
- */
-function execCommunicate(argv, input = null, cancellable = null) {
-    let cancelId = 0;
-    let flags = (Gio.SubprocessFlags.STDOUT_PIPE |
-                 Gio.SubprocessFlags.STDERR_PIPE);
-
-    if (input !== null)
-        flags |= Gio.SubprocessFlags.STDIN_PIPE;
-
-    let proc = new Gio.Subprocess({
-        argv: argv,
-        flags: flags
-    });
-    // proc.init(cancellable);
-
-    // if (cancellable instanceof Gio.Cancellable) {
-    //     cancelId = cancellable.connect(() => proc.force_exit());
-    // }
-
-    const result = proc.communicate_utf8(null, null);
-    let [, stdout, stderr] = result;
-    // let status = proc.get_successful();
-    // if (stderr) {
-    //     this._log.error(new Error(), `Failed to send the command ${cmdStr} to the app. stderr: ${stderr}`);
-    // }
-    // this._log.info(stdout);
-    return [proc.get_successful(), stdout, stderr];
-    
-    // return new Promise((resolve, reject) => {
-    //     proc.communicate_utf8_async(input, null, (proc, res) => {
-    //         try {
-    //             let [, stdout, stderr] = proc.communicate_utf8_finish(res);
-    //             let status = proc.get_exit_status();
-
-    //             if (status !== 0) {
-    //                 throw new Gio.IOErrorEnum({
-    //                     code: Gio.io_error_from_errno(status),
-    //                     message: stderr ? stderr.trim() : GLib.strerror(status)
-    //                 });
-    //             }
-
-    //             resolve(stdout.trim());
-    //         } catch (e) {
-    //             reject(e);
-    //         } finally {
-    //             if (cancelId > 0) {
-    //                 cancellable.disconnect(cancelId);
-    //             }
-    //         }
-    //     });
-    // });
-}

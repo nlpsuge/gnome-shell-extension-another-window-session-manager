@@ -43,16 +43,10 @@ var CloseSession = class {
             workspaceManager.get_workspace_by_index(i)._keepAliveId = false;
         }
 
-        let running_apps = this._defaultAppSystem.get_running();
         let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
-        this._consume(running_apps_closing_by_rules, new_running_apps);
+        this._tryCloseAppsByRules(running_apps_closing_by_rules, new_running_apps);
 
-        
         for (const app of new_running_apps) {
-            // if (this._tryCloseByRules(app)) {
-            //     continue;
-            // }
-            
             if (this._skip_multiple_windows(app)) {
                 this._log.debug(`Skipping ${app.get_name()} because it has more than one windows`);
                 continue;
@@ -63,7 +57,7 @@ var CloseSession = class {
 
     }
 
-    _consume(running_apps_closing_by_rules, new_running_apps) {
+    _tryCloseAppsByRules(running_apps_closing_by_rules, new_running_apps) {
         if (!running_apps_closing_by_rules || running_apps_closing_by_rules.length === 0) {
             return;
         } 
@@ -100,47 +94,41 @@ var CloseSession = class {
                 shortcutsOriginal.push(shortcut);
             }
 
-            const allShortcutsString = shortcutsMixedWithKeycode.join(' ');
             // Leave the overview first, so the keys can be sent to the activated windows
             if (Main.overview.visible) {
                 Main.overview.hide();
                 const hiddenId = Main.overview.connect('hidden', 
                     () => {
                         Main.overview.disconnect(hiddenId);
-                        this._activateWindow(app);
-                        const cmd = ['xdotool', 'key' ].concat(shortcutsMixedWithKeycode);
-                        const cmdStr = cmd.join(' ');
-                        this._log.info(`Closing the app ${app.get_name()} by sending a shortcut ${shortcutsMixedWithKeycode.join(' ')}: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
-
-                        // const [state, stdout, stderr, exit_status] = SubprocessUtils.trySpawnCommandLineSync(cmdStr);
-                        SubprocessUtils.trySpawnAsync(cmd, () => {
-                            this._consume(running_apps_closing_by_rules, new_running_apps);
-                        }, () => {
-                            new_running_apps.push(app);
-                        });
+                        this._activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules, new_running_apps);
                     });
             } else {
-                this._activateWindow(app);
-                const cmd = ['xdotool', 'key' ].concat(shortcutsMixedWithKeycode);
-                const cmdStr = cmd.join(' ');
-                this._log.info(`Closing the app ${app.get_name()} by sending a shortcut ${shortcutsMixedWithKeycode.join(' ')}: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
-
-                // const [state, stdout, stderr, exit_status] = SubprocessUtils.trySpawnCommandLineSync(cmdStr);
-                SubprocessUtils.trySpawnAsync(cmd, () => {
-                    this._consume(running_apps_closing_by_rules, new_running_apps);
-                }, () => {
-                    new_running_apps.push(app);
-                });
-                
+                this._activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules, new_running_apps);
             }
             
         }
 
     }
 
+    _activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules, new_running_apps) {
+        this._activateWindow(app);
+        const cmd = ['xdotool', 'key'].concat(shortcutsMixedWithKeycode);
+        const cmdStr = cmd.join(' ');
+        this._log.info(`Closing the app ${app.get_name()} by sending a shortcut ${shortcutsMixedWithKeycode.join(' ')}: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
+
+        SubprocessUtils.trySpawnAsync(cmd, (output) => {
+            this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
+            this._tryCloseAppsByRules(running_apps_closing_by_rules, new_running_apps);
+        }, (output) => {
+            this._log.info(`Failed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
+            new_running_apps.push(app);
+            this._tryCloseAppsByRules(running_apps_closing_by_rules, new_running_apps);
+        });
+    }
+
     _getRunningAppsClosingByRules() {
         if (!this._settings.get_boolean('enable-close-by-rules')) {
-            return [];
+            return [[], this._defaultAppSystem.get_running()];
         }
 
         let running_apps_closing_by_rules = [];
@@ -152,58 +140,12 @@ var CloseSession = class {
             const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
             if (!rules || !rules.enabled) {
                 new_running_apps.push(app);
-                continue;
+            } else {
+                running_apps_closing_by_rules.push(app);
             }
-
-            running_apps_closing_by_rules.push(app);
         }
 
         return [running_apps_closing_by_rules, new_running_apps];
-    }
-
-    _tryCloseByRules(app) {
-        if (!this._settings.get_boolean('enable-close-by-rules')) {
-            return false;
-        }
-
-        const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
-        const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
-        const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
-        if (!rules || !rules.enabled) {
-            return false;
-        }
-
-        let success = false;
-        if (rules.type === 'shortcut') {
-            for (const order in rules.value) {
-                const rule = rules.value[order];
-                let shortcut = rule.shortcut;
-                // The shift key is not pressed
-                if (!(rule.state & Constants.GDK_SHIFT_MASK)) {
-                    const keys = shortcut.split('+');
-                    const lastKey = keys[keys.length - 1];
-                    // Only handle letters which the length is 1, ignoring keys like Return, Escape etc.
-                    if (lastKey.length === 1) {
-                        keys[keys.length - 1] = lastKey.toLowerCase();
-                        shortcut = keys.join('+');
-                    }
-                }
-                // Leave the overview first, so the keys can be sent to the activated windows
-                if (Main.overview.visible) {
-                    Main.overview.hide();
-                    const hiddenId = Main.overview.connect('hidden', 
-                        () => {
-                            Main.overview.disconnect(hiddenId);
-                            this._activateAndCloseWindows(app, shortcut);
-                        });
-                    success = true;
-                } else {
-                    success = this._activateAndCloseWindows(app, shortcut);
-                }
-            }
-            
-        }
-        return success;
     }
 
     _activateWindow(app) {
@@ -214,44 +156,6 @@ var CloseSession = class {
         } else {
             app.activate();
         }
-    }
-
-    _activateAndCloseWindows(app, shortcut) {
-        this._activateWindow(app);
-        // const rId = windows[0].connect('raised',() => {
-        // windows[0].disconnect(rId);
-        // log('raised');
-
-        const cmd = ['xdotool', 'key', `${shortcut}`];
-        const cmdStr = cmd.join(' ');
-        this._log.info(`Closing the app ${app.get_name()} by sending a shortcut ${shortcut}: ${cmdStr}`);
-
-        // const [state, stdout, stderr, exit_status] = SubprocessUtils.trySpawnCommandLineSync(cmdStr);
-        SubprocessUtils.trySpawnAsync(cmd);
-        // const result = SubprocessUtils.execCommunicate(cmd);
-        // this._awaitingId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 2000, () => {
-        //     // Waiting for a moment
-        // });
-        // GLib.Source.set_name_by_id(this._awaitingId, '[gnome-shell-extension-another-window-session-manager] this._activateAndCloseWindows');
-        // return true;
-        // const proc = this._subprocessLauncher.spawnv(cmd);
-        // // Get the result to make sure the command has been sent to the window
-        // const result = proc.communicate_utf8(null, null);
-        // log(result);
-        // let [successful, stdout, stderr] = result;
-        // let status = proc.get_successful();
-        // if (stderr) {
-            // this._log.error(new Error(), `Failed to send the command ${cmdStr} to the app. stderr: ${stderr}`);
-        // }
-        // this._log.info(state);
-        // return state;
-            
-        // });
-        // const fId = windows[0].connect('focus',() => {
-        //     windows[0].disconnect(fId);
-        //     log('focus');
-        // });
-        return true;
     }
 
     _skip_multiple_windows(shellApp) {
