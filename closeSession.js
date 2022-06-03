@@ -44,20 +44,24 @@ var CloseSession = class {
         }
 
         let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
-        this._tryCloseAppsByRules(running_apps_closing_by_rules, new_running_apps);
+        this._tryCloseAppsByRules(running_apps_closing_by_rules);
 
         for (const app of new_running_apps) {
-            if (this._skip_multiple_windows(app)) {
-                this._log.debug(`Skipping ${app.get_name()} because it has more than one windows`);
-                continue;
-            }
-            this._log.debug(`Closing ${app.get_name()}`);
-            app.request_quit();
+            this._closeOneApp(app);
         }
 
     }
 
-    _tryCloseAppsByRules(running_apps_closing_by_rules, new_running_apps) {
+    _closeOneApp(app) {
+        if (this._skip_multiple_windows(app)) {
+            this._log.debug(`Skipping ${app.get_name()} because it has more than one windows`);
+        } else {
+            this._log.debug(`Closing ${app.get_name()}`);
+            app.request_quit();    
+        }
+    }
+
+    _tryCloseAppsByRules(running_apps_closing_by_rules) {
         if (!running_apps_closing_by_rules || running_apps_closing_by_rules.length === 0) {
             return;
         } 
@@ -100,17 +104,17 @@ var CloseSession = class {
                 const hiddenId = Main.overview.connect('hidden', 
                     () => {
                         Main.overview.disconnect(hiddenId);
-                        this._activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules, new_running_apps);
+                        this._activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules);
                     });
             } else {
-                this._activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules, new_running_apps);
+                this._activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules);
             }
             
         }
 
     }
 
-    _activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules, new_running_apps) {
+    _activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules) {
         this._activateWindow(app);
         const cmd = ['xdotool', 'key'].concat(shortcutsMixedWithKeycode);
         const cmdStr = cmd.join(' ');
@@ -118,11 +122,12 @@ var CloseSession = class {
 
         SubprocessUtils.trySpawnAsync(cmd, (output) => {
             this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
-            this._tryCloseAppsByRules(running_apps_closing_by_rules, new_running_apps);
+            this._tryCloseAppsByRules(running_apps_closing_by_rules);
         }, (output) => {
             this._log.info(`Failed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
-            new_running_apps.push(app);
-            this._tryCloseAppsByRules(running_apps_closing_by_rules, new_running_apps);
+            // Fallback to close it again in the normal way
+            this._closeOneApp(app);
+            this._tryCloseAppsByRules(running_apps_closing_by_rules);
         });
     }
 
@@ -162,7 +167,7 @@ var CloseSession = class {
         if (shellApp.get_n_windows() > 1 && this._skip_app_with_multiple_windows) {
             const app_id = shellApp.get_id();
             if (this.whitelist.includes(app_id)) {
-                this._log.debug(`${shellApp.get_name()} / ${app_id} in the whitelist.`);
+                this._log.debug(`${shellApp.get_name()} (${app_id}) in the whitelist. Closing it anyway.`);
                 return false;
             }
             return true;
