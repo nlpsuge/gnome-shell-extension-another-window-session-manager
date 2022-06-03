@@ -416,7 +416,7 @@ const RuleRow = GObject.registerClass({
             return Gdk.EVENT_STOP;
         }
 
-        if (!Gtk.accelerator_valid(keyval, mask)) return Gdk.EVENT_STOP;
+        // if (!Gtk.accelerator_valid(keyval, mask)) return Gdk.EVENT_STOP;
         const shortcut = Gtk.accelerator_get_label(keyval, mask);
         _eventControllerKey.get_widget().set_label(shortcut);
 

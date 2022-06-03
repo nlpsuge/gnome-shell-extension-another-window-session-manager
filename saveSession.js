@@ -127,7 +127,7 @@ var SaveSession = class {
                             if (status === 0 && stdout) {
                                 cmdStr = `${stdout.split(':')[1].trim()}/${cmdStr}`
                             } else {
-                                logError(`Failed to query the working directory according to ${pid}, and the current command line is ${cmdStr}`);
+                                logError(`Failed to query the working directory according to ${pid}, and the current command line is ${cmdStr}. stderr: ${stderr}`);
                             }
 
                         }
