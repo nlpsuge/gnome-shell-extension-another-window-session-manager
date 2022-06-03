@@ -115,7 +115,7 @@ var CloseSession = class {
     }
 
     _activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules) {
-        this._activateWindow(app);
+        this._activateAndFocusWindow(app);
         const cmd = ['xdotool', 'key'].concat(shortcutsMixedWithKeycode);
         const cmdStr = cmd.join(' ');
         this._log.info(`Closing the app ${app.get_name()} by sending a shortcut ${shortcutsMixedWithKeycode.join(' ')}: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
@@ -153,14 +153,10 @@ var CloseSession = class {
         return [running_apps_closing_by_rules, new_running_apps];
     }
 
-    _activateWindow(app) {
+    _activateAndFocusWindow(app) {
         this._log.info(`Activate the app ${app.get_name()}`);
         const windows = app.get_windows();
-        if (windows.length > 1) {
-            Main.activateWindow(windows[0]);
-        } else {
-            app.activate();
-        }
+        Main.activateWindow(windows[0]);
     }
 
     _skip_multiple_windows(shellApp) {
