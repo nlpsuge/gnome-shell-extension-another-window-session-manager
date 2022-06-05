@@ -8,6 +8,7 @@ const CloseWindowsRules = Me.imports.model.closeWindowsRules;
 
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const Log = Me.imports.utils.log;
+const GnomeVersion = Me.imports.utils.gnomeVersion;
 
 // const _ = ExtensionUtils.gettext;
 
@@ -35,6 +36,14 @@ var UICloseWindows = GObject.registerClass(
             });
 
             this.close_by_rules_list_box = this._builder.get_object('close_by_rules_list_box');
+            // Remove GtkScrolledWindow on Gnome 42
+            // See: https://gjs.guide/extensions/upgrading/gnome-shell-42.html#gtk-scrolledwindow
+            if (!GnomeVersion.isOlderThan42()) {
+                this.close_by_rules_list_box.unparent();
+                const close_by_rules_multi_grid2 = this._builder.get_object('close_by_rules_multi_grid2');
+                close_by_rules_multi_grid2.attach(this.close_by_rules_list_box, 0, 0, 1, 1);
+            }
+            
             this.close_by_rules_list_box.append(new AwsmNewRuleRow());
 
             this._actionGroup = new Gio.SimpleActionGroup();
@@ -80,7 +89,7 @@ var UICloseWindows = GObject.registerClass(
         }
 
         _onAddActivated() {
-            const dialog = new AwsmNewRuleDialog(this._builder.get_object('close_rule_listbox_scrolledwindow').get_root());
+            const dialog = new AwsmNewRuleDialog(this._builder.get_object('prefs_notebook').get_root());
             dialog.connect('response', (dlg, id) => {
                 const appInfo = id === Gtk.ResponseType.OK
                     ? dialog.get_widget().get_app_info() : null;
@@ -247,22 +256,28 @@ const RuleRow = GObject.registerClass({
             pixel_size: 32,
         });
         icon.get_style_context().add_class('icon-dropshadow');
+        icon.set_tooltip_text(appInfo.get_display_name());
         box.append(icon);
 
         const label = new Gtk.Label({
             label: appInfo.get_display_name(),
             halign: Gtk.Align.START,
             hexpand: true,
+            // Make sure that text align left
+            xalign: 0,
+            width_chars: 20,
             max_width_chars: 20,
             ellipsize: Pango.EllipsizeMode.END,
         });
+        label.set_tooltip_text(appInfo.get_display_name());
         box.append(label);
 
         const _model = new Gtk.ListStore();
         _model.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
         const combo = new Gtk.ComboBox({
             model: _model,
-            halign: Gtk.Align.START
+            halign: Gtk.Align.START,
+            // hexpand: true,
         });
         // https://stackoverflow.com/questions/21568268/how-to-use-the-gtk-combobox-in-gjs
         // https://tecnocode.co.uk/misc/platform-demos/combobox.js.xhtml

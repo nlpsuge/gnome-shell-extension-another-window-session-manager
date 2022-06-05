@@ -84,24 +84,13 @@
                   <object class="GtkScrolledWindow" id="close_rule_listbox_scrolledwindow">
                     <property name="focusable">1</property>
                     <property name="child">
-                      <object class="GtkViewport">
+                      <object class="GtkViewport" id="close_rule_listbox_viewport">
                         <property name="child">
-                          <object class="GtkBox">
-                            <property name="orientation">vertical</property>
-                            <child>
-                              <object class="GtkListBox" id="close_by_rules_list_box">
-                                <property name="hexpand">True</property>
-                                <property name="vexpand">True</property>
-                                <!-- <property name="show-separators">True</property> -->
-                                
-                              </object>
-                            </child>
-                            <child>
-                              <placeholder/>
-                            </child>
-                            <child>
-                              <placeholder/>
-                            </child>
+                          <object class="GtkListBox" id="close_by_rules_list_box">
+                            <property name="hexpand">True</property>
+                            <property name="vexpand">True</property>
+                            <!-- <property name="show-separators">True</property> -->
+                            
                           </object>
                         </property>
                       </object>
