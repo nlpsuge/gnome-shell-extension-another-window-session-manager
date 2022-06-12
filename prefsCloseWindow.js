@@ -222,20 +222,25 @@ const RuleRow = GObject.registerClass({
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
 
-        const box = new Gtk.Box({
-            spacing: 6,
-            margin_top: 6,
-            margin_bottom: 6,
-            margin_start: 6,
-            margin_end: 6,
+        const ruleRowBox = this._newBox({
+            hexpand: true,
+            halign: Gtk.Align.FILL
         });
-        this._box = box;
+    
+        const boxLeft = this._newBox({
+            hexpand: true,
+            halign: Gtk.Align.START
+        });
+
+        const boxRight = this._newBox({
+            halign: Gtk.Align.END
+        });
 
         super._init({
             activatable: false,
             // TODO
             // value: GLib.Variant.new_strv(ruleDetail.value),
-            child: box,
+            child: ruleRowBox,
         });
         this._appInfo = appInfo;
         this._ruleDetail = ruleDetail;
@@ -249,7 +254,7 @@ const RuleRow = GObject.registerClass({
         this.bind_property('enabled',
             this._enabledCheckButton, 'active',
             GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL);
-        box.append(this._enabledCheckButton);
+        boxLeft.append(this._enabledCheckButton);
 
         const icon = new Gtk.Image({
             gicon: appInfo.get_icon(),
@@ -257,7 +262,7 @@ const RuleRow = GObject.registerClass({
         });
         icon.get_style_context().add_class('icon-dropshadow');
         icon.set_tooltip_text(appInfo.get_display_name());
-        box.append(icon);
+        boxLeft.append(icon);
 
         const label = new Gtk.Label({
             label: appInfo.get_display_name(),
@@ -270,14 +275,14 @@ const RuleRow = GObject.registerClass({
             ellipsize: Pango.EllipsizeMode.END,
         });
         label.set_tooltip_text(appInfo.get_display_name());
-        box.append(label);
+        boxLeft.append(label);
 
         const _model = new Gtk.ListStore();
         _model.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
         const combo = new Gtk.ComboBox({
             model: _model,
             halign: Gtk.Align.START,
-            // hexpand: true,
+            hexpand: true,
         });
         // https://stackoverflow.com/questions/21568268/how-to-use-the-gtk-combobox-in-gjs
         // https://tecnocode.co.uk/misc/platform-demos/combobox.js.xhtml
@@ -291,16 +296,24 @@ const RuleRow = GObject.registerClass({
         _model.set(iter, [0, 1], ['Shortcut', 'Shortcut']);
         // Set the first row in the combobox to be active on startup
         combo.set_active(0);
-        box.append(combo);
+        boxLeft.append(combo);
 
-        this._append_accel();
+        this._append_accel(boxRight);
 
         const buttonRemove = new Gtk.Button({
             action_name: 'rules.remove',
             action_target: new GLib.Variant('s', this.appDesktopFilePath),
             icon_name: 'edit-delete-symbolic',
         });
-        box.append(buttonRemove);
+        const boxRemoveButton = this._newBox({
+            hexpand: true,
+            halign: Gtk.Align.START
+        });
+        boxRemoveButton.append(buttonRemove);
+        boxRight.append(boxRemoveButton);
+
+        ruleRowBox.append(boxLeft);
+        ruleRowBox.append(boxRight);
         
         // TODO Not used, can be deleted?
         this.connect('notify::value',
@@ -320,14 +333,20 @@ const RuleRow = GObject.registerClass({
             });
     }
 
-    _append_accel() {
-        this._rendererAccelBox = new Gtk.Box({
+    _newBox(properties) {
+        const box = new Gtk.Box({
             spacing: 6,
             margin_top: 6,
             margin_bottom: 6,
             margin_start: 6,
             margin_end: 6,
-        });
+        })
+        Object.assign(box, properties);
+        return box;
+    }
+
+    _append_accel(parentWidget) {
+        this._rendererAccelBox = this._newBox();
 
         const rules = this._ruleDetail.value;
         const ruleOrders = Object.keys(rules);
@@ -360,13 +379,7 @@ const RuleRow = GObject.registerClass({
             label: 'Delete accelerator',
             icon_name: 'edit-clear-symbolic',
         });
-        const rendererAccelOptBox = new Gtk.Box({
-            spacing: 6,
-            margin_top: 6,
-            margin_bottom: 6,
-            margin_start: 6,
-            margin_end: 6,
-        });
+        const rendererAccelOptBox = this._newBox();
         rendererAccelOptBox.append(addAccelButton);
         rendererAccelOptBox.append(deleteAccelButton);
 
@@ -383,7 +396,7 @@ const RuleRow = GObject.registerClass({
         const frame = new Gtk.Frame();
         frame.set_child(box);
 
-        this._box.append(frame);
+        parentWidget.append(frame);
     }
 
     _addNewAccel() {
@@ -430,6 +443,7 @@ const RuleRow = GObject.registerClass({
         // Backspace remove the new shortcut
         if (mask === 0 && keyval === Gdk.KEY_BackSpace) {
             this._removeAccelerator(_eventControllerKey.get_widget());
+            this._rendererAccelBox.get_root().get_surface().restore_system_shortcuts(null);
             return Gdk.EVENT_STOP;
         }
 
@@ -516,7 +530,7 @@ const RuleRow = GObject.registerClass({
         }
         // The current widget is in the last
         if (!nextWidgetRemoved) {
-            previousWidgetRemoved.get_prev_sibling().grab_focus();
+            this.grab_focus();
             this._rendererAccelBox.remove(previousWidgetRemoved);
         }
         this._rendererAccelBox.remove(currentWidgetRemoved);
