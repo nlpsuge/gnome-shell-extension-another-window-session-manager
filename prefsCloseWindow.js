@@ -342,6 +342,7 @@ const RuleRow = GObject.registerClass({
             const eventControllerKey = new Gtk.EventControllerKey();
             accelButton.add_controller(eventControllerKey);
             eventControllerKey.connect('key-pressed', this._onKeyPressed.bind(this));
+            eventControllerKey.connect('key-released', this._onKeyReleased.bind(this));
             this._rendererAccelBox.append(accelButton);
             if (ruleOrder < maxRuleOrder) {
                 let next = new Gtk.Label({
@@ -413,6 +414,7 @@ const RuleRow = GObject.registerClass({
         const eventControllerKey = new Gtk.EventControllerKey();
         newAccelButton.add_controller(eventControllerKey);
         eventControllerKey.connect('key-pressed', this._onKeyPressed.bind(this));
+        eventControllerKey.connect('key-released', this._onKeyReleased.bind(this));
         this._rendererAccelBox.append(newAccelButton);
 
         // TODO Calling this._rendererAccelBox.get_root().get_surface().restore_system_shortcuts(null); after this?
@@ -421,11 +423,25 @@ const RuleRow = GObject.registerClass({
         this._log.debug(`Grab the focus for setting the accelerator: ${focused}`);
     }
 
+    _onKeyReleased(_eventControllerKey, keyval, keycode, state) {
+        let mask = state & Gtk.accelerator_get_default_mod_mask();
+        mask &= ~Gdk.ModifierType.LOCK_MASK;
+
+        // Backspace remove the new shortcut
+        if (mask === 0 && keyval === Gdk.KEY_BackSpace) {
+            this._removeAccelerator(_eventControllerKey.get_widget());
+            return Gdk.EVENT_STOP;
+        }
+
+        this._rendererAccelBox.get_root().get_surface().restore_system_shortcuts(null);
+        this.grab_focus();
+    }
+
     _onKeyPressed(_eventControllerKey, keyval, keycode, state) {
         let mask = state & Gtk.accelerator_get_default_mod_mask();
         mask &= ~Gdk.ModifierType.LOCK_MASK;
 
-        // Backspace resets the new shortcut
+        // Backspace remove the new shortcut
         if (mask === 0 && keyval === Gdk.KEY_BackSpace) {
             this._removeAccelerator(_eventControllerKey.get_widget());
             return Gdk.EVENT_STOP;
