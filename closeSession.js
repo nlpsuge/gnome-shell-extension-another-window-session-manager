@@ -73,28 +73,21 @@ var CloseSession = class {
         const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
 
         if (rules.type === 'shortcut') {
-            let shortcutsMixedWithKeycode = [];
             let shortcutsOriginal = [];
+            let keycodes = [];
             for (const order in rules.value) {
                 const rule = rules.value[order];
                 let shortcut = rule.shortcut;
-                if (rule.state === 0) {
-                    shortcutsMixedWithKeycode.push(rule.keycode + '');
-                } else {
-                    // The shift key is not pressed, so convert the last key to the lowercase
-                    // xdotool won't recognize it if the last key is uppercase
-                    if (!(rule.state & Constants.GDK_SHIFT_MASK)) {
-                        const keys = shortcut.split('+');
-                        const lastKey = keys[keys.length - 1];
-                        // Only handle letters which the length is 1, ignoring keys like Return, Escape etc.
-                        if (lastKey.length === 1) {
-                            keys[keys.length - 1] = lastKey.toLowerCase();
-                            shortcut = keys.join('+');
-                        }
-                    }
-                    
-                    shortcutsMixedWithKeycode.push(shortcut);
-                }
+                let state = rule.state;
+                let keycode = rule.keycode;
+                const linuxKeycodes = this._convertToLinuxKeycodes(state, keycode);
+                const translatedLinuxKeycodes = linuxKeycodes.slice()
+                            // Press keys
+                            .map(k => k + ':1')
+                            .concat(linuxKeycodes.slice()
+                                // Release keys
+                                .reverse().map(k => k + ':0'))
+                keycodes = keycodes.concat(translatedLinuxKeycodes);
                 shortcutsOriginal.push(shortcut);
             }
 
@@ -104,22 +97,47 @@ var CloseSession = class {
                 const hiddenId = Main.overview.connect('hidden', 
                     () => {
                         Main.overview.disconnect(hiddenId);
-                        this._activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules);
+                        this._activateAndCloseWindows(app, keycodes, shortcutsOriginal, running_apps_closing_by_rules);
                     });
             } else {
-                this._activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules);
+                this._activateAndCloseWindows(app, keycodes, shortcutsOriginal, running_apps_closing_by_rules);
             }
             
         }
 
     }
 
-    _activateAndCloseWindows(app, shortcutsMixedWithKeycode, shortcutsOriginal, running_apps_closing_by_rules) {
-        this._activateAndFocusWindow(app);
-        const cmd = ['xdotool', 'key'].concat(shortcutsMixedWithKeycode);
-        const cmdStr = cmd.join(' ');
-        this._log.info(`Closing the app ${app.get_name()} by sending a shortcut ${shortcutsMixedWithKeycode.join(' ')}: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
+    _convertToLinuxKeycodes(state, keycode) {
+        let keycodes = [];
+        // Convert to key codes defined in /usr/include/linux/input-event-codes.h
+        if (state & Constants.GDK_SHIFT_MASK) {
+            // KEY_LEFTSHIFT
+            keycodes.push(42);
+        } 
+        if (state & Constants.GDK_CONTROL_MASK) {
+            // KEY_LEFTCTRL
+            keycodes.push(29);
+        } 
+        if (state & Constants.GDK_ALT_MASK) {
+            // KEY_LEFTALT
+            keycodes.push(56);
+        } 
+        if (state & Constants.GDK_META_MASK) {
+            // KEY_LEFTMETA
+            keycodes.push(125);
+        }
+        // The Xorg keycodes are 8 larger than the Linux keycodes.
+        // See https://wiki.archlinux.org/title/Keyboard_input#Identifying_keycodes_in_Xorg
+        keycodes.push(keycode - 8);
+        return keycodes;
+    }
 
+    _activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal, running_apps_closing_by_rules) {
+        this._activateAndFocusWindow(app);
+        const cmd = ['ydotool', 'key', '--key-delay', '0'].concat(linuxKeyCodes);
+        const cmdStr = cmd.join(' ');
+        this._log.info(`Closing the app ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
+        
         SubprocessUtils.trySpawnAsync(cmd, (output) => {
             this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
             this._tryCloseAppsByRules(running_apps_closing_by_rules);

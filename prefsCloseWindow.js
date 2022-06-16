@@ -443,11 +443,11 @@ const RuleRow = GObject.registerClass({
         // Backspace remove the new shortcut
         if (mask === 0 && keyval === Gdk.KEY_BackSpace) {
             this._removeAccelerator(_eventControllerKey.get_widget());
-            this._rendererAccelBox.get_root().get_surface().restore_system_shortcuts(null);
+            this._rendererAccelBox.get_root().get_surface().restore_system_shortcuts();
             return Gdk.EVENT_STOP;
         }
 
-        this._rendererAccelBox.get_root().get_surface().restore_system_shortcuts(null);
+        this._rendererAccelBox.get_root().get_surface().restore_system_shortcuts();
         this.grab_focus();
     }
 
