@@ -215,6 +215,7 @@ const RuleRow = GObject.registerClass({
             // Default value
             null,
             GObject.ParamFlags.READWRITE),
+        
     },
 }, class RuleRow extends Gtk.ListBoxRow {
     _init(appInfo, ruleDetail) {
@@ -279,6 +280,8 @@ const RuleRow = GObject.registerClass({
 
         boxLeft.append(this._newShortcutComboBox());
 
+        boxLeft.append(this._newDelaySpinButton());
+
         this._append_accel(boxRight);
 
         const buttonRemove = new Gtk.Button({
@@ -312,6 +315,30 @@ const RuleRow = GObject.registerClass({
                     // value: this.value,
                 }))
             });
+    }
+
+    _newDelaySpinButton() {
+        const savedKeyDelay = this._ruleDetail.keyDelay;
+        const spinButton = new Gtk.SpinButton({
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
+                // Up to 5 minutes
+                upper: 300000,
+                step_increment: 1,
+                value: savedKeyDelay ? savedKeyDelay : 0
+            }),
+            snap_to_ticks: true,
+            margin_end: 6,
+        });
+        spinButton.connect('value-changed', (widget) => {
+            const keyDelayValue = widget.get_value();
+            const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
+            let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
+            oldCloseWindowsRulesObj[this.appDesktopFilePath].keyDelay = keyDelayValue;
+            const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
+            this._settings.set_string('close-windows-rules', newCloseWindowsRules);
+        });
+        return spinButton;
     }
 
     _newShortcutComboBox() {
@@ -399,6 +426,11 @@ const RuleRow = GObject.registerClass({
 
         const frame = new Gtk.Frame();
         frame.set_child(box);
+        const cssProvider = new Gtk.CssProvider();
+        cssProvider.load_from_data(
+            "frame { border-style: dashed; }");
+        frame.get_style_context().add_provider(cssProvider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
 
         parentWidget.append(frame);
     }

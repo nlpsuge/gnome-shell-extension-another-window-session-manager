@@ -7,6 +7,7 @@ var CloseWindowsRules = class {
     appName; // string, such as 'Firefox'
     appDesktopFilePath; // string, such as '/usr/share/applications/firefox.desktop'
     enabled; // boolean
+    keyDelay; // int, for example: `enabydotool key --key-delay 500 29:1 16:1 16:0 29:0`
 }
 
 /**

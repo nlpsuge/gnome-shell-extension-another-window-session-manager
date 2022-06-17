@@ -72,7 +72,7 @@ var CloseSession = class {
         const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
         const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
 
-        if (rules.type === 'shortcut') {
+        if (rules?.type === 'shortcut') {
             let shortcutsOriginal = [];
             let keycodes = [];
             for (const order in rules.value) {
@@ -132,12 +132,17 @@ var CloseSession = class {
         return keycodes;
     }
 
-    _activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal, running_apps_closing_by_rules) {
-        this._activateAndFocusWindow(app);
-        const cmd = ['ydotool', 'key', '--key-delay', '0'].concat(linuxKeyCodes);
+    _activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal, running_apps_closing_by_rules) {  
+        const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
+        const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
+        const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
+        const keyDelay = rules?.keyDelay;
+        const cmd = ['ydotool', 'key', '--key-delay', !keyDelay ? '0' : keyDelay + ''].concat(linuxKeyCodes);
         const cmdStr = cmd.join(' ');
+        
         this._log.info(`Closing the app ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
         
+        this._activateAndFocusWindow(app);
         SubprocessUtils.trySpawnAsync(cmd, (output) => {
             this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
             this._tryCloseAppsByRules(running_apps_closing_by_rules);
@@ -161,7 +166,7 @@ var CloseSession = class {
             const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
             const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
             const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
-            if (!rules || !rules.enabled) {
+            if (!rules || !rules.enabled || !rules.value) {
                 new_running_apps.push(app);
             } else {
                 running_apps_closing_by_rules.push(app);
