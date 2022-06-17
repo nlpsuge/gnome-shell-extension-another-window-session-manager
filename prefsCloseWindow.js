@@ -277,26 +277,7 @@ const RuleRow = GObject.registerClass({
         label.set_tooltip_text(appInfo.get_display_name());
         boxLeft.append(label);
 
-        const _model = new Gtk.ListStore();
-        _model.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
-        const combo = new Gtk.ComboBox({
-            model: _model,
-            halign: Gtk.Align.START,
-            hexpand: true,
-        });
-        // https://stackoverflow.com/questions/21568268/how-to-use-the-gtk-combobox-in-gjs
-        // https://tecnocode.co.uk/misc/platform-demos/combobox.js.xhtml
-        const renderer = new Gtk.CellRendererText();
-        // Pack the renderers into the combobox in the order we want to see
-        combo.pack_start(renderer, true);
-        // Set the renderers to use the information from our liststore
-        combo.add_attribute(renderer, 'text', 1);
-        let iter = _model.append();
-        // https://docs.gtk.org/gtk4/method.ListStore.set.html
-        _model.set(iter, [0, 1], ['Shortcut', 'Shortcut']);
-        // Set the first row in the combobox to be active on startup
-        combo.set_active(0);
-        boxLeft.append(combo);
+        boxLeft.append(this._newShortcutComboBox());
 
         this._append_accel(boxRight);
 
@@ -331,6 +312,29 @@ const RuleRow = GObject.registerClass({
                     // value: this.value,
                 }))
             });
+    }
+
+    _newShortcutComboBox() {
+        const _model = new Gtk.ListStore();
+        _model.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING]);
+        const combo = new Gtk.ComboBox({
+            model: _model,
+            halign: Gtk.Align.START,
+            hexpand: true,
+        });
+        // https://stackoverflow.com/questions/21568268/how-to-use-the-gtk-combobox-in-gjs
+        // https://tecnocode.co.uk/misc/platform-demos/combobox.js.xhtml
+        const renderer = new Gtk.CellRendererText();
+        // Pack the renderers into the combobox in the order we want to see
+        combo.pack_start(renderer, true);
+        // Set the renderers to use the information from our liststore
+        combo.add_attribute(renderer, 'text', 1);
+        let iter = _model.append();
+        // https://docs.gtk.org/gtk4/method.ListStore.set.html
+        _model.set(iter, [0, 1], ['Shortcut', 'Shortcut']);
+        // Set the first row in the combobox to be active on startup
+        combo.set_active(0);
+        return combo;
     }
 
     _newBox(properties) {
