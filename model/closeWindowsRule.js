@@ -1,5 +1,5 @@
 
-var CloseWindowsRules = class {
+var CloseWindowsRule = class {
 
     type; // string, rule type, such as 'shortcut'
     value; // GdkShortcuts, order and the rule pairs, such as "{1: 'Ctrl+Q}'".

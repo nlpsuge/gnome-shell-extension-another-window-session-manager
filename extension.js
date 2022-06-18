@@ -5,6 +5,8 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const Main = imports.ui.main;
 
+const OpenWindowsInfoTracker = Me.imports.openWindowsInfoTracker;
+
 const Indicator = Me.imports.indicator;
 const Autostart = Me.imports.ui.autostart;
 
@@ -17,6 +19,8 @@ function enable() {
     Main.panel.addToStatusArea('Another Window Session Manager', _indicator);
 
     _autostartServiceProvider = new Autostart.AutostartServiceProvider();
+    
+    new OpenWindowsInfoTracker.OpenWindowsInfoTracker();
     
 }
 

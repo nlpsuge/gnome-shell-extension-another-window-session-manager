@@ -4,7 +4,7 @@ const { Gio, GLib, GObject, Gtk, Pango, Gdk } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const CloseWindowsRules = Me.imports.model.closeWindowsRules;
+const CloseWindowsRule = Me.imports.model.closeWindowsRule;
 
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const Log = Me.imports.utils.log;
@@ -30,10 +30,6 @@ var UICloseWindows = GObject.registerClass(
 
         init() {
             this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
-            this.close_by_rules_switch.connect('notify::active', (widget) => {
-                const active = widget.active;
-
-            });
 
             this.close_by_rules_list_box = this._builder.get_object('close_by_rules_list_box');
             // Remove GtkScrolledWindow on Gnome 42
@@ -94,17 +90,17 @@ var UICloseWindows = GObject.registerClass(
                 const appInfo = id === Gtk.ResponseType.OK
                     ? dialog.get_widget().get_app_info() : null;
                 if (appInfo) {
-                    const closeWindowsRules = new CloseWindowsRules.CloseWindowsRules();
-                    closeWindowsRules.type = 'shortcut';
-                    closeWindowsRules.value = {};
-                    closeWindowsRules.appId = appInfo.get_id();
-                    closeWindowsRules.appName = appInfo.get_name();
-                    closeWindowsRules.appDesktopFilePath = appInfo.get_filename();
-                    closeWindowsRules.enabled = false;
+                    const closeWindowsRule = new CloseWindowsRule.CloseWindowsRule();
+                    closeWindowsRule.type = 'shortcut';
+                    closeWindowsRule.value = {};
+                    closeWindowsRule.appId = appInfo.get_id();
+                    closeWindowsRule.appName = appInfo.get_name();
+                    closeWindowsRule.appDesktopFilePath = appInfo.get_filename();
+                    closeWindowsRule.enabled = false;
 
                     const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
                     let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
-                    oldCloseWindowsRulesObj[closeWindowsRules.appDesktopFilePath] = closeWindowsRules;
+                    oldCloseWindowsRulesObj[closeWindowsRule.appDesktopFilePath] = closeWindowsRule;
                     const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
                     this._settings.set_string('close-windows-rules', newCloseWindowsRules);
 
@@ -298,14 +294,6 @@ const RuleRow = GObject.registerClass({
 
         ruleRowBox.append(boxLeft);
         ruleRowBox.append(boxRight);
-        
-        // TODO Not used, can be deleted?
-        this.connect('notify::value',
-            () => this.activate_action('rules.update', new GLib.Variant('a{sv}', {
-                appDesktopFilePath: GLib.Variant.new_string(this.appDesktopFilePath),
-                enabled: GLib.Variant.new_boolean(this._enabledCheckButton.get_active()),
-                // value: this.value,
-            })));
 
         this.connect('notify::enabled',
             () => {

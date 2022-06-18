@@ -77,6 +77,7 @@ class AwsIndicator extends PanelMenu.Button {
         
     }
 
+    // TODO Move this method and related code to a single .js file
     _windowCreated(display, metaWindow, userData) {
         if (!Meta.is_wayland_compositor()) {
             // We call createEnoughWorkspaceAndMoveWindows() if and only if all conditions checked.
