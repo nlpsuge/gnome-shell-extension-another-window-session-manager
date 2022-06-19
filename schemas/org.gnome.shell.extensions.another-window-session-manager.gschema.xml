@@ -17,6 +17,12 @@
       
       </description>
     </key>
+    <key name="windows-mapping" type="s">
+      <default>'[]'</default>
+      <summary>The mapping of xid and stable sequence of a window on X11</summary>
+      <description>
+      </description>
+    </key>
     <key name="close-windows-rules" type="s">
       <default>'{}'</default>
       <summary>Rules that are used to close applications</summary>

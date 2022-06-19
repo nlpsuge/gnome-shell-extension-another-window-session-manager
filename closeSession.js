@@ -31,8 +31,6 @@ var CloseSession = class {
             flags: (Gio.SubprocessFlags.STDOUT_PIPE |
                     Gio.SubprocessFlags.STDERR_PIPE)});
 
-        this._openWindows = OpenWindowsInfoTracker.openWindows;
-
         // TODO Put into Settings
         // All apps in the whitelist should be closed safely, no worrying about lost data
         this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'smplayer.desktop'];
@@ -198,28 +196,41 @@ var CloseSession = class {
     }
 
     _activateAndFocusWindow(app) {
-        let activated = false;
-        const openWindows = this._openWindows.get(app);
-        if (openWindows) {
-            openWindows.windows = openWindows.windows.filter(savedWindow => {
-                return app.get_windows().find(w => w === savedWindow);
-            });
-            
-            if (openWindows.windows.length > 0) {
-                const window = openWindows.windows[openWindows.windows.length - 1];
-                this._log.info(`Activating the saved and running window ${window.get_title()} of ${app.get_name()}`);
-                Main.activateWindow(window);
-                activated = true;
-            }
-        }
+        const savedWindowsMappingJsonStr = this._settings.get_string('windows-mapping');
+        const savedWindowsMapping = new Map(JSON.parse(savedWindowsMappingJsonStr));
 
-        // Fall back to the normal way
-        if (!activated) {
-            const windows = app.get_windows();
-            const window = windows[0];
-            this._log.info(`Activating the running window ${window.get_title()} of ${app.get_name()}`);
-            Main.activateWindow(window);
-        }
+        const app_info = shellApp.get_app_info();
+        const desktopFullPath = app_info.get_filename();
+        const xidObj = savedWindowsMapping.get(desktopFullPath);
+        const windows = app.get_windows();
+        windows.sort((w1, w2) => {
+            const xid1 = w1.get_description();
+            const value1 = xidObj[xid1];
+            const windowStableSequence1 = value1.windowStableSequence;
+
+            const xid2 = w2.get_description();
+            const value2 = xidObj[xid2];
+            const windowStableSequence2 = value2.windowStableSequence;
+
+            const diff = windowStableSequence1 - windowStableSequence2;
+            if (diff === 0) {
+                return 0;
+            }
+
+            if (diff > 0) {
+                return 1;
+            }
+
+            if (diff < 0) {
+                return -1;
+            }
+
+        });
+
+        const topLevelWindow = windows[windows.length - 1];
+        this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
+        Main.activateWindow(topLevelWindow);
+        
     }
 
     _skip_multiple_windows(shellApp) {
