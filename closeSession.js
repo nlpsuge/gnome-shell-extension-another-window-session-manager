@@ -199,7 +199,7 @@ var CloseSession = class {
         const savedWindowsMappingJsonStr = this._settings.get_string('windows-mapping');
         const savedWindowsMapping = new Map(JSON.parse(savedWindowsMappingJsonStr));
 
-        const app_info = shellApp.get_app_info();
+        const app_info = app.get_app_info();
         const desktopFullPath = app_info.get_filename();
         const xidObj = savedWindowsMapping.get(desktopFullPath);
         const windows = app.get_windows();
