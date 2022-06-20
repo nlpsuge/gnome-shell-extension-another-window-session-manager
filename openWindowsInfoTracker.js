@@ -2,8 +2,6 @@
 
 const { Shell, Meta, Gio, GLib } = imports.gi;
 
-const ByteArray = imports.byteArray;
-
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -20,47 +18,11 @@ var OpenWindowsInfoTracker = class {
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
 
-        const SystemdLoginManagerIface = ByteArray.toString(
-            Me.dir.get_child('dbus-interfaces').get_child('org.freedesktop.login1.Manager.xml').load_contents(null)[1]);
-        const SystemdLoginManager = Gio.DBusProxy.makeProxyWrapper(SystemdLoginManagerIface);
-        this._proxy = new SystemdLoginManager(Gio.DBus.system,
-                                              'org.freedesktop.login1',
-                                              '/org/freedesktop/login1');
-        this._proxy.connectSignal('UserNew', this._userNew.bind(this));
-        this._proxy.connectSignal('UserRemoved', this._userRemove.bind(this));
-        this._proxy.connectSignal('PrepareForShutdown', this._prepareForShutdown.bind(this));
+        this._appSystem = Shell.AppSystem.get_default();
+        this._appSystem.connect('app-state-changed', this._cleanUp.bind(this));
 
         this._display = global.display;
         this._displayId = this._display.connect('window-created', this._windowCreated.bind(this));
-              
-    }
-
-    _userNew(proxy, sender, [uid, object_path]) {
-        log('_userNew');
-        log(uid);
-        log(object_path);
-    }
-
-    _userRemove(proxy, sender, [uid, object_path]) {
-        log('_userRemove');
-        log(uid);
-        log(object_path);
-    }
-
-    _prepareForShutdown(proxy, sender, [aboutToShutdown]) {
-        log(`Cleaning windows-mapping before shutdown or reboot. ${aboutToShutdown}`);
-        this._settings.set_string('windows-mapping', '{}');
-    }
-
-    async inhibit(reason, cancellable) {
-        log('inhibit ddd')
-        const inVariant = new GLib.Variant('(ssss)',
-            ['sleep', 'GNOME Shell ex', reason, 'delay']);
-        const [outVariant_, fdList] =
-            await this._proxy.call_with_unix_fd_list('Inhibit',
-                inVariant, 0, -1, null, cancellable);
-        const [fd] = fdList.steal_fds();
-        return new Gio.UnixInputStream({ fd });
     }
     
     _windowCreated(display, metaWindow, userData) {
@@ -85,12 +47,21 @@ var OpenWindowsInfoTracker = class {
         }
         const desktopFullPath = app_info.get_filename();
         let xidObj = savedWindowsMapping.get(desktopFullPath);
-        if (xidObj && !xidObj[xid]) {
-            xidObj[xid] = {
-                windowTitle: metaWindow.get_title(),
-                xid: xid,
-                windowStableSequence: windowStableSequence
-            };
+        if (xidObj) {
+            const windows = shellApp.get_windows();
+            const removedXids = Object.keys(xidObj).filter(xid => 
+                !windows.find(w => w.get_description() === xid));
+            removedXids.forEach(xid => {
+                delete xidObj[xid];
+            });
+
+            if (!xidObj[xid]){
+                xidObj[xid] = {
+                    windowTitle: metaWindow.get_title(),
+                    xid: xid,
+                    windowStableSequence: windowStableSequence
+                };
+            }
         } else {
             if (!xidObj) {
                 xidObj = {};
@@ -103,6 +74,31 @@ var OpenWindowsInfoTracker = class {
             savedWindowsMapping.set(desktopFullPath, xidObj);
         }
 
+        const newSavedWindowsMappingJsonStr = JSON.stringify(Array.from(savedWindowsMapping.entries()));
+        this._settings.set_string('windows-mapping', newSavedWindowsMappingJsonStr);
+        Gio.Settings.sync();
+        
+    }
+
+    _cleanUp(appSys, app) {
+        let state = app.state;
+        if (state != Shell.AppState.STOPPED) {
+            return;
+        }
+        
+        const app_info = app.get_app_info();
+        if (!app_info) {
+            return;
+        }
+
+        const savedWindowsMappingJsonStr = this._settings.get_string('windows-mapping');
+        if (savedWindowsMappingJsonStr === '{}') {
+            return;
+        } 
+        
+        let savedWindowsMapping = new Map(JSON.parse(savedWindowsMappingJsonStr));
+        const desktopFullPath = app_info.get_filename();
+        savedWindowsMapping.delete(desktopFullPath);
         const newSavedWindowsMappingJsonStr = JSON.stringify(Array.from(savedWindowsMapping.entries()));
         this._settings.set_string('windows-mapping', newSavedWindowsMappingJsonStr);
         Gio.Settings.sync();
