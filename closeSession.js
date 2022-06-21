@@ -59,7 +59,8 @@ var CloseSession = class {
             this._log.debug(`Skipping ${app.get_name()} because it has more than one windows`);
         } else {
             this._log.debug(`Closing ${app.get_name()}`);
-            app.request_quit();    
+            app.get_windows().forEach(w => w._aboutToClose = true);
+            app.request_quit();
         }
     }
 

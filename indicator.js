@@ -133,6 +133,10 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
 
+            if (metaWindow._aboutToClose) {
+                return;
+            }
+
             const shellApp = this._windowTracker.get_window_app(metaWindow);
             if (!shellApp) {
                 return;
@@ -163,6 +167,10 @@ class AwsIndicator extends PanelMenu.Button {
         let shownId = metaWindow.connect('shown', () => {
             if (this._isDestroyed) {
                 metaWindow.disconnect(shownId);
+                return;
+            }
+
+            if (metaWindow._aboutToClose) {
                 return;
             }
 
