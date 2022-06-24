@@ -102,22 +102,10 @@ var CloseSession = class {
                 const hiddenId = Main.overview.connect('hidden', 
                     () => {
                         Main.overview.disconnect(hiddenId);
-                        const result = this._activateAndCloseWindows(app, keycodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
-                        if (!result) {
-                            // Fallback to close it again in the normal way
-                            this._closeOneApp(app);
-                        } else {
-                            this._tryCloseAppsByRules(running_apps_closing_by_rules);
-                        }
+                        this._activateAndCloseWindows(app, keycodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
                     });
             } else {
-                const result = this._activateAndCloseWindows(app, keycodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
-                if (!result) {
-                    // Fallback to close it again in the normal way
-                    this._closeOneApp(app);
-                } else {
-                    this._tryCloseAppsByRules(running_apps_closing_by_rules);
-                }
+                this._activateAndCloseWindows(app, keycodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
             }
             
         }
@@ -151,6 +139,8 @@ var CloseSession = class {
 
     _activateAndCloseWindows(app, linuxKeyCodesSegments, shortcutsOriginal, running_apps_closing_by_rules) {
         if (!linuxKeyCodesSegments || linuxKeyCodesSegments.length === 0) {
+            // Proceed the next rule
+            this._tryCloseAppsByRules(running_apps_closing_by_rules);
             return;
         }
         const linuxKeyCodes = linuxKeyCodesSegments.shift();  
@@ -167,10 +157,8 @@ var CloseSession = class {
         SubprocessUtils.trySpawnAsync(cmd, (output) => {
             this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
             this._activateAndCloseWindows(app, linuxKeyCodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
-            return true;
         }, (output) => {
             this._log.info(`Failed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
-            return false;
         });
     }
 

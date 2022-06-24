@@ -2,11 +2,17 @@
 
 const { Shell, Meta, Gio, GLib } = imports.gi;
 
+const ByteArray = imports.byteArray;
+
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const Log = Me.imports.utils.log;
 const PrefsUtils = Me.imports.utils.prefsUtils;
+
+const EndSessionDialogIface = ByteArray.toString(
+    Me.dir.get_child('dbus-interfaces').get_child('org.gnome.SessionManager.EndSessionDialog.xml').load_contents(null)[1]);
+const EndSessionDialogProxy = Gio.DBusProxy.makeProxyWrapper(EndSessionDialogIface);
 
 var OpenWindowsInfoTracker = class {
 
@@ -18,11 +24,27 @@ var OpenWindowsInfoTracker = class {
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
 
-        this._appSystem = Shell.AppSystem.get_default();
-        this._appSystem.connect('app-state-changed', this._cleanUp.bind(this));
+        this._endSessionProxy = new EndSessionDialogProxy(Gio.DBus.session,
+                                           'org.gnome.SessionManager.EndSessionDialog',
+                                           '/org/gnome/SessionManager/EndSessionDialog');
+        
+        this._endSessionProxy.connectSignal('ConfirmedLogout', this._resetWindowsMapping.bind(this));
+        this._endSessionProxy.connectSignal('ConfirmedReboot', this._resetWindowsMapping.bind(this));
+        this._endSessionProxy.connectSignal('ConfirmedShutdown', this._resetWindowsMapping.bind(this));
+        this._endSessionProxy.connectSignal('Closed', this._close.bind(this));
+        this._endSessionProxy.connectSignal('Canceled', this._close.bind(this));
 
         this._display = global.display;
         this._displayId = this._display.connect('window-created', this._windowCreated.bind(this));
+    }
+
+    _close() {
+        log(`_close`);
+    }
+
+    _resetWindowsMapping(proxy, sender, [aboutToShutdown]) {
+        log(`Resetting windows-mapping before logout / shutdown / reboot. ${aboutToShutdown}`);
+        this._settings.set_string('windows-mapping', '{}');
     }
     
     _windowCreated(display, metaWindow, userData) {
@@ -80,39 +102,10 @@ var OpenWindowsInfoTracker = class {
         
     }
 
-    _cleanUp(appSys, app) {
-        let state = app.state;
-        if (state != Shell.AppState.STOPPED) {
-            return;
-        }
-        
-        const app_info = app.get_app_info();
-        if (!app_info) {
-            return;
-        }
-
-        const savedWindowsMappingJsonStr = this._settings.get_string('windows-mapping');
-        if (savedWindowsMappingJsonStr === '{}') {
-            return;
-        } 
-        
-        let savedWindowsMapping = new Map(JSON.parse(savedWindowsMappingJsonStr));
-        const desktopFullPath = app_info.get_filename();
-        savedWindowsMapping.delete(desktopFullPath);
-        const newSavedWindowsMappingJsonStr = JSON.stringify(Array.from(savedWindowsMapping.entries()));
-        this._settings.set_string('windows-mapping', newSavedWindowsMappingJsonStr);
-        Gio.Settings.sync();
-    }
-
     destroy() {
         if (this._displayId) {
             this._display.disconnect(this._displayId);
             this._displayId = 0;
-        }
-        
-        if (this._metaRestartId) {
-            this._display.disconnect(this._metaRestartId);
-            this._metaRestartId = 0;
         }
 
     }
