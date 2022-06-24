@@ -25,25 +25,39 @@ var OpenWindowsInfoTracker = class {
         this._settings = this._prefsUtils.getSettings();
 
         this._endSessionProxy = new EndSessionDialogProxy(Gio.DBus.session,
-                                           'org.gnome.SessionManager.EndSessionDialog',
-                                           '/org/gnome/SessionManager/EndSessionDialog');
+                                                          'org.gnome.Shell',
+                                                          '/org/gnome/SessionManager/EndSessionDialog');
         
-        this._endSessionProxy.connectSignal('ConfirmedLogout', this._resetWindowsMapping.bind(this));
-        this._endSessionProxy.connectSignal('ConfirmedReboot', this._resetWindowsMapping.bind(this));
-        this._endSessionProxy.connectSignal('ConfirmedShutdown', this._resetWindowsMapping.bind(this));
-        this._endSessionProxy.connectSignal('Closed', this._close.bind(this));
-        this._endSessionProxy.connectSignal('Canceled', this._close.bind(this));
+        this._endSessionProxy.connectSignal('ConfirmedLogout', this._onConfirmedLogout.bind(this));
+        this._endSessionProxy.connectSignal('ConfirmedReboot', this._onConfirmedReboot.bind(this));
+        this._endSessionProxy.connectSignal('ConfirmedShutdown', this._onConfirmedShutdown.bind(this));
+        this._endSessionProxy.connectSignal('Closed', this._onClose.bind(this));
+        this._endSessionProxy.connectSignal('Canceled', this._onCancel.bind(this));
 
         this._display = global.display;
         this._displayId = this._display.connect('window-created', this._windowCreated.bind(this));
     }
 
-    _close() {
-        log(`_close`);
+    _onClose() {
+        this._log.debug(`User closed endSessionDialog`);
     }
 
-    _resetWindowsMapping(proxy, sender, [aboutToShutdown]) {
-        log(`Resetting windows-mapping before logout / shutdown / reboot. ${aboutToShutdown}`);
+    _onCancel() {
+        this._log.debug(`User cancel endSessionDialog`);
+    }
+
+    _onConfirmedLogout(proxy, sender) {
+        this._log.debug(`Resetting windows-mapping before logout.`);
+        this._settings.set_string('windows-mapping', '{}');
+    }
+
+    _onConfirmedReboot(proxy, sender) {
+        this._log.debug(`Resetting windows-mapping before reboot.`);
+        this._settings.set_string('windows-mapping', '{}');
+    }
+
+    _onConfirmedShutdown(proxy, sender) {
+        this._log.debug(`Resetting windows-mapping before shutdown.`);
         this._settings.set_string('windows-mapping', '{}');
     }
     
