@@ -100,11 +100,11 @@ const Prefs = GObject.registerClass(
                 this._installAutostartDesktopFile();
             });
 
-            this._settings.connect('changed::enable-close-by-rules', (settings) => {
-                if (this._settings.get_boolean('enable-close-by-rules')) {
-                    this._install_udev_rules_for_ydotool();
-                }
-            });
+            // this._settings.connect('changed::enable-close-by-rules', (settings) => {
+            //     if (this._settings.get_boolean('enable-close-by-rules')) {
+            //         this._install_udev_rules_for_ydotool();
+            //     }
+            // });
 
         }
 

@@ -19,6 +19,19 @@ function readOutput(stream, lineBuffer) {
     });
 }
 
+var trySpawn = function(commandLineArray, callBackOnSuccess, callBackOnFailure) {
+    return new Promise((resolve, reject) => {
+        trySpawnAsync(commandLineArray, 
+            (output) => {
+                callBackOnSuccess();
+                resolve();
+            }, 
+            (output) => {
+                callBackOnFailure();
+                reject();
+            })
+    });
+}
 // Based on:
 // 1. https://gjs.guide/guides/gio/subprocesses.html#asynchronous-communication
 // 2. https://gitlab.gnome.org/GNOME/gnome-shell/blob/8fda3116f03d95fabf3fac6d082b5fa268158d00/js/misc/util.js:L111

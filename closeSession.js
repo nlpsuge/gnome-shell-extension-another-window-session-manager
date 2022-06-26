@@ -67,7 +67,7 @@ var CloseSession = class {
     _tryCloseAppsByRules(running_apps_closing_by_rules) {
         if (!running_apps_closing_by_rules || running_apps_closing_by_rules.length === 0) {
             return;
-        } 
+        }
 
         const app = running_apps_closing_by_rules.shift();
 
@@ -154,12 +154,13 @@ var CloseSession = class {
         this._log.info(`Closing the app ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
         
         this._activateAndFocusWindow(app);
-        SubprocessUtils.trySpawnAsync(cmd, (output) => {
+        SubprocessUtils.trySpawnAsync(cmd, 
+            (output) => {
             this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
             this._activateAndCloseWindows(app, linuxKeyCodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
-        }, (output) => {
-            this._log.info(`Failed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
-        });
+            }, (output) => {
+                this._log.error(new Error(`Failed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`));
+            });
     }
 
     _getRunningAppsClosingByRules() {
@@ -217,9 +218,10 @@ var CloseSession = class {
         });
 
         const topLevelWindow = windows[windows.length - 1];
-        this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
-        Main.activateWindow(topLevelWindow);
-        
+        if (topLevelWindow) {
+            this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
+            Main.activateWindow(topLevelWindow);
+        }
     }
 
     _skip_multiple_windows(shellApp) {

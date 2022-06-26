@@ -56,7 +56,7 @@
                     <child>
                       <object class="GtkLabel" id="close_by_rules_multi_label_description">
                         <property name="hexpand">1</property>
-                        <property name="label" translatable="yes">Authentication may be required to install the udev rules to make `ydotool` work under the naumal user</property>
+                        <property name="label" translatable="yes">To make this feature work, see: &lt;a href='https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work'&gt;How to make `Close by rules` work&lt;/a&gt;</property>
                         <property name="wrap">True</property>
                         <property name="use-markup">1</property>
                         <property name="xalign">0</property>
