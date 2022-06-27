@@ -4,10 +4,13 @@ const { Gtk, GObject, Gio, GLib } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
+const SubprocessUtils = Me.imports.utils.subprocessUtils;
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 
 Me.imports.utils.string;
+
+const PrefsCloseWindow = Me.imports.prefsCloseWindow;
 
 const Prefs = GObject.registerClass(
     {
@@ -23,9 +26,11 @@ const Prefs = GObject.registerClass(
             this._log = new Log.Log();
 
             this.render_ui();
+            new PrefsCloseWindow.UICloseWindows(this._builder).init();
             this._bindSettings();
             
             // Set sensitive AFTER this._bindSettings() to make it work
+            
             const restore_at_startup_switch_state = this._settings.get_boolean('enable-autorestore-sessions');
             this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(restore_at_startup_switch_state);
             this.autostart_delay_spinbutton.set_sensitive(restore_at_startup_switch_state);
@@ -33,6 +38,7 @@ const Prefs = GObject.registerClass(
             this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(
                 !this._settings.get_boolean('restore-at-startup-without-asking')
             );
+            
         }
 
         _bindSettings() {
@@ -65,9 +71,23 @@ const Prefs = GObject.registerClass(
             );
 
             this._settings.bind(
+                'restore-session-interval',
+                this.restore_session_interval_spinbutton,
+                'value',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
                 'autostart-delay',
                 this.autostart_delay_spinbutton,
                 'value',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
+                'enable-close-by-rules',
+                this.close_by_rules_switch,
+                'active',
                 Gio.SettingsBindFlags.DEFAULT
             );
 
@@ -87,6 +107,12 @@ const Prefs = GObject.registerClass(
                 this._installAutostartDesktopFile();
             });
 
+            // this._settings.connect('changed::enable-close-by-rules', (settings) => {
+            //     if (this._settings.get_boolean('enable-close-by-rules')) {
+            //         this._install_udev_rules_for_ydotool();
+            //     }
+            // });
+
         }
 
         render_ui() {
@@ -97,6 +123,7 @@ const Prefs = GObject.registerClass(
 
             this.debugging_mode_switch = this._builder.get_object('debugging_mode_switch');
 
+            this.restore_session_interval_spinbutton = this._builder.get_object('restore_session_interval_spinbutton');
             this.timer_on_the_autostart_dialog_spinbutton = this._builder.get_object('timer_on_the_autostart_dialog_spinbutton');
             this.autostart_delay_spinbutton = this._builder.get_object('autostart_delay_spinbutton');
 
@@ -120,7 +147,41 @@ const Prefs = GObject.registerClass(
                 const active = widget.active;
                 this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(!active);           
             });
-            
+
+            this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
+
+        }
+
+        _install_udev_rules_for_ydotool() {
+            // Check the `/dev/uinput` permission of `read` and `write`
+            const uinputFile = Gio.File.new_for_path('/dev/uinput');
+            let info = uinputFile.query_info(
+                    [Gio.FILE_ATTRIBUTE_ACCESS_CAN_READ, 
+                        Gio.FILE_ATTRIBUTE_ACCESS_CAN_WRITE].join(','),
+                    Gio.FileQueryInfoFlags.NONE,
+                    null);
+
+            const readable = info.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_READ);
+            const writable = info.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_WRITE);
+            if (readable && writable) {
+                return;
+            }
+
+            // Copy `60-awsm-ydotool-input.rules` to `/etc/udev/rules.d/`
+            const pkexecPath = GLib.find_program_in_path('pkexec');
+            const cmd = [pkexecPath,
+                         GLib.build_filenamev([Me.path, '/bin/install-udev-rules-for-ydotool.sh']),
+                         FileUtils.desktop_template_path_ydotool_uinput_rules, 
+                         FileUtils.system_udev_rules_path_ydotool_uinput_rules,
+                        ];
+            SubprocessUtils.trySpawnAsync(cmd, (output) => {
+                this._log.info(`Installed the udev uinput rules ${FileUtils.desktop_template_path_ydotool_uinput_rules} to ${FileUtils.system_udev_rules_path_ydotool_uinput_rules}! This rule should take effect after relogin or reboot.`);    
+                // TODO Send notification
+            }, (output) => {
+                this._settings.set_boolean('enable-close-by-rules', false);
+                this._log.error(new Error(output), `Failed to install the udev uinput rules '${FileUtils.desktop_template_path_ydotool_uinput_rules}'`)
+                // TODO Send notification
+            });
         }
 
         _installAutostartDesktopFile() {
@@ -142,10 +203,10 @@ const Prefs = GObject.registerClass(
                 if (success) {
                     this._log.info(`Installed the autostart desktop file: ${FileUtils.autostart_restore_desktop_file_path}!`);
                 } else {
-                    this._log.error(`Failed to install the autostart desktop file: ${FileUtils.autostart_restore_desktop_file_path}`)
+                    this._log.error(new Error(`Failed to install the autostart desktop file: ${FileUtils.autostart_restore_desktop_file_path}`))
                 }
             } else {
-                this._log.error(`Failed to create folder: ${autostart_restore_desktop_file_path_parent}`);
+                this._log.error(new Error(`Failed to create folder: ${autostart_restore_desktop_file_path_parent}`));
             }
         }
         

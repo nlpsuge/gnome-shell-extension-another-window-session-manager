@@ -20,7 +20,10 @@ var desktop_file_store_path = `${desktop_file_store_path_base}/__another-window-
 var recently_closed_session_name = 'Recently Closed Session';
 var recently_closed_session_path = GLib.build_filenamev([sessions_path, recently_closed_session_name]);
 
-var autostart_restore_desktop_file_path = GLib.build_filenamev([home_dir,'/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop']);
+var autostart_restore_desktop_file_path = GLib.build_filenamev([home_dir, '/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop']);
+
+var desktop_template_path_ydotool_uinput_rules = GLib.build_filenamev([Me.path, '/template/60-awsm-ydotool-uinput.rules']);
+var system_udev_rules_path_ydotool_uinput_rules = '/etc/udev/rules.d/60-awsm-ydotool-uinput.rules';
 
 
 function get_sessions_path() {
@@ -60,13 +63,13 @@ function listAllSessions(sessionPath, recursion, debug, callback) {
     let fileEnumerator;
     try {
         fileEnumerator = sessionPathFile.enumerate_children(
-            [Gio.FILE_ATTRIBUTE_STANDARD_NAME, 
-                Gio.FILE_ATTRIBUTE_STANDARD_TYPE, 
-                Gio.FILE_ATTRIBUTE_TIME_MODIFIED,
-                Gio.FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE].join(','),
+            [Gio.FILE_ATTRIBUTE_STANDARD_NAME,
+            Gio.FILE_ATTRIBUTE_STANDARD_TYPE,
+            Gio.FILE_ATTRIBUTE_TIME_MODIFIED,
+            Gio.FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE].join(','),
             Gio.FileQueryInfoFlags.NONE,
             null);
-    } catch(e) {
+    } catch (e) {
         logError(e, `Failed to list directory ${sessionPath}`);
         fileEnumerator = null;
     }
@@ -87,7 +90,7 @@ function listAllSessions(sessionPath, recursion, debug, callback) {
             }
         }
     }
-    
+
 }
 
 function sessionExists(sessionName) {
@@ -102,7 +105,7 @@ function trashSession(sessionName) {
     if (!sessionExists(sessionName)) {
         return true;
     }
-    
+
     let trashed = false;
     const sessionFilePath = GLib.build_filenamev([sessions_path, sessionName]);
     try {
@@ -112,7 +115,7 @@ function trashSession(sessionName) {
             logError(new Error(`Failed to trash file ${sessionFilePath}. Reason: Unknown.`));
         }
         return trashed;
-    } catch(e) {
+    } catch (e) {
         logError(e, `Failed to trash file ${sessionFilePath}`);
         return false;
     }

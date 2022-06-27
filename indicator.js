@@ -32,8 +32,8 @@ class AwsIndicator extends PanelMenu.Button {
         this._windowTracker = Shell.WindowTracker.get_default();
 
         this._prefsUtils = new PrefsUtils.PrefsUtils();
-        this._log = new Log.Log();
         this._settings = this._prefsUtils.getSettings();
+        this._log = new Log.Log();
 
         this._signal = new Signal.Signal();
         
@@ -77,6 +77,7 @@ class AwsIndicator extends PanelMenu.Button {
         
     }
 
+    // TODO Move this method and related code to a single .js file
     _windowCreated(display, metaWindow, userData) {
         if (!Meta.is_wayland_compositor()) {
             // We call createEnoughWorkspaceAndMoveWindows() if and only if all conditions checked.
@@ -132,6 +133,10 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
 
+            if (metaWindow._aboutToClose) {
+                return;
+            }
+
             const shellApp = this._windowTracker.get_window_app(metaWindow);
             if (!shellApp) {
                 return;
@@ -162,6 +167,10 @@ class AwsIndicator extends PanelMenu.Button {
         let shownId = metaWindow.connect('shown', () => {
             if (this._isDestroyed) {
                 metaWindow.disconnect(shownId);
+                return;
+            }
+
+            if (metaWindow._aboutToClose) {
                 return;
             }
 
@@ -264,7 +273,7 @@ class AwsIndicator extends PanelMenu.Button {
     _addSessionItems() {
         if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
             // TODO Empty session
-            log(`${this._sessions_path} not found! It's harmless, please save some windows in the panel menu to create it automatically.`);
+            this._log.info(`${this._sessions_path} not found! It's harmless, please save some windows in the panel menu to create it automatically.`);
             return;
         }
 

@@ -62,7 +62,37 @@ To modify the delay, timer, and how to restore a session:
 1. Search saved session by the session name fuzzily
 1. ...
 
-## How to `Restore a session at startup`?
+## Close windows
+
+### How to make `Close by rules` work
+
+```bash
+# 1. Install `ydotool` using the package manager and make sure the version is greater than v1.0.0
+sudo dnf install ydotool
+#Or install it from the source code: https://github.com/ReimuNotMoe/ydotool 
+
+#Check the permission of `/dev/uinput`, if it's `crw-rw----+`, you can skip step 2
+# 2. Get permission to access to `/dev/uinput` as the normal user
+sudo touch /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
+sudo echo '# See:
+     # https://github.com/ValveSoftware/steam-devices/blob/master/60-steam-input.rules 
+     # https://github.com/ReimuNotMoe/ydotool/issues/25
+
+     # ydotool udev write access
+     KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' > /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
+#Remove executable permission (a.k.a. x)
+sudo chmod 644 /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
+
+# 3. Autostart the ydotoold service under the normal user
+sudo cp /usr/lib/systemd/system/ydotool.service /usr/lib/systemd/user
+sudo systemctl --user enable ydotool.service
+```
+
+And then reboot the system to take effect. Relogin maybe work too.
+
+## Restore sessions
+
+### How to `Restore a session at startup`?
 
 To make it work, you must enable it through `Restore sessions -> Restore at startup` in the Preferences AND active a session by clicking <img src=https://user-images.githubusercontent.com/2271720/162792222-0fc7e6ca-1382-49cf-975a-f53d878d0479.png width="24" height="13"> in the popup menu.
 
@@ -91,9 +121,17 @@ Please do not modify `_gnome-shell-extension-another-window-session-manager.desk
 
 
 # Dependencies
-This project uses `ps` and `pwdx` to get some information from a process, install it via `dnf install procps-ng` if you don't have.
+* procps-ng
 
-And it uses `gdbus` to call the remote method, which is provided by this exension, to implement the `restore at start` feature. `gdbus` is part of `glib2`.
+Use `ps` and `pwdx` to get some information from a process, install it via `dnf install procps-ng` if you don't have.
+
+* glib2
+
+Use `gdbus` to call the remote method, which is provided by this exension, to implement the `restore at start` feature. `gdbus` is part of `glib2`.
+
+* ydotool
+
+Send keys to close the application with multiple windows.
 
 # Known issues
 
