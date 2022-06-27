@@ -70,7 +70,7 @@ var RestoreSession = class {
             
             this._restoreSessionTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 
                 // In milliseconds. 
-                // Note that this timing might not precise, see https://gjs-docs.gnome.org/glib20~2.66.1/glib.timeout_add
+                // Note that this timing might not be precise, see https://gjs-docs.gnome.org/glib20~2.66.1/glib.timeout_add
                 this._restore_session_interval,
                 () => {
                     if (session_config_objects.length === 0) {
