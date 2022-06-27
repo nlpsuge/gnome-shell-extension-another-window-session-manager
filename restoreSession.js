@@ -10,6 +10,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
+const PrefsUtils = Me.imports.utils.prefsUtils;
 
 // All launching apps by Shell.App#launch()
 var restoringApps = new Map();
@@ -18,11 +19,14 @@ var RestoreSession = class {
 
     constructor() {
         this._log = new Log.Log();
+        this._prefsUtils = new PrefsUtils.PrefsUtils();
+        this._settings = this._prefsUtils.getSettings();
 
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
-        this._windowTracker = Shell.WindowTracker.get_default();        
+        this._windowTracker = Shell.WindowTracker.get_default();   
 
+        this._restore_session_interval = this._settings.get_int('restore-session-interval');
 
         // All launched apps info by Shell.App#launch()
         this._restoredApps = new Map();
@@ -64,73 +68,85 @@ var RestoreSession = class {
                 return;
             }
             
-            for (const session_config_object of session_config_objects) {
-                const app_name = session_config_object.app_name;
-                let launched = false;
-                let running = false;
-                try {
-                    const desktop_file_id = session_config_object.desktop_file_id;
-                    if (desktop_file_id) {
-                        const shell_app = this._defaultAppSystem.lookup_app(desktop_file_id)
-                        if (shell_app) {
-                            const restoringShellAppData = restoringApps.get(shell_app);
-                            if (restoringShellAppData) {
-                                restoringShellAppData.saved_window_sessions.push(session_config_object);
-                            } else {
-                                restoringApps.set(shell_app, {
-                                    saved_window_sessions: [session_config_object]
-                                });
-                            }
-                            
-                            [launched, running] = this.launch(shell_app);
-                            if (launched) {
-                                if (!running) {
-                                    this._log.info(`${app_name} launched!`);
-                                }
-                                const existingShellAppData = this._restoredApps.get(shell_app);
-                                if (existingShellAppData) {
-                                    existingShellAppData.saved_window_sessions.push(session_config_object);
-                                } else {
-                                    this._restoredApps.set(shell_app, {
-                                        saved_window_sessions: [session_config_object]
-                                    });
-                                }
-                            } else {
-                                logError(new Error(`Failed to restore ${app_name}`, `Cannot find ${desktop_file_id}.`));
-                                global.notify_error(`Failed to restore ${app_name}`, `Reason: Cannot find ${desktop_file_id}.`);
-                            }
+            this._restoreSessionTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 
+                // In milliseconds. 
+                // Note that this timing might not precise, see https://gjs-docs.gnome.org/glib20~2.66.1/glib.timeout_add
+                this._restore_session_interval,
+                () => {
+                    if (session_config_objects.length === 0) {
+                        return GLib.SOURCE_REMOVE;
+                    }
+                    this._restoreSessionOne(session_config_objects.shift());
+                    return GLib.SOURCE_CONTINUE;
+                }
+            );
+        }
+       
+    }
+
+    _restoreSessionOne(session_config_object) {
+        const app_name = session_config_object.app_name;
+        let launched = false;
+        let running = false;
+        try {
+            const desktop_file_id = session_config_object.desktop_file_id;
+            if (desktop_file_id) {
+                const shell_app = this._defaultAppSystem.lookup_app(desktop_file_id)
+                if (shell_app) {
+                    const restoringShellAppData = restoringApps.get(shell_app);
+                    if (restoringShellAppData) {
+                        restoringShellAppData.saved_window_sessions.push(session_config_object);
+                    } else {
+                        restoringApps.set(shell_app, {
+                            saved_window_sessions: [session_config_object]
+                        });
+                    }
+                    
+                    [launched, running] = this.launch(shell_app);
+                    if (launched) {
+                        if (!running) {
+                            this._log.info(`${app_name} launched!`);
+                        }
+                        const existingShellAppData = this._restoredApps.get(shell_app);
+                        if (existingShellAppData) {
+                            existingShellAppData.saved_window_sessions.push(session_config_object);
                         } else {
-                            logError(new Error(`Failed to restore ${app_name}. Reason: don't find Shell.App by ${desktop_file_id}, App is not installed or something is wrong in ${desktop_file_id}?`));
-                            global.notify_error(`Failed to restore ${app_name}`, `Reason: don't find Shell.App by ${desktop_file_id}. App is not installed or something is wrong in ${desktop_file_id}?`);
+                            this._restoredApps.set(shell_app, {
+                                saved_window_sessions: [session_config_object]
+                            });
                         }
                     } else {
-                        // TODO check running state to skip running apps
-    
-                        const cmd = session_config_object.cmd;
-                        if (cmd && cmd.length !== 0) {
-                            const cmdString = cmd.join(' ');
-                            Util.trySpawnCommandLine(cmdString);
-                            launched = true;
-                            // Important log. Indicate that this app may has no .desktop file, need to be handled specially.
-                            this._log.info(`${app_name} launched via command line ${cmdString}!`);
-                        } else {
-                            // TODO try to launch via app_info by searching the app name?
-                            let errorMsg = `Empty command line for ${app_name}`;
-                            logError(new Error(errorMsg), `Invalid command line: ${cmd}`);
-                            global.notify_error(errorMsg, `Invalid command line: ${cmd}`);
-                        }
+                        logError(new Error(`Failed to restore ${app_name}`, `Cannot find ${desktop_file_id}.`));
+                        global.notify_error(`Failed to restore ${app_name}`, `Reason: Cannot find ${desktop_file_id}.`);
                     }
+                } else {
+                    logError(new Error(`Failed to restore ${app_name}. Reason: don't find Shell.App by ${desktop_file_id}, App is not installed or something is wrong in ${desktop_file_id}?`));
+                    global.notify_error(`Failed to restore ${app_name}`, `Reason: don't find Shell.App by ${desktop_file_id}. App is not installed or something is wrong in ${desktop_file_id}?`);
+                }
+            } else {
+                // TODO check running state to skip running apps
 
-                } catch (e) {
-                    logError(e, `Failed to restore ${app_name}`);
-                    if (!launched) {
-                        global.notify_error(`Failed to restore ${app_name}`, e.message);
-                    }
+                const cmd = session_config_object.cmd;
+                if (cmd && cmd.length !== 0) {
+                    const cmdString = cmd.join(' ');
+                    Util.trySpawnCommandLine(cmdString);
+                    launched = true;
+                    // Important log. Indicate that this app may has no .desktop file, need to be handled specially.
+                    this._log.info(`${app_name} launched via command line ${cmdString}!`);
+                } else {
+                    // TODO try to launch via app_info by searching the app name?
+                    let errorMsg = `Empty command line for ${app_name}`;
+                    logError(new Error(errorMsg), `Invalid command line: ${cmd}`);
+                    global.notify_error(errorMsg, `Invalid command line: ${cmd}`);
                 }
             }
-        }
 
-       
+        } catch (e) {
+            logError(e, `Failed to restore ${app_name}`);
+            if (!launched) {
+                global.notify_error(`Failed to restore ${app_name}`, e.message);
+            }
+        }
     }
 
     launch(shellApp) {
@@ -210,6 +226,10 @@ var RestoreSession = class {
                 obj.disconnect(id);
             }
             this._connectIds = null;
+        }
+
+        if (this._restoreSessionTimeoutId) {
+            this._restoreSessionTimeoutId = null;
         }
         
     }

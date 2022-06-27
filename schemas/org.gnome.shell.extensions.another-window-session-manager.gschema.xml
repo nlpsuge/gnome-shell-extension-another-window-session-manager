@@ -44,6 +44,13 @@
       `~/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop`.
       </description>
     </key>
+    <key name='restore-session-interval' type="i">
+      <default>0</default>
+      <summary>The interval restoring applications</summary>
+      <description>
+      Restore applications at intervals of some milliseconds, up to 5 minutes
+      </description>
+    </key>
     <key name='restore-at-startup-without-asking' type="b">
       <default>false</default>
       <summary>Restore at startup without asking</summary>

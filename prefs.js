@@ -71,6 +71,13 @@ const Prefs = GObject.registerClass(
             );
 
             this._settings.bind(
+                'restore-session-interval',
+                this.restore_session_interval_spinbutton,
+                'value',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
                 'autostart-delay',
                 this.autostart_delay_spinbutton,
                 'value',
@@ -116,6 +123,7 @@ const Prefs = GObject.registerClass(
 
             this.debugging_mode_switch = this._builder.get_object('debugging_mode_switch');
 
+            this.restore_session_interval_spinbutton = this._builder.get_object('restore_session_interval_spinbutton');
             this.timer_on_the_autostart_dialog_spinbutton = this._builder.get_object('timer_on_the_autostart_dialog_spinbutton');
             this.autostart_delay_spinbutton = this._builder.get_object('autostart_delay_spinbutton');
 

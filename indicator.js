@@ -32,8 +32,8 @@ class AwsIndicator extends PanelMenu.Button {
         this._windowTracker = Shell.WindowTracker.get_default();
 
         this._prefsUtils = new PrefsUtils.PrefsUtils();
-        this._log = new Log.Log();
         this._settings = this._prefsUtils.getSettings();
+        this._log = new Log.Log();
 
         this._signal = new Signal.Signal();
         

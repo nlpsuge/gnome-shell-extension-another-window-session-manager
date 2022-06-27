@@ -7,6 +7,12 @@
     <property name="page-increment">10</property>
   </object>
   
+  <object class="GtkAdjustment" id="restore_session_interval_spinbutton_adjustment">
+    <property name="upper">300000</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">100</property>
+  </object>
+
   <object class="GtkAdjustment" id="autostart_delay_adjustment">
     <property name="upper">3600</property>
     <property name="step-increment">1</property>
@@ -235,6 +241,31 @@
                           </object>
                         </child>
                         <child>
+                          <object class="GtkLabel" id="restore_session_interval_label">
+                            <property name="hexpand">1</property>
+                            <property name="label" translatable="yes">Restore applications interval([0, 300000]ms)</property>
+                            <property name="use-markup">1</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSpinButton" id="restore_session_interval_spinbutton">
+                            <property name="focusable">1</property>
+                            <property name="text" translatable="yes">10</property>
+                            <property name="adjustment">restore_session_interval_spinbutton_adjustment</property>
+                            <property name="numeric">1</property>
+                            <property name="value">0</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
                           <object class="GtkLabel" id="restore_at_startup_without_asking_multi_label">
                             <property name="hexpand">1</property>
                             <property name="label" translatable="yes">Restore at startup without asking</property>
@@ -242,7 +273,7 @@
                             <property name="xalign">0</property>
                             <layout>
                               <property name="column">0</property>
-                              <property name="row">2</property>
+                              <property name="row">3</property>
                             </layout>
                           </object>
                         </child>
@@ -253,7 +284,7 @@
                             <property name="valign">center</property>
                             <layout>
                               <property name="column">1</property>
-                              <property name="row">2</property>
+                              <property name="row">3</property>
                             </layout>
                           </object>
                         </child>
@@ -266,7 +297,7 @@
                             <property name="xalign">0</property>
                             <layout>
                               <property name="column">0</property>
-                              <property name="row">3</property>
+                              <property name="row">4</property>
                             </layout>
                           </object>
                         </child>
@@ -279,7 +310,7 @@
                             <property name="value">10</property>
                             <layout>
                               <property name="column">1</property>
-                              <property name="row">3</property>
+                              <property name="row">4</property>
                             </layout>
                           </object>
                         </child>
@@ -291,7 +322,7 @@
                             <property name="xalign">0</property>
                             <layout>
                               <property name="column">0</property>
-                              <property name="row">4</property>
+                              <property name="row">5</property>
                             </layout>
                           </object>
                         </child>
@@ -304,7 +335,7 @@
                             <property name="value">20</property>
                             <layout>
                               <property name="column">1</property>
-                              <property name="row">4</property>
+                              <property name="row">5</property>
                               <property name="row-span">2</property>
                             </layout>
                           </object>
@@ -321,7 +352,7 @@
                             </style>
                             <layout>
                               <property name="column">0</property>
-                              <property name="row">5</property>
+                              <property name="row">6</property>
                             </layout>
                           </object>
                         </child>
