@@ -73,6 +73,7 @@ sudo dnf install ydotool
 
 #Check the permission of `/dev/uinput`, if it's `crw-rw----+`, you can skip step 2
 # 2. Get permission to access to `/dev/uinput` as the normal user
+sudo touch /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
 sudo echo '# See:
      # https://github.com/ValveSoftware/steam-devices/blob/master/60-steam-input.rules 
      # https://github.com/ReimuNotMoe/ydotool/issues/25

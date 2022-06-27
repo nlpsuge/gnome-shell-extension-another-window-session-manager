@@ -17,6 +17,11 @@ const EndSessionDialogProxy = Gio.DBusProxy.makeProxyWrapper(EndSessionDialogIfa
 var OpenWindowsInfoTracker = class {
 
     constructor() {
+        // Only track windows on X11
+        if (Meta.is_wayland_compositor()) {
+            return;
+        }
+
         this._windowTracker = Shell.WindowTracker.get_default();
         this._defaultAppSystem = Shell.AppSystem.get_default();
 

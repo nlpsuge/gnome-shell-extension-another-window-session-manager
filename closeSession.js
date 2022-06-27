@@ -1,6 +1,6 @@
 'use strict';
 
-const { Shell, Gio, GLib } = imports.gi;
+const { Meta, Shell, Gio, GLib } = imports.gi;
 
 const Main = imports.ui.main;
 const Scripting = imports.ui.scripting;
@@ -186,6 +186,31 @@ var CloseSession = class {
     }
 
     _activateAndFocusWindow(app) {
+        let windows;
+        if (Meta.is_wayland_compositor()) {
+            windows = this._sortWindowsOnWayland(app);
+        } else {
+            windows = this._sortWindowsOnX11(app);
+        }
+
+        const topLevelWindow = windows[windows.length - 1];
+        if (topLevelWindow) {
+            this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
+            Main.activateWindow(topLevelWindow);
+        }
+    }
+
+    _sortWindowsOnWayland(app) {
+        const windows = app.get_windows();
+        windows.sort((w1, w2) => {
+            const windowStableSequence1 = w1.get_stable_sequence();
+            const windowStableSequence2 = w2.get_stable_sequence();
+            return this._compareWindowStableSequence(windowStableSequence1, windowStableSequence2);
+        });
+        return windows;
+    }
+
+    _sortWindowsOnX11(app) {
         const savedWindowsMappingJsonStr = this._settings.get_string('windows-mapping');
         const savedWindowsMapping = new Map(JSON.parse(savedWindowsMappingJsonStr));
 
@@ -196,31 +221,41 @@ var CloseSession = class {
         windows.sort((w1, w2) => {
             const xid1 = w1.get_description();
             const value1 = xidObj[xid1];
-            const windowStableSequence1 = value1.windowStableSequence;
+            let windowStableSequence1;
+            if (value1) {
+                windowStableSequence1 = value1.windowStableSequence;
+            } else {
+                windowStableSequence1 = w1.get_stable_sequence();
+                this._log.warn(`Mapping for this xid ${xid1} and stable sequence does not exist, use sequence ${windowStableSequence1} instead. app name: ${app.get_name()}, window title: ${w1.get_title()}`);
+            }
 
             const xid2 = w2.get_description();
             const value2 = xidObj[xid2];
-            const windowStableSequence2 = value2.windowStableSequence;
-
-            const diff = windowStableSequence1 - windowStableSequence2;
-            if (diff === 0) {
-                return 0;
+            let windowStableSequence2;
+            if (value2) {
+                windowStableSequence2 = value2.windowStableSequence;
+            } else {
+                windowStableSequence2 = w2.get_stable_sequence();
+                this._log.warn(`Mapping for this xid ${xid2} and stable sequence does not exist, use sequence ${windowStableSequence2} instead. app name: ${app.get_name()}, window title: ${w2.get_title()}`);
             }
 
-            if (diff > 0) {
-                return 1;
-            }
-
-            if (diff < 0) {
-                return -1;
-            }
-
+            return this._compareWindowStableSequence(windowStableSequence1, windowStableSequence2);
         });
+        return windows;
+    }
 
-        const topLevelWindow = windows[windows.length - 1];
-        if (topLevelWindow) {
-            this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
-            Main.activateWindow(topLevelWindow);
+    _compareWindowStableSequence(windowStableSequence1, windowStableSequence2) {
+        const diff = windowStableSequence1 - windowStableSequence2;
+        if (diff === 0) {
+            return 0;
+        }
+
+        if (diff > 0) {
+            return 1;
+        }
+
+        if (diff < 0) {
+            return -1;
         }
     }
 
