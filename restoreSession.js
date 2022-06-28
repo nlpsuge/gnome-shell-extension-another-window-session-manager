@@ -28,6 +28,10 @@ var RestoreSession = class {
 
         this._restore_session_interval = this._settings.get_int('restore-session-interval');
 
+        // TODO Add to Preferences?
+        // Launch apps using discrete graphics card might cause issues, like the white main window of superproductivity
+        this._useDiscreteGraphicsCard = false;
+
         // All launched apps info by Shell.App#launch()
         this._restoredApps = new Map();
 
@@ -184,17 +188,15 @@ var RestoreSession = class {
     }
 
     _getProperGpuPref(shell_app) {
-        let gpuPref;
-        const app_info = shell_app.get_app_info();
-        if (app_info) {
-            const appPrefersNonDefaultGPU = app_info.get_boolean('PrefersNonDefaultGPU');
-            gpuPref = appPrefersNonDefaultGPU
-                ? Shell.AppLaunchGpu.DEFAULT
-                : Shell.AppLaunchGpu.DISCRETE;
-        } else {
-            gpuPref = Shell.AppLaunchGpu.DEFAULT;
+        if (this._useDiscreteGraphicsCard) {
+            const app_info = shell_app.get_app_info();
+            if (app_info) {
+                return app_info.get_boolean('PrefersNonDefaultGPU')
+                    ? Shell.AppLaunchGpu.DEFAULT
+                    : Shell.AppLaunchGpu.DISCRETE;
+            }
         }
-        return gpuPref;
+        return Shell.AppLaunchGpu.DEFAULT;
     }
 
     destroy() {
