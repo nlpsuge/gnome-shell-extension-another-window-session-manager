@@ -53,7 +53,7 @@ To modify the delay, timer, and how to restore a session:
 
 # Main features
 1. Close open windows
-1. Close apps with multiple windows via `ydotool` so you don't lose sessions of this app
+1. Close apps with multiple windows via `ydotool` so you don't lose sessions of this app (See also: [How to make Close by rules work](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work))
 1. Save open windows
 1. Restore session(s)
 1. Restore a session at startup (See also: [#9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9#issuecomment-1097012874)). Please note that this feature is **disabled by default**.
