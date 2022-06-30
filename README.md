@@ -46,11 +46,14 @@ After confirm to save:
 
 ### Restore sessions
 To modify the delay, timer, and how to restore a session:
-![image](https://user-images.githubusercontent.com/2271720/163179151-03cf6778-77dc-449c-a705-89d7b9a18d05.png)
+![image](https://user-images.githubusercontent.com/2271720/176686337-1cb35fcd-bf16-4942-bb92-3f43299ce1af.png)
 
+### Close windows
+![image](https://user-images.githubusercontent.com/2271720/176687352-e99a5f7d-9260-4f63-abd4-abaa4671daf3.png)
 
 # Main features
 1. Close open windows
+1. Close apps with multiple windows via `ydotool` so you don't lose sessions of this app
 1. Save open windows
 1. Restore session(s)
 1. Restore a session at startup (See also: [#9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9#issuecomment-1097012874)). Please note that this feature is **disabled by default**.
