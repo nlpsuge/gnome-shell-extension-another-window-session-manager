@@ -1,14 +1,25 @@
 
 var CloseWindowsRule = class {
 
-    type; // string, rule type, such as 'shortcut'
+    type; // string, rule type, how to do with this rule, such as 'shortcut'
     value; // GdkShortcuts, order and the rule pairs, such as "{1: 'Ctrl+Q}'".
     appId; // string, such as 'firefox.desktop'
     appName; // string, such as 'Firefox'
     appDesktopFilePath; // string, such as '/usr/share/applications/firefox.desktop'
-    enabled; // boolean
-    keyDelay; // int, for example: `enabydotool key --key-delay 500 29:1 16:1 16:0 29:0`
+    enabled; // boolean, if it's false then it this rules will not be applied
+    keyDelay; // int, for example: `ydotool key --key-delay 500 29:1 16:1 16:0 29:0`
+    case; // in which case this rule will be applied, supported 'AppDesktopFile', 
+          // 'WindowTitle', default to 'AppDesktopFile'
+    
 }
+
+var WindowTitleCloseWindowsRule = class extends CloseWindowsRule {
+    titleName; // string, window title name
+    compareMethod;  // string, how to compare titleName with the real window title name, 
+                    // supported 'Include', 'MatchWholeWords', default to 'Include'
+}
+
+
 
 /**
 * See: https://gitlab.gnome.org/GNOME/gtk/blob/d726ecdb5d1ece870585c7be89eb6355b2482544/gdk/gdkenums.h:L73

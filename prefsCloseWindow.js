@@ -5,6 +5,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const CloseWindowsRule = Me.imports.model.closeWindowsRule;
+const WindowTitleCloseWindowsRule = Me.imports.model.windowTitleCloseWindowsRule;
 
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const Log = Me.imports.utils.log;
@@ -46,8 +47,12 @@ var UICloseWindows = GObject.registerClass(
             this.close_by_rules_list_box.insert_action_group('rules', this._actionGroup);
 
             let action;
-            action = new Gio.SimpleAction({ name: 'add' });
-            action.connect('activate', this._onAddActivated.bind(this));
+            action = new Gio.SimpleAction({ name: 'addApplication' });
+            action.connect('activate', this._onAddApplicationActivated.bind(this));
+            this._actionGroup.add_action(action);
+
+            action = new Gio.SimpleAction({ name: 'addWindow' });
+            action.connect('activate', this._onAddWindowActivated.bind(this));
             this._actionGroup.add_action(action);
 
             action = new Gio.SimpleAction({
@@ -84,7 +89,27 @@ var UICloseWindows = GObject.registerClass(
 
         }
 
-        _onAddActivated() {
+        _onAddWindowActivated() {
+            const appInfo = dialog.get_widget().get_app_info();
+            const windowTitleCloseWindowsRule = new WindowTitleCloseWindowsRule.WindowTitleCloseWindowsRule();
+            windowTitleCloseWindowsRule.type = 'shortcut';
+            windowTitleCloseWindowsRule.value = {};
+            windowTitleCloseWindowsRule.appId = appInfo?.get_id();
+            windowTitleCloseWindowsRule.appName = appInfo?.get_name();
+            windowTitleCloseWindowsRule.appDesktopFilePath = appInfo?.get_filename();
+            windowTitleCloseWindowsRule.enabled = false;
+
+            windowTitleCloseWindowsRule.case = 'WindowTitle';
+            windowTitleCloseWindowsRule.compareMethod = 'Include';
+
+            const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
+            let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
+            oldCloseWindowsRulesObj[windowTitleCloseWindowsRule.appDesktopFilePath] = windowTitleCloseWindowsRule;
+            const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
+            this._settings.set_string('close-windows-rules', newCloseWindowsRules);
+        }
+
+        _onAddApplicationActivated() {
             const dialog = new AwsmNewRuleDialog(this._builder.get_object('prefs_notebook').get_root());
             dialog.connect('response', (dlg, id) => {
                 const appInfo = id === Gtk.ResponseType.OK
@@ -634,19 +659,28 @@ const RuleRow = GObject.registerClass({
 const AwsmNewRuleRow = GObject.registerClass(
     class AwsmNewRuleRow extends Gtk.ListBoxRow {
         _init() {
-            super._init({
-                action_name: 'rules.add',
-                child: new Gtk.Image({
-                    icon_name: 'list-add-symbolic',
-                    pixel_size: 16,
-                    margin_top: 12,
-                    margin_bottom: 12,
-                    margin_start: 12,
-                    margin_end: 12,
-                }),
+            this._buttonBox = new Gtk.Box({
+                hexpand: false,
+                halign: Gtk.Align.CENTER
             });
-            this.update_property(
-                [Gtk.AccessibleProperty.LABEL], ['Add Rule']);
+
+            super._init({
+                child: this._buttonBox,
+            });
+
+            this._addButtons();
+        }
+
+        _addButtons() {
+            this._buttonBox.append(new Gtk.Button({
+                action_name: 'rules.addApplication',
+                label: 'Add application'
+            }));
+
+            this._buttonBox.append(new Gtk.Button({
+                action_name: 'rules.addWindow',
+                label: 'Add window'
+            }));
         }
     });
 
