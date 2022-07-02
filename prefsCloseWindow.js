@@ -449,6 +449,8 @@ const RuleRow = GObject.registerClass({
         };
         
         const eventControllerKey = new Gtk.EventControllerKey();
+        // To hold the pair of keycode and its accelerator, for example: 105 and Control R
+        eventControllerKey._rightModifierMapping = new Map();
         newAccelButton.add_controller(eventControllerKey);
         eventControllerKey.connect('key-pressed', this._onKeyPressed.bind(this));
         eventControllerKey.connect('key-released', this._onKeyReleased.bind(this));
@@ -471,6 +473,10 @@ const RuleRow = GObject.registerClass({
             return Gdk.EVENT_STOP;
         }
 
+        // Remove customized properties
+        delete _eventControllerKey._controlRightPressed
+        delete _eventControllerKey._shiftRightPressed;
+
         this._rendererAccelBox.get_root().get_surface().restore_system_shortcuts();
         this.grab_focus();
     }
@@ -484,11 +490,27 @@ const RuleRow = GObject.registerClass({
             this._removeAccelerator(_eventControllerKey.get_widget());
             return Gdk.EVENT_STOP;
         }
-
         // if (!Gtk.accelerator_valid(keyval, mask)) return Gdk.EVENT_STOP;
-        const shortcut = Gtk.accelerator_get_label(keyval, mask);
-        _eventControllerKey.get_widget().set_label(shortcut);
+        let shortcut = Gtk.accelerator_get_label(keyval, mask);
 
+        // Control Right
+        if (keycode === 105) {
+            _eventControllerKey._controlRightPressed = true;
+        }
+        // Override Ctrl to Ctrl_R
+        if (_eventControllerKey._controlRightPressed) {
+            shortcut = shortcut.replace('Ctrl', 'Ctrl_R');
+        }
+        // Shift Right
+        if (keycode === 62) {
+            _eventControllerKey._shiftRightPressed = true;
+        }
+        // Override Shift to Shift_R
+        if (_eventControllerKey._shiftRightPressed && keycode !== 62) {
+            shortcut = shortcut.replace('Shift', 'Shift_R');
+        }
+
+        _eventControllerKey.get_widget().set_label(shortcut);
         const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
         let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
         const ruleValues = oldCloseWindowsRulesObj[this.appDesktopFilePath].value;
@@ -499,6 +521,8 @@ const RuleRow = GObject.registerClass({
             keyval: keyval,
             keycode: keycode,
             state: state,
+            controlRightPressed: _eventControllerKey._controlRightPressed,
+            shiftRightPressed: _eventControllerKey._shiftRightPressed,
             order: order
         };
         const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
