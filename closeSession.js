@@ -82,9 +82,7 @@ var CloseSession = class {
             for (const order in rules.value) {
                 const rule = rules.value[order];
                 let shortcut = rule.shortcut;
-                let state = rule.state;
-                let keycode = rule.keycode;
-                const linuxKeycodes = this._convertToLinuxKeycodes(state, keycode);
+                const linuxKeycodes = this._convertToLinuxKeycodes(rule);
                 const translatedLinuxKeycodes = linuxKeycodes.slice()
                             // Press keys
                             .map(k => k + ':1')
@@ -112,16 +110,31 @@ var CloseSession = class {
 
     }
 
-    _convertToLinuxKeycodes(state, keycode) {
+    _convertToLinuxKeycodes(rule) {
+        const state = rule.state;
+        const keycode = rule.keycode;
+        const controlRightPressed = rule.controlRightPressed;
+        const shiftRightPressed = rule.shiftRightPressed;
+
         let keycodes = [];
         // Convert to key codes defined in /usr/include/linux/input-event-codes.h
         if (state & Constants.GDK_SHIFT_MASK) {
-            // KEY_LEFTSHIFT
-            keycodes.push(42);
+            if (shiftRightPressed) {
+                // KEY_RIGHTSHIFT
+                keycodes.push(54);
+            } else {
+                // KEY_LEFTSHIFT
+                keycodes.push(42);
+            }
         } 
         if (state & Constants.GDK_CONTROL_MASK) {
-            // KEY_LEFTCTRL
-            keycodes.push(29);
+            if (controlRightPressed) {
+                // KEY_RIGHTCTRL
+                keycodes.push(97);
+            } else {
+                // KEY_LEFTCTRL
+                keycodes.push(29);
+            }
         } 
         if (state & Constants.GDK_ALT_MASK) {
             // KEY_LEFTALT

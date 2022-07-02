@@ -15,6 +15,9 @@ var CloseWindowsRule = class {
 * See: https://gitlab.gnome.org/GNOME/gtk/blob/1ce79b29e363e585872901424d3b72041b55e3e4/gtk/gtkeventcontrollerkey.c:L203
 */
 var GdkShortcuts = class {
+    /**
+     * For example: Ctrl+Q
+     */
     shortcut;
     order;
     /**
@@ -29,4 +32,12 @@ var GdkShortcuts = class {
      * the bitmask, representing the state of modifier keys and pointer buttons. See `GdkModifierType` in Gtk source.
      */
     state;
+    /**
+     * Indicate the right Ctrl key was pressed
+     */
+    controlRightPressed;
+    /**
+     * Indicate the right Shift key was pressed
+     */
+    shiftRightPressed;
 }
