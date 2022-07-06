@@ -3,7 +3,6 @@
 const { Meta, Shell, Gio, GLib } = imports.gi;
 
 const Main = imports.ui.main;
-const Scripting = imports.ui.scripting;
 
 const Util = imports.misc.util;
 
@@ -16,6 +15,8 @@ const SubprocessUtils = Me.imports.utils.subprocessUtils;
 const OpenWindowsInfoTracker = Me.imports.openWindowsInfoTracker;
 
 const Constants = Me.imports.constants;
+
+const UiHelper = Me.imports.ui.uiHelper;
 
 
 var CloseSession = class {
@@ -36,7 +37,7 @@ var CloseSession = class {
         this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'smplayer.desktop'];
     }
 
-    closeWindows() {
+    async closeWindows() {
         this._log.debug('Closing open windows');
         
         let workspaceManager = global.workspace_manager;
@@ -46,30 +47,70 @@ var CloseSession = class {
         }
 
         let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
-        this._tryCloseAppsByRules(running_apps_closing_by_rules);
+        await this._tryCloseAppsByRules(running_apps_closing_by_rules);
+        this._log.debug('done...');
 
         for (const app of new_running_apps) {
-            this._closeOneApp(app);
+            const closing = this._closeOneApp(app);
+            if (closing) {
+                this._log.debug(`Closing ${app.get_name()}`);
+            } else {
+                this._log.debug(`Can not close ${app.get_name()}`);
+            }
         }
 
     }
 
     _closeOneApp(app) {
-        if (this._skip_multiple_windows(app)) {
-            this._log.debug(`Skipping ${app.get_name()} because it has more than one windows`);
-        } else {
-            this._log.debug(`Closing ${app.get_name()}`);
+        let closing = true;
+        if (app.get_n_windows() == 1) {
             app.get_windows().forEach(w => w._aboutToClose = true);
             app.request_quit();
+        } else {
+            const appInWhitelist = this.whitelist.includes(app.get_id());
+            let windows = this._sortWindows(app);
+            for (let i = windows.length - 1; i >= 0; i--) {
+                let window = windows[i];
+                if (!window.can_close()) {
+                    closing = false;
+                    continue;
+                }
+
+                if (UiHelper.isDialog(window) 
+                    || appInWhitelist 
+                    || !this._skip_app_with_multiple_windows)
+                {
+                    window._aboutToClose = true
+                    window.delete(global.get_current_time());
+                } else {
+                    closing = false;
+                }
+            }
         }
+        
+        return closing; 
     }
 
-    _tryCloseAppsByRules(running_apps_closing_by_rules) {
+    async _tryCloseAppsByRules(running_apps_closing_by_rules) {
+        await new Promise((resolve, reject) => {
+            this._tryCloseAppsByRulesAsync(running_apps_closing_by_rules, () => {
+                resolve();
+            })
+        });
+    }
+
+    _tryCloseAppsByRulesAsync(running_apps_closing_by_rules, finishApplyRulesCallback) {
         if (!running_apps_closing_by_rules || running_apps_closing_by_rules.length === 0) {
+            if (finishApplyRulesCallback) {
+                this._log.debug('done calling callback...');
+                finishApplyRulesCallback();
+            }
             return;
         }
 
         const app = running_apps_closing_by_rules.shift();
+        // Help close dialogs
+        this._closeOneApp(app);
 
         const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
         const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
@@ -78,7 +119,6 @@ var CloseSession = class {
         if (rules?.type === 'shortcut') {
             let keycodesSegments = [];
             let shortcutsOriginal = [];
-            let keycodes = [];
             for (const order in rules.value) {
                 const rule = rules.value[order];
                 let shortcut = rule.shortcut;
@@ -89,7 +129,6 @@ var CloseSession = class {
                             .concat(linuxKeycodes.slice()
                                 // Release keys
                                 .reverse().map(k => k + ':0'))
-                // keycodes = keycodes.concat(translatedLinuxKeycodes);
                 keycodesSegments.push(translatedLinuxKeycodes);
                 shortcutsOriginal.push(shortcut);
             }
@@ -153,7 +192,7 @@ var CloseSession = class {
     _activateAndCloseWindows(app, linuxKeyCodesSegments, shortcutsOriginal, running_apps_closing_by_rules) {
         if (!linuxKeyCodesSegments || linuxKeyCodesSegments.length === 0) {
             // Proceed the next rule
-            this._tryCloseAppsByRules(running_apps_closing_by_rules);
+            this._tryCloseAppsByRulesAsync(running_apps_closing_by_rules);
             return;
         }
         const linuxKeyCodes = linuxKeyCodesSegments.shift();  
@@ -199,18 +238,22 @@ var CloseSession = class {
     }
 
     _activateAndFocusWindow(app) {
+        let windows = this._sortWindows(app);
+        const topLevelWindow = windows[windows.length - 1];
+        if (topLevelWindow) {
+            this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
+            Main.activateWindow(topLevelWindow);
+        }
+    }
+
+    _sortWindows(app) {
         let windows;
         if (Meta.is_wayland_compositor()) {
             windows = this._sortWindowsOnWayland(app);
         } else {
             windows = this._sortWindowsOnX11(app);
         }
-
-        const topLevelWindow = windows[windows.length - 1];
-        if (topLevelWindow) {
-            this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
-            Main.activateWindow(topLevelWindow);
-        }
+        return windows;
     }
 
     _sortWindowsOnWayland(app) {
