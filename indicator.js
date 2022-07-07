@@ -270,7 +270,7 @@ class AwsIndicator extends PanelMenu.Button {
 
     }
 
-    _addSessionItems() {
+    async _addSessionItems() {
         if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
             // TODO Empty session
             this._log.info(`${this._sessions_path} not found! It's harmless, please save some windows in the panel menu to create it automatically.`);
@@ -294,7 +294,7 @@ class AwsIndicator extends PanelMenu.Button {
         this._sessionsMenuSection.addMenuItem(item, this._itemIndex++);
 
         let sessionFileInfos = [];
-        FileUtils.listAllSessions(null, false, this._prefsUtils.isDebug(),(file, info) => {
+        await FileUtils.listAllSessions(null, false, this._prefsUtils.isDebug(),(file, info) => {
             // We have an interest in regular and text files
 
             const file_type = info.get_file_type();

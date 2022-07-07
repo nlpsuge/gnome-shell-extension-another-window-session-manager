@@ -47,7 +47,7 @@ function getJsonObj(contents) {
     return session_config;
 }
 
-function listAllSessions(sessionPath, recursion, debug, callback) {
+async function listAllSessions(sessionPath, recursion, debug, callback) {
     if (!sessionPath) {
         sessionPath = get_sessions_path();
     }
@@ -60,34 +60,52 @@ function listAllSessions(sessionPath, recursion, debug, callback) {
         log(`Looking up path: ${sessionPath}`);
     }
     const sessionPathFile = Gio.File.new_for_path(sessionPath);
-    let fileEnumerator;
-    try {
-        fileEnumerator = sessionPathFile.enumerate_children(
+    let fileEnumerator = await new Promise((resolve, reject) => {
+        sessionPathFile.enumerate_children_async(
             [Gio.FILE_ATTRIBUTE_STANDARD_NAME,
             Gio.FILE_ATTRIBUTE_STANDARD_TYPE,
             Gio.FILE_ATTRIBUTE_TIME_MODIFIED,
             Gio.FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE].join(','),
             Gio.FileQueryInfoFlags.NONE,
-            null);
-    } catch (e) {
-        logError(e, `Failed to list directory ${sessionPath}`);
-        fileEnumerator = null;
-    }
-
-    if (fileEnumerator != null) {
-        let info;
-        while ((info = fileEnumerator.next_file(null))) {
-            const file = fileEnumerator.get_child(info);
-            if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
-                if (debug) {
-                    log(`${info.get_name()} is a folder, checking`);
+            GLib.PRIORITY_DEFAULT,
+            null,
+            (file, asyncResult) => {
+                try {
+                    resolve(file.enumerate_children_finish(asyncResult));
+                } catch (e) {
+                    logError(e, `Failed to list directory ${sessionPath}`);
+                    reject(e);
                 }
-                listAllSessions(file.get_path(), recursion, debug, callback);
-            }
+            });
+    }); 
 
-            if (callback) {
-                callback(file, info);
+    let infos = await new Promise((resolve, reject) => {
+        fileEnumerator.next_files_async(
+            // num_files. Just set a random value, because I don't know which value is better yet
+            10,
+            GLib.PRIORITY_DEFAULT,
+            null,
+            (iter, asyncResult) => {
+                try {
+                    resolve(iter.next_files_finish(asyncResult));
+                } catch (e) {
+                    reject(e);
+                }
             }
+        );
+    });
+
+    for (const info of infos) {
+        const file = fileEnumerator.get_child(info);
+        if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
+            if (debug) {
+                log(`${info.get_name()} is a folder, checking`);
+            }
+            listAllSessions(file.get_path(), recursion, debug, callback);
+        }
+
+        if (callback) {
+            callback(file, info);
         }
     }
 
