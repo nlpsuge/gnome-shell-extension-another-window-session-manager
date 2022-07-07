@@ -29,18 +29,49 @@ var OpenWindowsInfoTracker = class {
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
 
-        this._endSessionProxy = new EndSessionDialogProxy(Gio.DBus.session,
-                                                          'org.gnome.Shell',
-                                                          '/org/gnome/SessionManager/EndSessionDialog');
-        
-        this._endSessionProxy.connectSignal('ConfirmedLogout', this._onConfirmedLogout.bind(this));
-        this._endSessionProxy.connectSignal('ConfirmedReboot', this._onConfirmedReboot.bind(this));
-        this._endSessionProxy.connectSignal('ConfirmedShutdown', this._onConfirmedShutdown.bind(this));
-        this._endSessionProxy.connectSignal('Closed', this._onClose.bind(this));
-        this._endSessionProxy.connectSignal('Canceled', this._onCancel.bind(this));
+        this._confirmedLogoutId = 0;
+        this._confirmedRebootId = 0;
+        this._confirmedShutdownId = 0;
+        this._closedId = 0;
+        this._canceledId = 0;        
+
+        this._busWatchId = Gio.bus_watch_name(
+            Gio.BusType.SESSION,
+            'org.gnome.Shell',
+            Gio.BusNameWatcherFlags.NONE,
+            this._onNameAppeared.bind(this),
+            this._onNameVanished.bind(this)
+        ); 
 
         this._display = global.display;
         this._displayId = this._display.connect('window-created', this._windowCreated.bind(this));
+    }
+
+    _onNameAppeared() {
+        this._endSessionProxy = new EndSessionDialogProxy(Gio.DBus.session,
+            'org.gnome.Shell',
+            '/org/gnome/SessionManager/EndSessionDialog',
+            (proxy, error) => {
+                // If `error` is not `null` it will be an Error object indicating the
+                // failure, and `proxy` will be `null` in this case.
+                if (error !== null) {
+                    this._log.error(error);
+                    return;
+                }
+                
+                this._confirmedLogoutId = this._endSessionProxy.connectSignal('ConfirmedLogout', this._onConfirmedLogout.bind(this));
+                this._confirmedRebootId = this._endSessionProxy.connectSignal('ConfirmedReboot', this._onConfirmedReboot.bind(this));
+                this._confirmedShutdownId = this._endSessionProxy.connectSignal('ConfirmedShutdown', this._onConfirmedShutdown.bind(this));
+                this._closedId = this._endSessionProxy.connectSignal('Closed', this._onClose.bind(this));
+                this._canceledId = this._endSessionProxy.connectSignal('Canceled', this._onCancel.bind(this));
+            },
+            null,
+            Gio.DBusProxyFlags.NONE
+        );
+    }
+
+    _onNameVanished(connection, name) {
+        this._log.debug(`Dbus name ${name} vanished`);   
     }
 
     _onClose() {
@@ -127,6 +158,31 @@ var OpenWindowsInfoTracker = class {
             this._displayId = 0;
         }
 
+        if (this._busWatchId) {
+            Gio.bus_unwatch_name(this._busWatchId);
+            this._busWatchId = 0;
+        }
+
+        if (this._confirmedLogoutId) {
+            this._endSessionProxy?.disconnectSignal(this._confirmedLogoutId);
+            this._confirmedLogoutId = 0;
+        }
+        if (this._confirmedRebootId) {
+            this._endSessionProxy?.disconnectSignal(this._confirmedRebootId);
+            this._confirmedRebootId = 0;
+        }
+        if (this._confirmedShutdownId) {
+            this._endSessionProxy?.disconnectSignal(this._confirmedShutdownId);
+            this._confirmedShutdownId = 0;
+        }
+        if (this._closedId) {
+            this._endSessionProxy?.disconnectSignal(this._closedId);
+            this._closedId = 0;
+        }
+        if (this._canceledId) {
+            this._endSessionProxy?.disconnectSignal(this._canceledId);
+            this._canceledId = 0;
+        }
     }
 
 }
