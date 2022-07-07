@@ -13,6 +13,7 @@ const Autostart = Me.imports.ui.autostart;
 
 let _indicator;
 let _autostartServiceProvider;
+let _openWindowsInfoTracker;
 
 function enable() {
     _indicator = new Indicator.AwsIndicator();
@@ -20,7 +21,7 @@ function enable() {
 
     _autostartServiceProvider = new Autostart.AutostartServiceProvider();
     
-    new OpenWindowsInfoTracker.OpenWindowsInfoTracker();
+    _openWindowsInfoTracker = new OpenWindowsInfoTracker.OpenWindowsInfoTracker();
     
 }
 
@@ -33,6 +34,11 @@ function disable() {
     if (_autostartServiceProvider) {
         _autostartServiceProvider.disable();
         _autostartServiceProvider = null;
+    }
+
+    if (_openWindowsInfoTracker) {
+        _openWindowsInfoTracker.destroy();
+        _openWindowsInfoTracker = null;
     }
     
 }
