@@ -55,7 +55,7 @@ var OpenWindowsInfoTracker = class {
                 // If `error` is not `null` it will be an Error object indicating the
                 // failure, and `proxy` will be `null` in this case.
                 if (error !== null) {
-                    this._log.error(error);
+                    this._log.error(new Error(error), 'Failed to create the EndSessionDialog dbus proxy!');
                     return;
                 }
                 

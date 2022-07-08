@@ -19,6 +19,8 @@ var desktop_file_store_path = `${desktop_file_store_path_base}/__another-window-
 
 var recently_closed_session_name = 'Recently Closed Session';
 var recently_closed_session_path = GLib.build_filenamev([sessions_path, recently_closed_session_name]);
+var recently_closed_session_file = Gio.File.new_for_path(recently_closed_session_path);
+
 
 var autostart_restore_desktop_file_path = GLib.build_filenamev([home_dir, '/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop']);
 
@@ -57,7 +59,7 @@ async function listAllSessions(sessionPath, recursion, debug, callback) {
     }
 
     if (debug) {
-        log(`Looking up path: ${sessionPath}`);
+        log(`[DEBUG][Another window session manager] Scanning ${sessionPath}`);
     }
     const sessionPathFile = Gio.File.new_for_path(sessionPath);
     let fileEnumerator = await new Promise((resolve, reject) => {
@@ -77,38 +79,44 @@ async function listAllSessions(sessionPath, recursion, debug, callback) {
                     reject(e);
                 }
             });
-    }); 
-
-    let infos = await new Promise((resolve, reject) => {
-        fileEnumerator.next_files_async(
-            // num_files. Just set a random value, because I don't know which value is better yet
-            10,
-            GLib.PRIORITY_DEFAULT,
-            null,
-            (iter, asyncResult) => {
-                try {
-                    resolve(iter.next_files_finish(asyncResult));
-                } catch (e) {
-                    reject(e);
-                }
-            }
-        );
     });
 
-    for (const info of infos) {
-        const file = fileEnumerator.get_child(info);
-        if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
-            if (debug) {
-                log(`${info.get_name()} is a folder, checking`);
+    const nextFilesFunc = async () => {
+        return new Promise((resolve, reject) => {
+            fileEnumerator.next_files_async(
+                // num_files. Just set a random value, because I don't know which value is better yet
+                10,
+                GLib.PRIORITY_DEFAULT,
+                null,
+                (iter, asyncResult) => {
+                    try {
+                        resolve(iter.next_files_finish(asyncResult));
+                    } catch (e) {
+                        reject(e);
+                    }
+                }
+            );
+        });
+    };
+
+    let infos = await nextFilesFunc();
+    while (infos && infos.length > 0) {
+        for (const info of infos) {
+            const file = fileEnumerator.get_child(info);
+            if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
+                if (debug) {
+                    log(`${info.get_name()} is a folder, checking`);
+                }
+                listAllSessions(file.get_path(), recursion, debug, callback);
             }
-            listAllSessions(file.get_path(), recursion, debug, callback);
+
+            if (callback) {
+                callback(file, info);
+            }
         }
 
-        if (callback) {
-            callback(file, info);
-        }
+        infos = await nextFilesFunc();
     }
-
 }
 
 function sessionExists(sessionName) {
