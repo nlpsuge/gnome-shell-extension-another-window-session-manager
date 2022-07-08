@@ -69,7 +69,7 @@ var AutostartServiceProvider = GObject.registerClass(
             this._log.debug(`DBus name ${name} acquired!`);
         }
     
-        onNameLost(_connection, name) {
+        onNameLost(connection, name) {
             this._log.debug(`Dbus name ${name} lost`);
         }
 
