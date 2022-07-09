@@ -13,6 +13,7 @@ const UiHelper = Me.imports.ui.uiHelper;
 
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
+
 // for make prototype affect
 Me.imports.utils.string;
 
@@ -29,14 +30,16 @@ var SaveSession = class {
         this._defaultAppSystem = Shell.AppSystem.get_default();
     }
 
-    saveSession(sessionName) {
-        
+    async saveSession(sessionName) {
+        this._log.info(`Generating session ${sessionName}`);
+
         const runningShellApps = this._defaultAppSystem.get_running();
         const sessionConfig = new SessionConfig.SessionConfig();
         sessionConfig.session_name = sessionName ? sessionName : FileUtils.default_sessionName;
         sessionConfig.session_create_time = new Date().toLocaleString();
         
-        this._log.info(`Saving open windows as a session named ${sessionConfig.session_name}`);
+        const psPromiseMap = new Map();
+        this._promisePs(runningShellApps, psPromiseMap);
 
         for (const runningShellApp of runningShellApps) {
             const appName = runningShellApp.get_name();
@@ -61,20 +64,16 @@ var SaveSession = class {
             });
             for (const metaWindow of metaWindows) {
 
-                // TODO pid is 0 if not known 
-                // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
                 const pid = metaWindow.get_pid();
-                const input_cmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,command'];
                 try {
-                    const proc = this._subprocessLauncher.spawnv(input_cmd);
-                    // TODO Use async version in the future
-                    const result = proc.communicate_utf8(null, null);
-                                        
                     const sessionConfigObject = new SessionConfig.SessionConfigObject();
+                    const windowId = metaWindow.get_id();
 
+                    const psPromise = psPromiseMap.get(metaWindow);
+                    const [result, proc] = await psPromise;
                     this._setFieldsFromProcess(proc, result, sessionConfigObject);
 
-                    sessionConfigObject.window_id_the_int_type = metaWindow.get_id();
+                    sessionConfigObject.window_id_the_int_type = windowId;
                     if (metaWindow.is_always_on_all_workspaces()) {
                         sessionConfigObject.desktop_number = -1;
                     } else {
@@ -166,13 +165,13 @@ var SaveSession = class {
                     sessionConfig.x_session_config_objects.push(sessionConfigObject);    
 
                 } catch (e) {
-                    logError(e, `Failed to build session`);
-                    global.notify_error(`Failed to build session`, e.message);
+                    logError(e, `Failed to generate session ${sessionName}`);
+                    global.notify_error(`Failed to generate session ${sessionName}`, e.message);
                 }
             }
         }
 
-        // Save open windows
+        // Save open windows to local file
         try {
             sessionConfig.x_session_config_objects = sessionConfig.sort();
             this.save2File(sessionConfig);
@@ -183,6 +182,35 @@ var SaveSession = class {
             throw e;
         }
 
+    }
+
+    _promisePs(runningShellApps, psPromiseMap) {
+        for (const runningShellApp of runningShellApps) {
+            let metaWindows = runningShellApp.get_windows();
+            for (const metaWindow of metaWindows) {
+                const pid = metaWindow.get_pid();
+                if (this._ignoreWindows(metaWindow) || psPromiseMap.has(metaWindow)) {
+                    continue;
+                }
+                const psCmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,command'];
+
+                const psPromise = new Promise((resolve, reject) => {
+                    // TODO pid is 0 if not known 
+                    // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
+                    const proc = this._subprocessLauncher.spawnv(psCmd);
+                    proc.communicate_utf8_async(null, null, ((proc, res) => {
+                        try {
+                            resolve([proc.communicate_utf8_finish(res), proc]);
+                        } catch(e) {
+                            reject(e);
+                        }
+                    }));
+
+                })
+
+                psPromiseMap.set(metaWindow, psPromise);
+            }
+        }
     }
 
     _ignoreWindows(metaWindow) {
@@ -206,6 +234,8 @@ var SaveSession = class {
     }
 
     save2File(sessionConfig) {
+        this._log.info(`Saving session ${sessionConfig.session_name} to local file`);
+
         const sessionConfigJson = JSON.stringify(sessionConfig, null, 4);
 
         const sessions_path = FileUtils.get_sessions_path();
@@ -285,17 +315,17 @@ var SaveSession = class {
                 try {
                     const success = sessionFile.replace_contents_finish(asyncResult);
                     if (success) {
-                        this._log.info(`Saved open windows as a session in ${sessionFile.get_path()}!`);
+                        this._log.info(`Saved session into ${sessionFile.get_path()}!`);
                         // TODO Notification
                     } else {
                         const errMsg = `Cannot save session: ${sessionFile.get_path()}`;
-                        const reason = `Failed to save open windows as a session in ${sessionFile.get_path()}!`;
+                        const reason = `Failed to save session into ${sessionFile.get_path()}!`;
                         this._log.error(new Error(`${errMsg}`), `${reason}`);
                         global.notify_error(`${errMsg}`, `${reason}`);
                     }
                 } catch (e) {
                     const errMsg = `Cannot save session: ${sessionFile.get_path()}`;
-                    const reason = `Failed to save open windows as a session in ${sessionFile.get_path()}!`;
+                    const reason = `Failed to save session into ${sessionFile.get_path()}!`;
                     this._log.error(e, `${reason}`);
                     global.notify_error(`${errMsg}`, `${reason}`);
                 }
