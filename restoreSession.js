@@ -63,29 +63,51 @@ var RestoreSession = class {
     restoreSessionFromFile(session_file_path) {
         const session_file = Gio.File.new_for_path(session_file_path);
         let [success, contents] = session_file.load_contents(null);
-        if (success) {
-            let session_config = FileUtils.getJsonObj(contents);
-            
-            const session_config_objects = session_config.x_session_config_objects;
-            if (!session_config_objects) {
-                logError(new Error(`Session details not found: ${session_file_path}`));
-                return;
-            }
-            
-            this._restoreSessionTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 
-                // In milliseconds. 
-                // Note that this timing might not be precise, see https://gjs-docs.gnome.org/glib20~2.66.1/glib.timeout_add
-                this._restore_session_interval,
-                () => {
-                    if (session_config_objects.length === 0) {
-                        return GLib.SOURCE_REMOVE;
-                    }
-                    this._restoreSessionOne(session_config_objects.shift());
-                    return GLib.SOURCE_CONTINUE;
-                }
-            );
+        if (!success) {
+            return;
         }
-       
+
+        let session_config = FileUtils.getJsonObj(contents);
+        let session_config_objects = session_config.x_session_config_objects;
+        if (!session_config_objects) {
+            logError(new Error(`Session details not found: ${session_file_path}`));
+            return;
+        }
+
+        session_config_objects = session_config_objects.filter(session_config_object => {
+            const desktop_file_id = session_config_object.desktop_file_id;
+            if (!desktop_file_id) {
+                return true;
+            }
+            const shellApp = this._defaultAppSystem.lookup_app(desktop_file_id)
+            if (!shellApp) {
+                return true;
+            }
+
+            if (this._appIsRunning(shellApp)) {
+                this._log.debug(`${shellApp.get_name()} is already running`)
+                return false;
+            }
+
+            return true;
+        });
+        if (session_config_objects.length === 0) return;
+
+        this._restoreSessionOne(session_config_objects.shift());
+        if (session_config_objects.length === 0) return;
+
+        this._restoreSessionTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 
+            // In milliseconds. 
+            // Note that this timing might not be precise, see https://gjs-docs.gnome.org/glib20~2.66.1/glib.timeout_add
+            this._restore_session_interval,
+            () => {
+                if (session_config_objects.length === 0) {
+                    return GLib.SOURCE_REMOVE;
+                }
+                this._restoreSessionOne(session_config_objects.shift());
+                return GLib.SOURCE_CONTINUE;
+            }
+        );  
     }
 
     _restoreSessionOne(session_config_object) {
