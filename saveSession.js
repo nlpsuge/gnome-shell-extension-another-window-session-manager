@@ -129,7 +129,7 @@ var SaveSession = class {
                             if (status === 0 && stdout) {
                                 cmdStr = `${stdout.split(':')[1].trim()}/${cmdStr}`
                             } else {
-                                logError(`Failed to query the working directory according to ${pid}, and the current command line is ${cmdStr}. stderr: ${stderr}`);
+                                this._log.error(new Error(`Failed to query the working directory according to ${pid}, and the current command line is ${cmdStr}. stderr: ${stderr}`));
                             }
 
                         }
@@ -146,7 +146,7 @@ var SaveSession = class {
                         const desktopFileContent = FileUtils.loadDesktopTemplate().fill(argument);
                         if (!desktopFileContent) {
                             const errMsg = `Failed to generate a .desktop file ${desktopFileName} using ${JSON.stringify(argument)}`;
-                            logError(errMsg);
+                            this._log.error(new Error(errMsg));
                         } else {
                             this._log.info(`Generated a .desktop file, you can use the below content to create a .desktop file and copy it to ${FileUtils.desktop_file_store_path_base} :`
                             + '\n\n'
@@ -165,7 +165,7 @@ var SaveSession = class {
                     sessionConfig.x_session_config_objects.push(sessionConfigObject);    
 
                 } catch (e) {
-                    logError(e, `Failed to generate session ${sessionName}`);
+                    this._log.error(e, `Failed to generate session ${sessionName}`);
                     global.notify_error(`Failed to generate session ${sessionName}`, e.message);
                 }
             }
@@ -177,7 +177,7 @@ var SaveSession = class {
             this.save2File(sessionConfig);
             // TODO saved Notification
         } catch (e) {
-            logError(e, `Failed to write session to disk`);
+            this._log.error(e, `Failed to write session to disk`);
             global.notify_error(`Failed to write session to disk`, e.message);
             throw e;
         }
@@ -344,7 +344,7 @@ var SaveSession = class {
             sessionConfigObject.memory_percent = stdoutArr.slice(6, 7).join();
             sessionConfigObject.cmd = stdoutArr.slice(7);
         } else {
-            logError(new Error(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`));
+            this._log.error(new Error(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`));
             sessionConfigObject.process_create_time = null;
             sessionConfigObject.cpu_percent = null;
             sessionConfigObject.memory_percent = null;
