@@ -12,6 +12,7 @@ const IconFinder = Me.imports.utils.iconFinder;
 const FileUtils = Me.imports.utils.fileUtils;
 const Tooltip = Me.imports.utils.tooltip;
 const GnomeVersion = Me.imports.utils.gnomeVersion;
+const Log = Me.imports.utils.log;
 
 const SaveSession = Me.imports.saveSession;
 const RestoreSession = Me.imports.restoreSession;
@@ -28,6 +29,8 @@ class SessionItemButtons extends GObject.Object {
     _init(sessionItem) {
         super._init();
 
+        this._log = new Log.Log();
+        
         this.sessionItem = sessionItem;
 
         // TODO Nullify created object?
@@ -182,7 +185,9 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _onClickSave(button, event) {
-        this._saveSession.saveSession(this.sessionItem._filename);
+        this._saveSession.saveSession(this.sessionItem._filename).catch(e => {
+            this._log.error(e)
+        });
     }
     
     _onClickRestore(button, event) {

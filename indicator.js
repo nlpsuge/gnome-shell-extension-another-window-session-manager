@@ -243,7 +243,9 @@ class AwsIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(this._searchSessionItem, this._itemIndex++);
                 
         this._addScrollableSessionsMenuSection();
-        this._addSessionItems();
+        this._addSessionItems().catch((error => {
+            this._log.error(error, 'Error adding session items while creating indicator menu');
+        }));
 
         this._addSessionFolderMonitor();
     }
@@ -270,7 +272,7 @@ class AwsIndicator extends PanelMenu.Button {
 
     }
 
-    _addSessionItems() {
+    async _addSessionItems() {
         if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
             // TODO Empty session
             this._log.info(`${this._sessions_path} not found! It's harmless, please save some windows in the panel menu to create it automatically.`);
@@ -278,23 +280,9 @@ class AwsIndicator extends PanelMenu.Button {
         }
 
         this._log.debug('List all sessions to add session items');
-
-        // Recently Closed Session always on the top
-        const recently_closed_session_file = Gio.File.new_for_path(FileUtils.recently_closed_session_path);
-        let info = null;
-        try {
-            info = recently_closed_session_file.query_info(
-                [Gio.FILE_ATTRIBUTE_STANDARD_NAME, 
-                    Gio.FILE_ATTRIBUTE_TIME_MODIFIED].join(','),
-                Gio.FileQueryInfoFlags.NONE,
-                null);
-        } catch (ignored) {}
         
-        let item = new SessionItem.SessionItem(info, recently_closed_session_file, this);
-        this._sessionsMenuSection.addMenuItem(item, this._itemIndex++);
-
         let sessionFileInfos = [];
-        FileUtils.listAllSessions(null, false, this._prefsUtils.isDebug(),(file, info) => {
+        await FileUtils.listAllSessions(null, false, this._prefsUtils.isDebug(),(file, info) => {
             // We have an interest in regular and text files
 
             const file_type = info.get_file_type();
@@ -309,27 +297,17 @@ class AwsIndicator extends PanelMenu.Button {
             }
 
             // Skip the `Recently Closed Session` file since it has been added to the session list already.
-            if (file.equal(recently_closed_session_file)) {
+            if (file.equal(FileUtils.recently_closed_session_file)) {
                 return;
             }
             
-            let parent = file.get_parent();
-            let parentPath;
-            // https://gjs-docs.gnome.org/gio20~2.66p/gio.file#method-get_parent
-            // If the this represents the root directory of the file system, then null will be returned.
-            if (parent === null) {
-                // Impossible, who puts sessions under the /?
-                parentPath = '/';
-            } else {
-                parentPath = parent.get_path();
-            }
-            this._log.debug(`Processing ${file.get_path()} under ${parentPath}`);
+            this._log.debug(`Processing ${file.get_path()}`);
             sessionFileInfos.push({
                 info: info,
                 file: file
             });
 
-        });
+        }).catch(e => {this._log.error(e, 'Error listing all sessions')});
 
         // Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator
         // The latest on the top, if a file has no modification time put it on the bottom
@@ -356,6 +334,21 @@ class AwsIndicator extends PanelMenu.Button {
             return modification_date_time2.compare(modification_date_time1);
         });
 
+        this._sessionsMenuSection.removeAll();
+
+        let info = null;
+        try {
+            info = FileUtils.recently_closed_session_file.query_info(
+                [Gio.FILE_ATTRIBUTE_STANDARD_NAME, 
+                    Gio.FILE_ATTRIBUTE_TIME_MODIFIED].join(','),
+                Gio.FileQueryInfoFlags.NONE,
+                null);
+        } catch (ignored) {}
+        
+        // Recently Closed Session always on the top
+        let item = new SessionItem.SessionItem(info, FileUtils.recently_closed_session_file, this);
+        this._sessionsMenuSection.addMenuItem(item, this._itemIndex++);
+
         for (const sessionFileInfo of sessionFileInfos) {
             const info = sessionFileInfo.info;
             const file = sessionFileInfo.file;
@@ -373,22 +366,54 @@ class AwsIndicator extends PanelMenu.Button {
         const sessionPathFile = Gio.File.new_for_path(this._sessions_path);
         // Ok, it's the directory we are monitoring :)
         // TODO If the parent of this._sessions_path was deleted, this.monitor don't get the 'changed' signal, so the panel menu items not removed.
-        this.monitor = sessionPathFile.monitor_directory(Gio.FileMonitorFlags.WATCH_MOUNTS | Gio.FileMonitorFlags.WATCH_MOVES, null);
-        this.monitor.connect('changed', this._sessionPathChanged.bind(this));
+        this.monitor = sessionPathFile.monitor_directory(Gio.FileMonitorFlags.NONE, null);
+        this.monitor.connect('changed', this._sessionChanged.bind(this));
     }
 
     // https://gjs-docs.gnome.org/gio20~2.66p/gio.filemonitor#signal-changed
     // Looks like the document is wrong ...
-    _sessionPathChanged(monitor, srcFile, descFile) {
-        this._log.debug(`Session path changed, readd all session items from ${this._sessions_path}. ${srcFile.get_path()} was changed.`);
-        this._sessionsMenuSection.removeAll();
+    _sessionChanged(monitor, file, other_file, eventType) {
+        this._log.debug(`Session changed, readd all session items from ${this._sessions_path}. ${file.get_path()} changed. Event type: ${eventType}`);
+
+        // Ignore CHANGED and CREATED events, since in both cases
+        // we'll get a CHANGES_DONE_HINT event when done.
+        if (eventType === Gio.FileMonitorEvent.CHANGED ||
+            eventType === Gio.FileMonitorEvent.CREATED) 
+            return;
+                
+        // Ignore temporary files generated by Gio
+        if (file.get_basename().startsWith('.goutputstream-')) {
+            return;
+        }
+
+        let info = null;
+        try {
+            info = file.query_info(
+                [Gio.FILE_ATTRIBUTE_STANDARD_TYPE, 
+                    Gio.FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE].join(','),
+                Gio.FileQueryInfoFlags.NONE,
+                null);
+        } catch (ignored) {}
+
+        // Ignore none regular and text files
+        if (info) {
+            const file_type = info.get_file_type();
+            const content_type = info.get_content_type();
+            if (!(file_type === Gio.FileType.REGULAR &&
+                  content_type === 'text/plain')) {
+                return;
+            }
+        }
+
         // It probably is a problem when there are large amount session files,
         // say thousands of them, but who creates that much?
         // 
         // Can use Gio.FileMonitorEvent to modify the results 
         // of this._sessionsMenuSection._getMenuItems() when the performance
         // is a problem to be resolved, it's a more complex implement.
-        this._addSessionItems();
+        this._addSessionItems().catch((error => {
+            this._log.error(error, 'Error adding session items while session was changed');
+        }));
     }
 
     _onAutoRestoreSwitchChanged() {
