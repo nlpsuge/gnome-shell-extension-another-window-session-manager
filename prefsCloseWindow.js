@@ -1,3 +1,4 @@
+'use strict';
 
 const { Gio, GLib, GObject, Gtk, Pango, Gdk } = imports.gi;
 

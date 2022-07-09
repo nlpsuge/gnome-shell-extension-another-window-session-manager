@@ -67,12 +67,12 @@ var SaveSession = class {
                 const pid = metaWindow.get_pid();
                 try {
                     const sessionConfigObject = new SessionConfig.SessionConfigObject();
-                    const windowId = metaWindow.get_id();
 
-                    const psPromise = psPromiseMap.get(metaWindow);
+                    const psPromise = psPromiseMap.get(metaWindow.get_pid());
                     const [result, proc] = await psPromise;
                     this._setFieldsFromProcess(proc, result, sessionConfigObject);
 
+                    const windowId = metaWindow.get_id();
                     sessionConfigObject.window_id_the_int_type = windowId;
                     if (metaWindow.is_always_on_all_workspaces()) {
                         sessionConfigObject.desktop_number = -1;
@@ -189,14 +189,14 @@ var SaveSession = class {
             let metaWindows = runningShellApp.get_windows();
             for (const metaWindow of metaWindows) {
                 const pid = metaWindow.get_pid();
-                if (this._ignoreWindows(metaWindow) || psPromiseMap.has(metaWindow)) {
+                if (psPromiseMap.has(pid) || this._ignoreWindows(metaWindow)) {
                     continue;
                 }
-                const psCmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,command'];
 
                 const psPromise = new Promise((resolve, reject) => {
                     // TODO pid is 0 if not known 
                     // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
+                    const psCmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,command'];
                     const proc = this._subprocessLauncher.spawnv(psCmd);
                     proc.communicate_utf8_async(null, null, ((proc, res) => {
                         try {
@@ -208,7 +208,7 @@ var SaveSession = class {
 
                 })
 
-                psPromiseMap.set(metaWindow, psPromise);
+                psPromiseMap.set(pid, psPromise);
             }
         }
     }
