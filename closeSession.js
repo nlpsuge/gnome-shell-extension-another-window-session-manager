@@ -39,7 +39,7 @@ var CloseSession = class {
 
     async closeWindows() {
         this._log.debug('Closing open windows');
-        
+
         let workspaceManager = global.workspace_manager;
         for (let i = 0; i < workspaceManager.n_workspaces; i++) {
             // Make workspaces non-persistent, so they can be removed if no windows in it
@@ -47,9 +47,12 @@ var CloseSession = class {
         }
 
         let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
-        await this._tryCloseAppsByRules(running_apps_closing_by_rules);
-        this._log.debug('done...');
-
+        for(const app of running_apps_closing_by_rules) {
+            await this._tryCloseAppsByRules(app).catch(e => {
+                this._log.error(e);
+            });
+        }
+        
         for (const app of new_running_apps) {
             const closing = this._closeOneApp(app);
             if (closing) {
@@ -58,7 +61,6 @@ var CloseSession = class {
                 this._log.debug(`Can not close ${app.get_name()}`);
             }
         }
-
     }
 
     _closeOneApp(app) {
@@ -91,24 +93,7 @@ var CloseSession = class {
         return closing; 
     }
 
-    async _tryCloseAppsByRules(running_apps_closing_by_rules) {
-        await new Promise((resolve, reject) => {
-            this._tryCloseAppsByRulesAsync(running_apps_closing_by_rules, () => {
-                resolve();
-            })
-        });
-    }
-
-    _tryCloseAppsByRulesAsync(running_apps_closing_by_rules, finishApplyRulesCallback) {
-        if (!running_apps_closing_by_rules || running_apps_closing_by_rules.length === 0) {
-            if (finishApplyRulesCallback) {
-                this._log.debug('done calling callback...');
-                finishApplyRulesCallback();
-            }
-            return;
-        }
-
-        const app = running_apps_closing_by_rules.shift();
+    async _tryCloseAppsByRules(app) {
         // Help close dialogs
         this._closeOneApp(app);
 
@@ -135,18 +120,28 @@ var CloseSession = class {
 
             // Leave the overview first, so the keys can be sent to the activated windows
             if (Main.overview.visible) {
-                Main.overview.hide();
-                const hiddenId = Main.overview.connect('hidden', 
-                    () => {
-                        Main.overview.disconnect(hiddenId);
-                        this._activateAndCloseWindows(app, keycodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
-                    });
-            } else {
-                this._activateAndCloseWindows(app, keycodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
+                this._log.debug('Leaving Overview before applying rules to close windows');
+                await this._leaveOverview();
             }
             
+            for (const linuxKeyCodes of keycodesSegments) {
+                await this._activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal);
+            }
         }
+    }
 
+    _leaveOverview() {
+        return new Promise((resolve, reject) => {
+            const hiddenId = Main.overview.connect('hidden', () => {
+                try {
+                    Main.overview.disconnect(hiddenId);
+                    resolve();
+                } catch (e) {
+                    reject(e);
+                }
+            });
+            Main.overview.hide();
+        });
     }
 
     _convertToLinuxKeycodes(rule) {
@@ -189,30 +184,29 @@ var CloseSession = class {
         return keycodes;
     }
 
-    _activateAndCloseWindows(app, linuxKeyCodesSegments, shortcutsOriginal, running_apps_closing_by_rules) {
-        if (!linuxKeyCodesSegments || linuxKeyCodesSegments.length === 0) {
-            // Proceed the next rule
-            this._tryCloseAppsByRulesAsync(running_apps_closing_by_rules);
-            return;
+    async _activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal) {
+        try {
+            const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
+            const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
+            const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
+            const keyDelay = rules?.keyDelay;
+            const cmd = ['ydotool', 'key', '--key-delay', !keyDelay ? '0' : keyDelay + ''].concat(linuxKeyCodes);
+            const cmdStr = cmd.join(' ');
+            
+            this._log.info(`Closing the app ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
+            
+            this._activateAndFocusWindow(app);
+            await SubprocessUtils.trySpawn(cmd, 
+                (output) => {
+                    this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
+                }, (output) => {
+                    this._log.error(new Error(`Failed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`));
+                }
+            );
+        } catch (e) {
+            this._log.error(e);
         }
-        const linuxKeyCodes = linuxKeyCodesSegments.shift();  
-        const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
-        const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
-        const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
-        const keyDelay = rules?.keyDelay;
-        const cmd = ['ydotool', 'key', '--key-delay', !keyDelay ? '0' : keyDelay + ''].concat(linuxKeyCodes);
-        const cmdStr = cmd.join(' ');
         
-        this._log.info(`Closing the app ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
-        
-        this._activateAndFocusWindow(app);
-        SubprocessUtils.trySpawnAsync(cmd, 
-            (output) => {
-            this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
-            this._activateAndCloseWindows(app, linuxKeyCodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
-            }, (output) => {
-                this._log.error(new Error(`Failed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`));
-            });
     }
 
     _getRunningAppsClosingByRules() {
