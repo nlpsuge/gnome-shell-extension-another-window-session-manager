@@ -23,12 +23,16 @@ var trySpawn = function(commandLineArray, callBackOnSuccess, callBackOnFailure) 
     return new Promise((resolve, reject) => {
         trySpawnAsync(commandLineArray, 
             (output) => {
-                callBackOnSuccess();
-                resolve();
+                if (callBackOnSuccess) {
+                    callBackOnSuccess();
+                }
+                resolve(output);
             }, 
             (output) => {
-                callBackOnFailure();
-                reject();
+                if (callBackOnFailure) {
+                    callBackOnFailure();
+                }
+                reject(output);
             })
     });
 }

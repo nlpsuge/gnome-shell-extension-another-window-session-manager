@@ -1,6 +1,9 @@
 'use strict';
 
 const { Shell, Gio, GLib } = imports.gi;
+
+const ByteArray = imports.byteArray;
+
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -10,6 +13,7 @@ const UiHelper = Me.imports.ui.uiHelper;
 
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
+
 // for make prototype affect
 Me.imports.utils.string;
 
@@ -26,14 +30,16 @@ var SaveSession = class {
         this._defaultAppSystem = Shell.AppSystem.get_default();
     }
 
-    saveSession(sessionName) {
-        
+    async saveSession(sessionName) {
+        this._log.info(`Generating session ${sessionName}`);
+
         const runningShellApps = this._defaultAppSystem.get_running();
         const sessionConfig = new SessionConfig.SessionConfig();
         sessionConfig.session_name = sessionName ? sessionName : FileUtils.default_sessionName;
         sessionConfig.session_create_time = new Date().toLocaleString();
         
-        this._log.info(`Saving open windows as a session named ${sessionConfig.session_name}`);
+        const psPromiseMap = new Map();
+        this._promisePs(runningShellApps, psPromiseMap);
 
         for (const runningShellApp of runningShellApps) {
             const appName = runningShellApp.get_name();
@@ -58,20 +64,16 @@ var SaveSession = class {
             });
             for (const metaWindow of metaWindows) {
 
-                // TODO pid is 0 if not known 
-                // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
                 const pid = metaWindow.get_pid();
-                const input_cmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,command'];
                 try {
-                    const proc = this._subprocessLauncher.spawnv(input_cmd);
-                    // TODO Use async version in the future
-                    const result = proc.communicate_utf8(null, null);
-                                        
                     const sessionConfigObject = new SessionConfig.SessionConfigObject();
+                    const windowId = metaWindow.get_id();
 
+                    const psPromise = psPromiseMap.get(metaWindow);
+                    const [result, proc] = await psPromise;
                     this._setFieldsFromProcess(proc, result, sessionConfigObject);
 
-                    sessionConfigObject.window_id_the_int_type = metaWindow.get_id();
+                    sessionConfigObject.window_id_the_int_type = windowId;
                     if (metaWindow.is_always_on_all_workspaces()) {
                         sessionConfigObject.desktop_number = -1;
                     } else {
@@ -163,27 +165,52 @@ var SaveSession = class {
                     sessionConfig.x_session_config_objects.push(sessionConfigObject);    
 
                 } catch (e) {
-                    logError(e, `Failed to build session`);
-                    global.notify_error(`Failed to build session`, e.message);
+                    logError(e, `Failed to generate session ${sessionName}`);
+                    global.notify_error(`Failed to generate session ${sessionName}`, e.message);
                 }
             }
         }
 
-        // Save open windows
+        // Save open windows to local file
         try {
             sessionConfig.x_session_config_objects = sessionConfig.sort();
-            const success = this.save2File(sessionConfig);
-            if (success) {
-                // TODO saved Notification
-            }
-            return success;
+            this.save2File(sessionConfig);
+            // TODO saved Notification
         } catch (e) {
             logError(e, `Failed to write session to disk`);
             global.notify_error(`Failed to write session to disk`, e.message);
             throw e;
         }
 
-        return false;
+    }
+
+    _promisePs(runningShellApps, psPromiseMap) {
+        for (const runningShellApp of runningShellApps) {
+            let metaWindows = runningShellApp.get_windows();
+            for (const metaWindow of metaWindows) {
+                const pid = metaWindow.get_pid();
+                if (this._ignoreWindows(metaWindow) || psPromiseMap.has(metaWindow)) {
+                    continue;
+                }
+                const psCmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,command'];
+
+                const psPromise = new Promise((resolve, reject) => {
+                    // TODO pid is 0 if not known 
+                    // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
+                    const proc = this._subprocessLauncher.spawnv(psCmd);
+                    proc.communicate_utf8_async(null, null, ((proc, res) => {
+                        try {
+                            resolve([proc.communicate_utf8_finish(res), proc]);
+                        } catch(e) {
+                            reject(e);
+                        }
+                    }));
+
+                })
+
+                psPromiseMap.set(metaWindow, psPromise);
+            }
+        }
     }
 
     _ignoreWindows(metaWindow) {
@@ -207,56 +234,103 @@ var SaveSession = class {
     }
 
     save2File(sessionConfig) {
+        this._log.info(`Saving session ${sessionConfig.session_name} to local file`);
+
         const sessionConfigJson = JSON.stringify(sessionConfig, null, 4);
 
         const sessions_path = FileUtils.get_sessions_path();
         const session_file_path = GLib.build_filenamev([sessions_path, sessionConfig.session_name]);
         const session_file = Gio.File.new_for_path(session_file_path);
-        if (GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
-            let backup = false;
-            let reason = null;
-            const session_file_backup_path = FileUtils.get_sessions_backups_path();
-            const session_file_backup = GLib.build_filenamev([session_file_backup_path, sessionConfig.session_name + '.backup-' + new Date().getTime()]);
-            if (GLib.mkdir_with_parents(session_file_backup_path, 0o744) === 0) {
-                backup = session_file.copy(
-                    Gio.File.new_for_path(session_file_backup),
-                    Gio.FileCopyFlags.OVERWRITE,
-                    null,
-                    null);
-            } else {
-                reason = `Failed to create backups folder: ${session_file_backup_path}`;
-            }
-
-            if (!backup) {
-                const errMsg = `Failed to backup the previous session file: ${session_file_path}`;
-                reason = reason ? reason : `Failed to copy ${session_file_path} to ${session_file_backup}`;
-                logError(new Error(`${errMsg}`), `${reason}`);
-                global.notify_error(`${errMsg}`, `${reason}`);
-            }
-
+        if (!GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
+            this._saveSessionConfigJson(session_file, sessionConfigJson);
+            return;
         }
 
+        const session_file_backup_path = FileUtils.get_sessions_backups_path();
+        const session_file_backup = GLib.build_filenamev([session_file_backup_path, sessionConfig.session_name + '.backup-' + new Date().getTime()]);
+        if (GLib.mkdir_with_parents(session_file_backup_path, 0o744) !== 0) {
+            const errMsg = `Cannot save session: ${session_file_path}`;
+            const reason = `Failed to create backups folder: ${session_file_backup_path}`;
+            this._log.error(new Error(`${errMsg}`), `${reason}`);
+            global.notify_error(`${errMsg}`, `${reason}`);
+            return;
+        }
+
+        session_file.copy_async(
+            Gio.File.new_for_path(session_file_backup),
+            Gio.FileCopyFlags.OVERWRITE,
+            GLib.PRIORITY_DEFAULT,
+            null,
+            null,
+            (file, asyncResult) => {
+                let success;
+                try {
+                    success = session_file.copy_finish(asyncResult);
+                } catch (e) {
+                    const errMsg = `Cannot save session: ${session_file_path}`;
+                    const reason = `Failed to backup ${session_file_path} to ${session_file_backup}`;
+                    this._log.error(e, `${reason}`);
+                    global.notify_error(`${errMsg}`, `${reason}`);
+                    return;
+                }
+
+                if (success) {
+                    this._saveSessionConfigJson(session_file, sessionConfigJson);
+                } else {
+                    const errMsg = `Cannot save session: ${session_file_path}`;
+                    const reason = `Failed to backup ${session_file_path} to ${session_file_backup}`;
+                    this._log.error(new Error(`${errMsg}`), `${reason}`);
+                    global.notify_error(`${errMsg}`, `${reason}`);
+                }
+            }
+        );
+
+    }
+
+    _saveSessionConfigJson(sessionFile, sessionConfigJson) {
         // https://gjs.guide/guides/gio/file-operations.html#saving-content
         // https://github.com/ewlsh/unix-permissions-cheat-sheet/blob/master/README.md#octal-notation
         // https://askubuntu.com/questions/472812/why-is-777-assigned-to-chmod-to-permit-everything-on-a-file
         // 0o stands for octal 
         // 0o744 => rwx r-- r--
-        if (GLib.mkdir_with_parents(session_file.get_parent().get_path(), 0o744) === 0) {
-            let [success, tag] = session_file.replace_contents(
-                sessionConfigJson,
-                null,
-                false,
-                Gio.FileCreateFlags.REPLACE_DESTINATION,
-                null
-            );
-
-            if (success) {
-                this._log.info(`Saved open windows as a session in ${session_file_path}!`);
-            }
-            return success;
+        const sessionFolder = sessionFile.get_parent().get_path();
+        if (GLib.mkdir_with_parents(sessionFolder, 0o744) !== 0) {
+            const errMsg = `Cannot save session: ${sessionFile.get_path()}`;
+            const reason = `Failed to create session folder: ${sessionFolder}`;
+            this._log.error(new Error(`${errMsg}`), `${reason}`);
+            global.notify_error(`${errMsg}`, `${reason}`);
+            return;
         }
 
-        return false;
+        // Use replace_contents_bytes_async instead of replace_contents_async, see: 
+        // https://gitlab.gnome.org/GNOME/gjs/-/blob/gnome-42/modules/core/overrides/Gio.js#L513
+        // https://gitlab.gnome.org/GNOME/gjs/-/issues/192
+        sessionFile.replace_contents_bytes_async(
+            ByteArray.fromString(sessionConfigJson),
+            null,
+            false,
+            Gio.FileCreateFlags.REPLACE_DESTINATION,
+            null,
+            (file, asyncResult) => {
+                try {
+                    const success = sessionFile.replace_contents_finish(asyncResult);
+                    if (success) {
+                        this._log.info(`Saved session into ${sessionFile.get_path()}!`);
+                        // TODO Notification
+                    } else {
+                        const errMsg = `Cannot save session: ${sessionFile.get_path()}`;
+                        const reason = `Failed to save session into ${sessionFile.get_path()}!`;
+                        this._log.error(new Error(`${errMsg}`), `${reason}`);
+                        global.notify_error(`${errMsg}`, `${reason}`);
+                    }
+                } catch (e) {
+                    const errMsg = `Cannot save session: ${sessionFile.get_path()}`;
+                    const reason = `Failed to save session into ${sessionFile.get_path()}!`;
+                    this._log.error(e, `${reason}`);
+                    global.notify_error(`${errMsg}`, `${reason}`);
+                }
+            }
+        );
     }
 
     _setFieldsFromProcess(proc, result, sessionConfigObject) {

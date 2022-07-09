@@ -440,7 +440,7 @@ const RuleRow = GObject.registerClass({
         if (previousAcceleratorButton) {
             order = previousAcceleratorButton._rule.order + 1
         } else {
-            // The vert first accelerator...
+            // The very first accelerator...
             order = 1;
         }
 
