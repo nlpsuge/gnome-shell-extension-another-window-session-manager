@@ -3,7 +3,6 @@
 const { Meta, Shell, Gio, GLib } = imports.gi;
 
 const Main = imports.ui.main;
-const Scripting = imports.ui.scripting;
 
 const Util = imports.misc.util;
 
@@ -16,6 +15,8 @@ const SubprocessUtils = Me.imports.utils.subprocessUtils;
 const OpenWindowsInfoTracker = Me.imports.openWindowsInfoTracker;
 
 const Constants = Me.imports.constants;
+
+const UiHelper = Me.imports.ui.uiHelper;
 
 
 var CloseSession = class {
@@ -36,9 +37,9 @@ var CloseSession = class {
         this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'smplayer.desktop'];
     }
 
-    closeWindows() {
+    async closeWindows() {
         this._log.debug('Closing open windows');
-        
+
         let workspaceManager = global.workspace_manager;
         for (let i = 0; i < workspaceManager.n_workspaces; i++) {
             // Make workspaces non-persistent, so they can be removed if no windows in it
@@ -46,30 +47,55 @@ var CloseSession = class {
         }
 
         let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
-        this._tryCloseAppsByRules(running_apps_closing_by_rules);
-
-        for (const app of new_running_apps) {
-            this._closeOneApp(app);
+        for(const app of running_apps_closing_by_rules) {
+            await this._tryCloseAppsByRules(app).catch(e => {
+                this._log.error(e);
+            });
         }
-
+        
+        for (const app of new_running_apps) {
+            const closing = this._closeOneApp(app);
+            if (closing) {
+                this._log.debug(`Closing ${app.get_name()}`);
+            } else {
+                this._log.debug(`Can not close ${app.get_name()}`);
+            }
+        }
     }
 
     _closeOneApp(app) {
-        if (this._skip_multiple_windows(app)) {
-            this._log.debug(`Skipping ${app.get_name()} because it has more than one windows`);
-        } else {
-            this._log.debug(`Closing ${app.get_name()}`);
+        let closing = true;
+        if (app.get_n_windows() == 1) {
             app.get_windows().forEach(w => w._aboutToClose = true);
             app.request_quit();
+        } else {
+            const appInWhitelist = this.whitelist.includes(app.get_id());
+            let windows = this._sortWindows(app);
+            for (let i = windows.length - 1; i >= 0; i--) {
+                let window = windows[i];
+                if (!window.can_close()) {
+                    closing = false;
+                    continue;
+                }
+
+                if (UiHelper.isDialog(window) 
+                    || appInWhitelist 
+                    || !this._skip_app_with_multiple_windows)
+                {
+                    window._aboutToClose = true
+                    window.delete(global.get_current_time());
+                } else {
+                    closing = false;
+                }
+            }
         }
+        
+        return closing; 
     }
 
-    _tryCloseAppsByRules(running_apps_closing_by_rules) {
-        if (!running_apps_closing_by_rules || running_apps_closing_by_rules.length === 0) {
-            return;
-        }
-
-        const app = running_apps_closing_by_rules.shift();
+    async _tryCloseAppsByRules(app) {
+        // Help close dialogs
+        this._closeOneApp(app);
 
         const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
         const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
@@ -78,7 +104,6 @@ var CloseSession = class {
         if (rules?.type === 'shortcut') {
             let keycodesSegments = [];
             let shortcutsOriginal = [];
-            let keycodes = [];
             for (const order in rules.value) {
                 const rule = rules.value[order];
                 let shortcut = rule.shortcut;
@@ -89,25 +114,34 @@ var CloseSession = class {
                             .concat(linuxKeycodes.slice()
                                 // Release keys
                                 .reverse().map(k => k + ':0'))
-                // keycodes = keycodes.concat(translatedLinuxKeycodes);
                 keycodesSegments.push(translatedLinuxKeycodes);
                 shortcutsOriginal.push(shortcut);
             }
 
             // Leave the overview first, so the keys can be sent to the activated windows
             if (Main.overview.visible) {
-                Main.overview.hide();
-                const hiddenId = Main.overview.connect('hidden', 
-                    () => {
-                        Main.overview.disconnect(hiddenId);
-                        this._activateAndCloseWindows(app, keycodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
-                    });
-            } else {
-                this._activateAndCloseWindows(app, keycodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
+                this._log.debug('Leaving Overview before applying rules to close windows');
+                await this._leaveOverview();
             }
             
+            for (const linuxKeyCodes of keycodesSegments) {
+                await this._activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal);
+            }
         }
+    }
 
+    _leaveOverview() {
+        return new Promise((resolve, reject) => {
+            const hiddenId = Main.overview.connect('hidden', () => {
+                try {
+                    Main.overview.disconnect(hiddenId);
+                    resolve();
+                } catch (e) {
+                    reject(e);
+                }
+            });
+            Main.overview.hide();
+        });
     }
 
     _convertToLinuxKeycodes(rule) {
@@ -150,30 +184,29 @@ var CloseSession = class {
         return keycodes;
     }
 
-    _activateAndCloseWindows(app, linuxKeyCodesSegments, shortcutsOriginal, running_apps_closing_by_rules) {
-        if (!linuxKeyCodesSegments || linuxKeyCodesSegments.length === 0) {
-            // Proceed the next rule
-            this._tryCloseAppsByRules(running_apps_closing_by_rules);
-            return;
+    async _activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal) {
+        try {
+            const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
+            const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
+            const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
+            const keyDelay = rules?.keyDelay;
+            const cmd = ['ydotool', 'key', '--key-delay', !keyDelay ? '0' : keyDelay + ''].concat(linuxKeyCodes);
+            const cmdStr = cmd.join(' ');
+            
+            this._log.info(`Closing the app ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
+            
+            this._activateAndFocusWindow(app);
+            await SubprocessUtils.trySpawn(cmd, 
+                (output) => {
+                    this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
+                }, (output) => {
+                    this._log.error(new Error(`Failed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`));
+                }
+            );
+        } catch (e) {
+            this._log.error(e);
         }
-        const linuxKeyCodes = linuxKeyCodesSegments.shift();  
-        const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
-        const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
-        const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
-        const keyDelay = rules?.keyDelay;
-        const cmd = ['ydotool', 'key', '--key-delay', !keyDelay ? '0' : keyDelay + ''].concat(linuxKeyCodes);
-        const cmdStr = cmd.join(' ');
         
-        this._log.info(`Closing the app ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
-        
-        this._activateAndFocusWindow(app);
-        SubprocessUtils.trySpawnAsync(cmd, 
-            (output) => {
-            this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
-            this._activateAndCloseWindows(app, linuxKeyCodesSegments, shortcutsOriginal, running_apps_closing_by_rules);
-            }, (output) => {
-                this._log.error(new Error(`Failed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`));
-            });
     }
 
     _getRunningAppsClosingByRules() {
@@ -199,18 +232,22 @@ var CloseSession = class {
     }
 
     _activateAndFocusWindow(app) {
+        let windows = this._sortWindows(app);
+        const topLevelWindow = windows[windows.length - 1];
+        if (topLevelWindow) {
+            this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
+            Main.activateWindow(topLevelWindow);
+        }
+    }
+
+    _sortWindows(app) {
         let windows;
         if (Meta.is_wayland_compositor()) {
             windows = this._sortWindowsOnWayland(app);
         } else {
             windows = this._sortWindowsOnX11(app);
         }
-
-        const topLevelWindow = windows[windows.length - 1];
-        if (topLevelWindow) {
-            this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
-            Main.activateWindow(topLevelWindow);
-        }
+        return windows;
     }
 
     _sortWindowsOnWayland(app) {

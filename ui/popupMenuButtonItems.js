@@ -143,7 +143,9 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
                 Main.overview.toggle();
             }
 
-            this.closeSession.closeWindows();
+            this.closeSession.closeWindows().catch(e => {
+                this._log.error(e)
+            });
             this._hideConfirm();
 
             // Set the actor the timeline is associated with to make sure Clutter.Timeline works normally.

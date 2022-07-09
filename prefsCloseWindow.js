@@ -449,8 +449,6 @@ const RuleRow = GObject.registerClass({
         };
         
         const eventControllerKey = new Gtk.EventControllerKey();
-        // To hold the pair of keycode and its accelerator, for example: 105 and Control R
-        eventControllerKey._rightModifierMapping = new Map();
         newAccelButton.add_controller(eventControllerKey);
         eventControllerKey.connect('key-pressed', this._onKeyPressed.bind(this));
         eventControllerKey.connect('key-released', this._onKeyReleased.bind(this));
