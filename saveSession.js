@@ -34,13 +34,12 @@ var SaveSession = class {
         this._log.info(`Generating session ${sessionName}`);
 
         const runningShellApps = this._defaultAppSystem.get_running();
+        const _getProcessInfoPromise = this._getProcessInfo(runningShellApps)
+
         const sessionConfig = new SessionConfig.SessionConfig();
         sessionConfig.session_name = sessionName ? sessionName : FileUtils.default_sessionName;
         sessionConfig.session_create_time = new Date().toLocaleString();
         
-        const psPromiseMap = new Map();
-        this._promisePs(runningShellApps, psPromiseMap);
-
         for (const runningShellApp of runningShellApps) {
             const appName = runningShellApp.get_name();
             const desktopFileId = runningShellApp.get_id();
@@ -62,15 +61,17 @@ var SaveSession = class {
                 }
                 return true;
             });
+
+            const processInfoMap = await _getProcessInfoPromise;
+
             for (const metaWindow of metaWindows) {
 
                 const pid = metaWindow.get_pid();
                 try {
                     const sessionConfigObject = new SessionConfig.SessionConfigObject();
 
-                    const psPromise = psPromiseMap.get(metaWindow.get_pid());
-                    const [result, proc] = await psPromise;
-                    this._setFieldsFromProcess(proc, result, sessionConfigObject);
+                    const processInfoArray = processInfoMap.get(pid);
+                    this._setFieldsFromProcess(processInfoArray, sessionConfigObject);
 
                     const windowId = metaWindow.get_id();
                     sessionConfigObject.window_id_the_int_type = windowId;
@@ -184,33 +185,58 @@ var SaveSession = class {
 
     }
 
-    _promisePs(runningShellApps, psPromiseMap) {
+    _getProcessInfo(runningShellApps) {
+        const pidSet = new Set();
         for (const runningShellApp of runningShellApps) {
             let metaWindows = runningShellApp.get_windows();
             for (const metaWindow of metaWindows) {
-                const pid = metaWindow.get_pid();
-                if (psPromiseMap.has(pid) || this._ignoreWindows(metaWindow)) {
+                if (this._ignoreWindows(metaWindow)) {
                     continue;
                 }
 
-                const psPromise = new Promise((resolve, reject) => {
-                    // TODO pid is 0 if not known 
-                    // get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
-                    const psCmd = ['ps', '--no-headers', '-p', `${pid}`, '-o', 'lstart,%cpu,%mem,command'];
-                    const proc = this._subprocessLauncher.spawnv(psCmd);
-                    proc.communicate_utf8_async(null, null, ((proc, res) => {
-                        try {
-                            resolve([proc.communicate_utf8_finish(res), proc]);
-                        } catch(e) {
-                            reject(e);
-                        }
-                    }));
-
-                })
-
-                psPromiseMap.set(pid, psPromise);
+                const pid = metaWindow.get_pid();
+                // pid is `0` if not known
+                // Note that pass `0` or negative value to `ps -p` will get `error: process ID out of range`
+                if (pid > 0) pidSet.add(pid);
             }
         }
+
+        // Separate with comma
+        const pids = Array.from(pidSet).join(',');
+        // TODO get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
+        const psCmd = ['ps', '--no-headers', '-p', `${pids}`, '-o', 'lstart,%cpu,%mem,pid,command'];
+    
+        return new Promise((resolve, reject) => {
+            try {
+                const proc = this._subprocessLauncher.spawnv(psCmd);
+                proc.communicate_utf8_async(null, null, ((proc, res) => {
+                    try {
+                        const processInfoMap = new Map();
+                        let [, stdout, stderr] = proc.communicate_utf8_finish(res);
+                        let status = proc.get_exit_status();
+                        if (status === 0 && stdout) {
+                            const lines = stdout.trim();
+                            for (const line of lines.split('\n')) {
+                                const processInfoArray = line.split(' ').filter(a => a);
+                                const pid = processInfoArray.slice(7, 8).join();
+                                processInfoMap.set(Number(pid), processInfoArray);
+                            }
+                            return resolve(processInfoMap);
+                        }
+    
+                        this._log.error(new Error(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`));
+                        resolve(processInfoMap);
+                    } catch(e) {
+                        this._log.error(e);
+                        reject(e);
+                    }
+                }));
+            } catch (e) {
+                this._log.error(e);
+                reject(e);
+            }
+            
+        })
     }
 
     _ignoreWindows(metaWindow) {
@@ -333,18 +359,13 @@ var SaveSession = class {
         );
     }
 
-    _setFieldsFromProcess(proc, result, sessionConfigObject) {
-        let [, stdout, stderr] = result;
-        let status = proc.get_exit_status();
-        if (status === 0 && stdout) {
-            stdout = stdout.trim();
-            const stdoutArr = stdout.split(' ').filter(a => a);
-            sessionConfigObject.process_create_time = stdoutArr.slice(0, 5).join(' ');
-            sessionConfigObject.cpu_percent = stdoutArr.slice(5, 6).join();
-            sessionConfigObject.memory_percent = stdoutArr.slice(6, 7).join();
-            sessionConfigObject.cmd = stdoutArr.slice(7);
+    _setFieldsFromProcess(processInfoArray, sessionConfigObject) {
+        if (processInfoArray) {
+            sessionConfigObject.process_create_time = processInfoArray.slice(0, 5).join(' ');
+            sessionConfigObject.cpu_percent = processInfoArray.slice(5, 6).join();
+            sessionConfigObject.memory_percent = processInfoArray.slice(6, 7).join();
+            sessionConfigObject.cmd = processInfoArray.slice(8);
         } else {
-            this._log.error(new Error(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`));
             sessionConfigObject.process_create_time = null;
             sessionConfigObject.cpu_percent = null;
             sessionConfigObject.memory_percent = null;
