@@ -11,6 +11,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Log = Me.imports.utils.log;
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const SubprocessUtils = Me.imports.utils.subprocessUtils;
+const DateUtils = Me.imports.utils.dateUtils;
 
 const OpenWindowsInfoTracker = Me.imports.openWindowsInfoTracker;
 
@@ -54,48 +55,83 @@ var CloseSession = class {
         }
         
         for (const app of new_running_apps) {
-            const closing = this._closeOneApp(app);
-            if (closing) {
-                this._log.debug(`Closing ${app.get_name()}`);
-            } else {
-                this._log.debug(`Can not close ${app.get_name()}`);
-            }
+            this._closeOneApp(app)
+                .then((closed) => {
+                    if (closed) {
+                        this._log.debug(`Closed ${app.get_name()}`);
+                    } else {
+                        this._log.debug(`Can not close ${app.get_name()}`);
+                    }
+                });
         }
     }
 
-    _closeOneApp(app) {
-        let closing = true;
-        if (app.get_n_windows() == 1) {
-            app.get_windows().forEach(w => w._aboutToClose = true);
-            app.request_quit();
-        } else {
-            const appInWhitelist = this.whitelist.includes(app.get_id());
-            let windows = this._sortWindows(app);
-            for (let i = windows.length - 1; i >= 0; i--) {
-                let window = windows[i];
-                if (!window.can_close()) {
-                    closing = false;
-                    continue;
-                }
-
-                if (UiHelper.isDialog(window) 
-                    || appInWhitelist 
-                    || !this._skip_app_with_multiple_windows)
-                {
-                    window._aboutToClose = true
-                    window.delete(global.get_current_time());
-                } else {
-                    closing = false;
+    /**
+     * * If the `app` has multiple windows, only delete those windows that their type are dialog (See UiHelper.isDialog(window))
+     *   * If the `app` is in the whitelist, which means the app can close safely, delete all its windows.
+     * * If a window can not close, leave it open.
+     * 
+     * @param {Shell.App} app 
+     * @returns true if this `app` is closed, otherwise return false which means it still has unclosed windows
+     */
+    async _closeOneApp(app) {
+        try {
+            let closed = true;
+            if (app.get_n_windows() > 1) {
+                const appInWhitelist = this.whitelist.includes(app.get_id());
+                let windows = this._sortWindows(app);
+                for (let i = windows.length - 1; i >= 0; i--) {
+                    let window = windows[i];
+                    if (!window.can_close()) {
+                        closed = false;
+                        continue;
+                    }
+    
+                    if (UiHelper.isDialog(window) 
+                        || appInWhitelist 
+                        || !this._skip_app_with_multiple_windows)
+                    {
+                        window._aboutToClose = true;
+                        closed = await this._awaitDeleteWindow(app, window);
+                    } else {
+                        closed = false;
+                    }
                 }
             }
+                
+            if (app.get_n_windows() === 1) {
+                const window = app.get_windows()[0];
+                if (window.can_close()) {
+                    window._aboutToClose = true;
+                    closed = await this._awaitDeleteWindow(app, window);
+                }
+            }
+            
+            return closed;
+        } catch (e) {
+            this._log.error(e);
+            return false;
         }
-        
-        return closing; 
+    }
+
+    _awaitDeleteWindow(app, metaWindow) {
+        return new Promise((resolve, reject) => {
+            const windowsChangedId = app.connect('windows-changed', () => {
+                app.disconnect(windowsChangedId);
+                resolve(app.get_n_windows() === 0);
+            });
+            metaWindow.delete(DateUtils.get_current_time());
+        });
     }
 
     async _tryCloseAppsByRules(app) {
-        // Help close dialogs
-        this._closeOneApp(app);
+        // Help close dialogs.
+        // Or even might help close the app without sending keys further, for example if the apps
+        // has one normal window and some attached dialogs. 
+        if (await this._closeOneApp(app)) {
+            this._log.info(`${app.get_name()} has been closed`);
+            return;
+        }
 
         const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
         const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
@@ -193,7 +229,7 @@ var CloseSession = class {
             const cmd = ['ydotool', 'key', '--key-delay', !keyDelay ? '0' : keyDelay + ''].concat(linuxKeyCodes);
             const cmdStr = cmd.join(' ');
             
-            this._log.info(`Closing the app ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
+            this._log.info(`Closing ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
             
             this._activateAndFocusWindow(app);
             await SubprocessUtils.trySpawn(cmd, 
@@ -236,11 +272,15 @@ var CloseSession = class {
         const topLevelWindow = windows[windows.length - 1];
         if (topLevelWindow) {
             this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
-            Main.activateWindow(topLevelWindow);
+            Main.activateWindow(topLevelWindow, DateUtils.get_current_time());
         }
     }
 
     _sortWindows(app) {
+        if (app.get_n_windows() === 1) {
+            return app.get_windows();
+        }
+
         let windows;
         if (Meta.is_wayland_compositor()) {
             windows = this._sortWindowsOnWayland(app);
