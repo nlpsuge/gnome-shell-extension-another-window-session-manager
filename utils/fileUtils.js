@@ -59,7 +59,7 @@ async function listAllSessions(sessionPath, recursion, debug, callback) {
     }
 
     if (debug) {
-        log(`[DEBUG][Another window session manager] Scanning ${sessionPath}`);
+        log(`[DEBUG  ][Another window session manager] Scanning ${sessionPath}`);
     }
     const sessionPathFile = Gio.File.new_for_path(sessionPath);
     let fileEnumerator = await new Promise((resolve, reject) => {
