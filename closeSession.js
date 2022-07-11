@@ -57,11 +57,11 @@ var CloseSession = class {
         for (const app of new_running_apps) {
             this._log.info(`Closing ${app.get_name()}`);
             this._closeOneApp(app)
-                .then((closed) => {
+                .then(([closed, reason]) => {
                     if (closed) {
                         this._log.info(`Closed ${app.get_name()}`);
                     } else {
-                        this._log.warn(`Can not close ${app.get_name()}`);
+                        this._log.warn(`Can not close ${app.get_name()} because ${reason}`);
                     }
                 });
         }
@@ -78,6 +78,7 @@ var CloseSession = class {
     async _closeOneApp(app) {
         try {
             let closed = true;
+            let reason;
             if (app.get_n_windows() > 1) {
                 const appInWhitelist = this.whitelist.includes(app.get_id());
                 let windows = this._sortWindows(app);
@@ -85,6 +86,7 @@ var CloseSession = class {
                     let window = windows[i];
                     if (!window.can_close()) {
                         closed = false;
+                        reason = 'it has unclosable window(s)';
                         continue;
                     }
     
@@ -94,8 +96,12 @@ var CloseSession = class {
                     {
                         window._aboutToClose = true;
                         closed = await this._awaitDeleteWindow(app, window);
+                        if (!closed) {
+                            reason = 'it has at least one window still open';
+                        }
                     } else {
                         closed = false;
+                        reason = 'it has multiple normal windows and does not in the whitelist';
                     }
                 }
             }
@@ -105,13 +111,16 @@ var CloseSession = class {
                 if (window.can_close()) {
                     window._aboutToClose = true;
                     closed = await this._awaitDeleteWindow(app, window);
+                    if (!closed) {
+                        reason = 'it has at least one window still open, maybe it is not closable';
+                    }
                 }
             }
             
-            return closed;
+            return [closed, reason];
         } catch (e) {
             this._log.error(e);
-            return false;
+            return [false, `Error raised while closing app: ${e.message}`];
         }
     }
 
@@ -130,7 +139,8 @@ var CloseSession = class {
         // Or even might help close the app without sending keys further, for example if the apps
         // has one normal window and some attached dialogs. 
         this._log.info(`Closing ${app.get_name()}`);
-        if (await this._closeOneApp(app)) {
+        const [closed, reason] = await this._closeOneApp(app)
+        if (closed) {
             this._log.warn(`${app.get_name()} has been closed`);
             return;
         }
