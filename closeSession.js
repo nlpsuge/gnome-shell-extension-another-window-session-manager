@@ -55,12 +55,13 @@ var CloseSession = class {
         }
         
         for (const app of new_running_apps) {
+            this._log.info(`Closing ${app.get_name()}`);
             this._closeOneApp(app)
                 .then((closed) => {
                     if (closed) {
-                        this._log.debug(`Closed ${app.get_name()}`);
+                        this._log.info(`Closed ${app.get_name()}`);
                     } else {
-                        this._log.debug(`Can not close ${app.get_name()}`);
+                        this._log.warn(`Can not close ${app.get_name()}`);
                     }
                 });
         }
@@ -128,8 +129,9 @@ var CloseSession = class {
         // Help close dialogs.
         // Or even might help close the app without sending keys further, for example if the apps
         // has one normal window and some attached dialogs. 
+        this._log.info(`Closing ${app.get_name()}`);
         if (await this._closeOneApp(app)) {
-            this._log.info(`${app.get_name()} has been closed`);
+            this._log.warn(`${app.get_name()} has been closed`);
             return;
         }
 
