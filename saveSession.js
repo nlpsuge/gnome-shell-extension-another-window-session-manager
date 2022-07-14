@@ -163,6 +163,21 @@ var SaveSession = class {
                     window_state.is_above = metaWindow.is_above();
                     window_state.meta_maximized = metaWindow.get_maximized();
 
+                    const windowTileFor = metaWindow.get_tile_match();
+                    if (windowTileFor) {
+                        const shellApp = this._windowTracker.get_window_app(windowTileFor);
+                        if (shellApp) {
+                            let window_tiling = {};
+                            window_tiling.window_tile_for = {
+                                app_name: shellApp.get_name(),
+                                desktop_file_id: shellApp.get_id(),
+                                desktop_file_id_full_path: shellApp.get_app_info()?.get_filename(),
+                                window_title: windowTileFor.get_title()
+                            };
+                            sessionConfigObject.window_tiling = window_tiling;
+                        }
+                    }
+                    
                     sessionConfig.x_session_config_objects.push(sessionConfigObject);    
 
                 } catch (e) {

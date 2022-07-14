@@ -71,9 +71,8 @@ var MoveSession = class {
 
             try {
                 this._restoreMonitor(open_window, saved_window_session);
-
                 this._restoreWindowGeometry(open_window, saved_window_session);
-
+                this._restoreTiling(open_window, saved_window_session);
                 this._createEnoughWorkspace(desktop_number);
 
                 // Sticky windows don't need moving, in fact moving would unstick them
@@ -97,6 +96,21 @@ var MoveSession = class {
             saved_window_session.moved = true;
         }
 
+    }
+
+    // Inspired by https://github.com/Leleat/Tiling-Assistant/blob/main/tiling-assistant%40leleat-on-github/src/extension/resizeHandler.js
+    _restoreTiling(metaWindow, saved_window_session) {
+        const window_tiling = saved_window_session.window_tiling;
+        if (!window_tiling) return;
+        const window_tile_for = window_tiling.window_tile_for;
+        const shellApp = this._defaultAppSystem.lookup_app(window_tile_for.desktop_file_id);
+        if (!shellApp) return;
+        const windows = shellApp.get_windows();
+        if (!windows) return;
+        if (windows.length === 1) {
+            windows[0].connect('size-changed', );
+
+        }
     }
 
     /**
