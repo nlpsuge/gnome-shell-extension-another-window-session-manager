@@ -110,7 +110,9 @@ var CloseSession = class {
                 
             if (app.get_n_windows() === 1) {
                 const window = app.get_windows()[0];
-                if (window.can_close()) {
+                // Window could be `undefined` here, maybe even though this._awaitDeleteWindow()
+                // returns true, the window still takes some time to close.
+                if (window?.can_close()) {
                     window._aboutToClose = true;
                     closed = await this._awaitDeleteWindow(app, window);
                     if (!closed) {
