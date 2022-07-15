@@ -116,7 +116,7 @@ var CloseSession = class {
                     window._aboutToClose = true;
                     closed = await this._awaitDeleteWindow(app, window);
                     if (!closed) {
-                        reason = 'it has at least one window still open, maybe it is not closable';
+                        reason = 'it has at least one window still open, maybe it is not closable or still closing';
                     }
                 }
             }
