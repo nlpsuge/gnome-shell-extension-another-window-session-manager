@@ -24,15 +24,15 @@ var trySpawn = function(commandLineArray, callBackOnSuccess, callBackOnFailure) 
         trySpawnAsync(commandLineArray, 
             (output) => {
                 if (callBackOnSuccess) {
-                    callBackOnSuccess();
+                    callBackOnSuccess(output);
                 }
                 resolve(output);
             }, 
             (output) => {
                 if (callBackOnFailure) {
-                    callBackOnFailure();
+                    callBackOnFailure(output);
                 }
-                reject(output);
+                reject(new Error(output));
             })
     });
 }

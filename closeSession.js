@@ -252,7 +252,9 @@ var CloseSession = class {
                 (output) => {
                     this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
                 }, (output) => {
-                    this._log.error(new Error(`Failed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`));
+                    const msg = `Failed to send keys to close ${app.get_name()} via ydotool`;
+                    this._log.error(new Error(`${msg}. output: ${output}`));
+                    global.notify_error(`${msg}`, `Reason: ${output}.`);
                 }
             );
         } catch (e) {
