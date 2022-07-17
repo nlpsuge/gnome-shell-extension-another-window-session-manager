@@ -8,6 +8,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 
+const WindowTilingSupport = Me.imports.windowTilingSupport;
 
 var MoveSession = class {
 
@@ -58,11 +59,11 @@ var MoveSession = class {
 
     moveWindowsByShellApp(shellApp, saved_window_sessions) {
         const interestingWindows = this._getAutoMoveInterestingWindows(shellApp, saved_window_sessions);
-
+        
         if (!interestingWindows.length) {
             return;
         }
-
+        
         for (const interestingWindow of interestingWindows) {
             const open_window = interestingWindow.open_window;
             const saved_window_session = interestingWindow.saved_window_session;
@@ -102,15 +103,7 @@ var MoveSession = class {
     _restoreTiling(metaWindow, saved_window_session) {
         const window_tiling = saved_window_session.window_tiling;
         if (!window_tiling) return;
-        const window_tile_for = window_tiling.window_tile_for;
-        const shellApp = this._defaultAppSystem.lookup_app(window_tile_for.desktop_file_id);
-        if (!shellApp) return;
-        const windows = shellApp.get_windows();
-        if (!windows) return;
-        if (windows.length === 1) {
-            windows[0].connect('size-changed', );
-
-        }
+        WindowTilingSupport.windowsAboutToTileMap.set(metaWindow, window_tiling);
     }
 
     /**
@@ -381,6 +374,7 @@ var MoveSession = class {
                     if (open_window_workspace_index === desktop_number) {
                         this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
                         this._restoreWindowStateAndGeometry(open_window, saved_window_session);
+                        this._restoreTiling(open_window, saved_window_session);
                         saved_window_session.moved = true;
                         return;
                     }
