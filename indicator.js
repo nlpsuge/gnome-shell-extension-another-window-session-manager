@@ -148,9 +148,6 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
 
-            // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
-            this._log.debug(`window-created -> first-frame: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
-
             const shellAppData = RestoreSession.restoringApps.get(shellApp);
             if (!shellAppData) {
                 return;
@@ -185,9 +182,6 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
             
-            // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
-            this._log.debug(`window-created -> shown: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
-
             const shellAppData = RestoreSession.restoringApps.get(shellApp);
             if (!shellAppData) {
                 return;
