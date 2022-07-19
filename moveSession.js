@@ -178,7 +178,7 @@ var MoveSession = class {
         }
 
         if (saved_window_session.moved) {
-            this._restoreWindowStateAndGeometry(metaWindow, saved_window_session);
+            this._restoreWindowStates(metaWindow, saved_window_session);
             return saved_window_session;
         }
 
@@ -202,7 +202,7 @@ var MoveSession = class {
 
         if (saved_window_session.moved) {
             const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._restoreWindowStateAndGeometry(metaWindow, saved_window_session);
+                this._restoreWindowStates(metaWindow, saved_window_session);
                 return GLib.SOURCE_REMOVE;
             });
             this._sourceIds.push(sourceId);
@@ -210,6 +210,7 @@ var MoveSession = class {
             const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 this._restoreMonitor(metaWindow, saved_window_session);
                 this._restoreWindowGeometry(metaWindow, saved_window_session);
+                this._restoreTiling(metaWindow, saved_window_session);
                 const desktop_number = saved_window_session.desktop_number;
                 // It's necessary to move window again to ensure an app goes to its own workspace.
                 // In a sort of situation, some apps probably just don't want to move when call createEnoughWorkspaceAndMoveWindows() from `Meta.Display::window-created` signal.
@@ -259,11 +260,17 @@ var MoveSession = class {
     }
 
     /**
+     * Restore varies window states, including:
+     * * window states, such as Always on Top, Always on Visible Workspace
+     * * window geometry
+     * * window tiling
+     * 
      * @see https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en
      */
-    _restoreWindowStateAndGeometry(metaWindow, saved_window_session) {
+    _restoreWindowStates(metaWindow, saved_window_session) {
         this._restoreWindowState(metaWindow, saved_window_session);
         this._restoreWindowGeometry(metaWindow, saved_window_session);
+        this._restoreTiling(metaWindow, saved_window_session);
     }
 
     _restoreWindowState(metaWindow, saved_window_session) {
@@ -380,8 +387,7 @@ var MoveSession = class {
                 if (windows_count === 1 || title === saved_window_session.window_title) {
                     if (open_window_workspace_index === desktop_number) {
                         this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
-                        this._restoreWindowStateAndGeometry(open_window, saved_window_session);
-                        this._restoreTiling(open_window, saved_window_session);
+                        this._restoreWindowStates(open_window, saved_window_session);
                         saved_window_session.moved = true;
                         return;
                     }
