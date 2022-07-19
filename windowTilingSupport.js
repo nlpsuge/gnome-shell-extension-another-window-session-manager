@@ -75,7 +75,7 @@ class Resizing {
                     grabbedWindowRect.x,
                     windowAboutToResizeRect.height];
             }
-            
+
             if (xywh) {
                 windowAboutToResize.move_resize_frame(false, ...xywh);
             }
@@ -126,10 +126,9 @@ class Resizing {
         if (windows.length === 1) {
             windowAboutToResize = windows[0];
         } else {
-            // Match title
+            // Get one window by matching title
             for (const win of windows) {
-                if (win.get_title() === window_tile_for.window_title) 
-                {
+                if (win.get_title() === window_tile_for.window_title) {
                     windowAboutToResize = win;
                     break;
                 }

@@ -316,15 +316,15 @@ var MoveSession = class {
             // Fix: https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/25
             // TODO Note that this is not a perfect solution to address the above issue.
             this._delayRestoreGeometryId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                this._restoreWindowGeometryIfNecessary(metaWindow, saved_window_session);
+                this._moveResizeFrame(metaWindow, saved_window_session);
                 return GLib.SOURCE_REMOVE;
             });
         } else {
-            this._restoreWindowGeometryIfNecessary(metaWindow, saved_window_session);
+            this._moveResizeFrame(metaWindow, saved_window_session);
         }
     }
 
-    _restoreWindowGeometryIfNecessary(metaWindow, saved_window_session) {
+    _moveResizeFrame(metaWindow, saved_window_session) {
         const window_position = saved_window_session.window_position;
         if (window_position.provider === 'Meta') {
             const to_x = window_position.x_offset;
@@ -332,17 +332,24 @@ var MoveSession = class {
             const to_width = window_position.width;
             const to_height = window_position.height;
 
-            const frameRect = metaWindow.get_frame_rect();
-            const current_x = frameRect.x;
-            const current_y = frameRect.y;
-            const current_width = frameRect.width;
-            const current_height = frameRect.height;
-            if (to_x !== current_x ||
-                to_y !== current_y ||
-                current_width !== to_width ||
-                current_height !== to_height) {
-                metaWindow.move_resize_frame(true, to_x, to_y, to_width, to_height);
-            }
+            const currentMonitor = global.display.get_current_monitor();
+            const rectWorkArea = metaWindow.get_work_area_for_monitor(currentMonitor);
+            metaWindow.move_resize_frame(
+                false,
+                to_x,
+                
+                // Fix the below issue:
+                // No rect to clip to found!
+                // No rect whose size to clamp to found!
+
+                // Window might flies outside of the screen when resizing due to 
+                // the y axis of the saved window is less than the one of work area, see:
+                // https://gitlab.gnome.org/GNOME/mutter/-/issues/1461
+                // https://gitlab.gnome.org/GNOME/mutter/-/issues/1499
+
+                Math.max(to_y, rectWorkArea.y),
+                to_width,
+                to_height);
         }
     }
 
