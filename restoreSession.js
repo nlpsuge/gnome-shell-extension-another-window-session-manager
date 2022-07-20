@@ -79,7 +79,7 @@ var RestoreSession = class {
             if (!desktop_file_id) {
                 return true;
             }
-            const shellApp = this._defaultAppSystem.lookup_app(desktop_file_id)
+            const shellApp = this._defaultAppSystem.lookup_app(desktop_file_id);
             if (!shellApp) {
                 return true;
             }

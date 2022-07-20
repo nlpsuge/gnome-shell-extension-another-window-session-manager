@@ -72,6 +72,12 @@
       A specified amount of time to delay to execute the target command.
       </description>
     </key>
+    <key name='restore-window-tiling' type="b">
+      <default>true</default>
+      <summary>Restore window edge tiling</summary>
+      <description>
+      </description>
+    </key>
     
   </schema>
 </schemalist>

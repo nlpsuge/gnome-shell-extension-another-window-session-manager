@@ -9,20 +9,21 @@ const OpenWindowsInfoTracker = Me.imports.openWindowsInfoTracker;
 
 const Indicator = Me.imports.indicator;
 const Autostart = Me.imports.ui.autostart;
-
+const WindowTilingSupport = Me.imports.windowTilingSupport;
 
 let _indicator;
 let _autostartServiceProvider;
 let _openWindowsInfoTracker;
+let _windowTilingSupport;
 
 function enable() {
     _indicator = new Indicator.AwsIndicator();
     Main.panel.addToStatusArea('Another Window Session Manager', _indicator);
 
     _autostartServiceProvider = new Autostart.AutostartServiceProvider();
-    
     _openWindowsInfoTracker = new OpenWindowsInfoTracker.OpenWindowsInfoTracker();
-    
+    _windowTilingSupport = new WindowTilingSupport.WindowTilingSupport();
+
 }
 
 function disable() {
@@ -41,6 +42,10 @@ function disable() {
         _openWindowsInfoTracker = null;
     }
     
+    if (_windowTilingSupport) {
+        _windowTilingSupport.destroy();
+        _windowTilingSupport = null;
+    }
 }
 
 function init() {

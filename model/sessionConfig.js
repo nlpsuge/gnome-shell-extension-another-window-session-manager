@@ -24,6 +24,19 @@ class WindowPosition {
     height; // int
 }
 
+class WindowTilingFor {
+    app_name; // str
+    // the .desktop file name
+    desktop_file_id; // str
+    // The full .desktop file path
+    desktop_file_id_full_path; // str
+    window_title; // str
+}
+
+class WindowTiling {
+    window_tile_for = new WindowTilingFor(); // WindowTilingFor
+}
+
 var SessionConfigObject = class {
 
     window_id; // str, hexadecimal
@@ -56,6 +69,8 @@ var SessionConfigObject = class {
     monitor_number;
     // TODO Primary monitor can be changed, what if the primary monitor have been changed when restoring apps? The monitor number is the same as saved monitor_number?
     is_on_primary_monitor;
+
+    window_tiling; // WindowTiling
 }
 
 var SessionConfig = class {
