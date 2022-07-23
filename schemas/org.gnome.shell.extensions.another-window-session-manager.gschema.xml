@@ -78,12 +78,6 @@
       <description>
       </description>
     </key>
-    <key name='window-tiling-mapping' type='s'>
-      <default>'[]'</default>
-      <summary>Persist window tiling relation temporally on X11</summary>
-      <description>
-      </description>
-    </key>
     
   </schema>
 </schemalist>

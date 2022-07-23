@@ -7,7 +7,6 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
-const MetaWindowUtils = Me.imports.utils.metaWindowUtils;
 
 const WindowTilingSupport = Me.imports.windowTilingSupport;
 
@@ -102,7 +101,9 @@ var MoveSession = class {
 
     // Inspired by https://github.com/Leleat/Tiling-Assistant/blob/main/tiling-assistant%40leleat-on-github/src/extension/resizeHandler.js
     _restoreTiling(metaWindow, saved_window_session) {
-        WindowTilingSupport.updateTile(metaWindow, saved_window_session.window_tiling);
+        const window_tiling = saved_window_session.window_tiling;
+        if (!window_tiling) return;
+        WindowTilingSupport.windowsAboutToTileMap.set(metaWindow, window_tiling);
     }
 
     /**
