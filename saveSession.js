@@ -34,6 +34,7 @@ var SaveSession = class {
         this._log.info(`Generating session ${sessionName}`);
 
         const runningShellApps = this._defaultAppSystem.get_running();
+        this._log.debug(`There are ${runningShellApps.length} apps in save`);
         const _getProcessInfoPromise = this._getProcessInfo(runningShellApps)
 
         const sessionConfig = new SessionConfig.SessionConfig();
@@ -163,7 +164,7 @@ var SaveSession = class {
                     window_state.is_above = metaWindow.is_above();
                     window_state.meta_maximized = metaWindow.get_maximized();
 
-                    const windowTileFor = metaWindow.get_tile_match();
+                    const windowTileFor = metaWindow.get_tile_match() ?? metaWindow._tile_match_for_awsm;
                     if (windowTileFor) {
                         const shellApp = this._windowTracker.get_window_app(windowTileFor);
                         if (shellApp) {
