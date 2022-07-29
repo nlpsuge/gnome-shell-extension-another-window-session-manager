@@ -103,9 +103,14 @@ var OpenWindowsInfoTracker = class {
             return;
         }
 
+        let key;
         const app_info = shellApp.get_app_info();
-        if (!app_info) {
-            return;
+        if (app_info) {
+            // .desktop file full path
+            key = app_info.get_filename();
+        } else {
+            // window backed app
+            key = shellApp.get_name();
         }
         
         const xid = metaWindow.get_description();
@@ -117,8 +122,7 @@ var OpenWindowsInfoTracker = class {
         } else {
             savedWindowsMapping = new Map(JSON.parse(savedWindowsMappingJsonStr));
         }
-        const desktopFullPath = app_info.get_filename();
-        let xidObj = savedWindowsMapping.get(desktopFullPath);
+        let xidObj = savedWindowsMapping.get(key);
         if (xidObj) {
             const windows = shellApp.get_windows();
             const removedXids = Object.keys(xidObj).filter(xid => 
@@ -143,7 +147,7 @@ var OpenWindowsInfoTracker = class {
                 xid: xid,
                 windowStableSequence: windowStableSequence
             };
-            savedWindowsMapping.set(desktopFullPath, xidObj);
+            savedWindowsMapping.set(key, xidObj);
         }
 
         const newSavedWindowsMappingJsonStr = JSON.stringify(Array.from(savedWindowsMapping.entries()));
