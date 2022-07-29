@@ -323,8 +323,8 @@ var CloseSession = class {
         const savedWindowsMapping = new Map(JSON.parse(savedWindowsMappingJsonStr));
 
         const app_info = app.get_app_info();
-        const desktopFullPath = app_info.get_filename();
-        const xidObj = savedWindowsMapping.get(desktopFullPath);
+        const key = app_info ? app_info.get_filename() : app.get_name();
+        const xidObj = savedWindowsMapping.get(key);
         const windows = app.get_windows();
         windows.sort((w1, w2) => {
 
