@@ -59,10 +59,7 @@ var OpenWindowsTracker = class {
         this._settings = this._prefsUtils.getSettings();
 
         this._saveSession = new SaveSession.SaveSession();
-        this._savingSession = false;
-        this._sizeOrPositionChanged = false;
         this._restoringSession = false;
-        this._currentFocusedWindow = null;
 
         this._confirmedLogoutId = 0;
         this._confirmedRebootId = 0;
@@ -78,7 +75,6 @@ var OpenWindowsTracker = class {
             this._onNameVanishedGnomeShell.bind(this)
         );
 
-        this._windowsUserTimeNotifyIdMap = new Map();
         this._signals = [];
         this._display = global.display;
 
@@ -90,24 +86,6 @@ var OpenWindowsTracker = class {
                 this._restoringSession = false;
             });
             this._signals.push([installedChanged, this._defaultAppSystem]);
-
-            // const installedChanged = this._defaultAppSystem.connect('installed-changed', () => {
-                // const runningApps = this._defaultAppSystem.get_running();
-                // if (runningApps.length) {
-                //     log('apps size ' + runningApps.length)
-
-                //     for (const app of runningApps) {
-                //         const windows = app.get_windows();
-                //         for (const window of windows) {
-                //             this._connectSignalsToSaveSession(window);
-                //         }
-
-                //     }
-                // }
-            // });
-            // this._signals.push([installedChanged, this._defaultAppSystem]);
-
-            // this._onX11DisplayOpened();
         });
 
         const windowCreatedId = this._display.connect('window-created', (display, window, userData) => {
@@ -144,17 +122,6 @@ var OpenWindowsTracker = class {
             this._saveSessionToTmpAsync(w2);
         });
         this._signals.push([windowUntiledId, WindowTilingSupport]);
-
-        this._display.connect('notify::focus-window', () => {
-            // Update session of the unfocused window
-            const unfocusedWindow = this._currentFocusedWindow;
-            if (unfocusedWindow) {
-                this._saveSessionToTmpAsync(unfocusedWindow);
-            }
-            this._currentFocusedWindow = this._display.get_focus_window();
-            this._saveSessionToTmpAsync(this._currentFocusedWindow);
-        });
-
         this._signals.push([windowCreatedId, this._display]);
         this._signals.push([x11DisplayOpenedId, this._display]);
 
@@ -193,77 +160,10 @@ var OpenWindowsTracker = class {
                 // workspace is nullish during gnome shell restarts
                 if (!workspace) return;
 
-                // if (signal === 'size-changed' || signal === 'position-changed') {
-                //     this._sizeOrPositionChanged = true;
-                // } 
-                // else {
-                    log(signal + ' emitted ' + window.get_title());
-                    // if (signal === 'position-changed') {
-                    //     const windowTileFor = window.get_tile_match() ?? window._tile_match_awsm;
-                    //     if (windowTileFor) {
-                    //         windowTileFor._aboveToUntile = true;
-                    //         this._saveSessionToTmpAsync(windowTileFor);
-                    //     }
-                    // }
-                    this._saveSessionToTmpAsync(window);
-                // }
+                this._saveSessionToTmpAsync(window);
             });
-            // this._windowsUserTimeNotifyIdMap.set(w, userTimeNotifyId);
             this._signals.push([windowSignalId, window]);
         })
-        
-        // const grabOpEndId = this._display.connect('grab-op-end', (display, grabbedWindow, grabOp) => {
-            // if (this._sizeOrPositionChanged) {
-            //     this._saveSessionToTmpAsync(grabbedWindow);
-            //     this._sizeOrPositionChanged = false;
-            // }
-            
-        // });
-        // this._signals.push([grabOpEndId, this._display]);
-    }
-
-    async _onX11DisplayOpened() {
-        try {
-            this._log.debug('x11 display opened');
-            let sessionContents = [];
-            await FileUtils.listAllSessions(sessionPath,
-                true, this._prefsUtils.isDebug(),
-                (file, info) => {
-                    const file_type = info.get_file_type();
-                    if (file_type !== Gio.FileType.REGULAR) {
-                        this._log.debug(`${file.get_path()} (file type is ${file_type}) is not a regular file, skipping`);
-                        return;
-                    }
-                    const content_type = info.get_content_type();
-                    if (content_type !== 'application/json') {
-                        this._log.debug(`${file.get_path()} (content type is ${content_type}) is not a json file, skipping`);
-                        return;
-                    }
-    
-                    let [success, contents] = file.load_contents(null);
-                    if (!success) {
-                        return;
-                    }
-    
-                    let session_config = FileUtils.getJsonObj(contents);
-                    sessionContents.push(session_config);
-                }).catch(e => this._log.error(e));
-    
-            if (!sessionContents.length) {
-                this._log.warn(`Window sessions does not exist: ${sessionPath}`);
-                return;
-            }
-    
-            // installed-changed emits when `shell_app_system_init()` is called
-            const installedChanged = this._defaultAppSystem.connect('installed-changed', () => {
-                this._runningAppsLoaded = true;
-                // Restore session
-                this._restoreWindowsStates(sessionContents);
-            });
-            this._signals.push([installedChanged, this._defaultAppSystem]);
-        } catch (e) {
-            this._log.error(e);
-        }
     }
 
     _restoreWindowState(sessionContent) {
@@ -285,9 +185,6 @@ var OpenWindowsTracker = class {
         try {
             if (!window) return;
             if (this._blacklist.has(window.get_wm_class())) return;
-            // if (this._savingSession) return;
-
-            this._savingSession = true;
 
             await this._saveSession.saveWindowSessionAsync(
                 window,
@@ -296,10 +193,7 @@ var OpenWindowsTracker = class {
             );
         } catch (error) {
             this._log.error(error);
-        } finally {
-            this._savingSession = false;
         }
-
     }
 
     _onNameAppearedGnomeShell() {
@@ -412,14 +306,6 @@ var OpenWindowsTracker = class {
     }
 
     destroy() {
-        if (this._windowsUserTimeNotifyIdMap && this._windowsUserTimeNotifyIdMap.size) {
-            for (const [obj, id] of this._windowsUserTimeNotifyIdMap) {
-                if (obj && id)
-                    obj.disconnect(id);
-            }
-            this._windowsUserTimeNotifyIdMap.clear();
-            this._windowsUserTimeNotifyIdMap = null;
-        }
         if (this._signals && this._signals.length) {
             this._signals.forEach(([id, obj]) => {
                 if (id && obj) {
