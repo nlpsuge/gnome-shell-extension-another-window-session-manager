@@ -5,25 +5,25 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const Main = imports.ui.main;
 
-const OpenWindowsInfoTracker = Me.imports.openWindowsInfoTracker;
+const OpenWindowsTracker = Me.imports.openWindowsTracker;
 
 const Indicator = Me.imports.indicator;
 const Autostart = Me.imports.ui.autostart;
-const WindowTilingSupport = Me.imports.windowTilingSupport;
+const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
 
 let _indicator;
 let _autostartServiceProvider;
-let _openWindowsInfoTracker;
-let _windowTilingSupport;
+let _openWindowsTracker;
 
 function enable() {
     _indicator = new Indicator.AwsIndicator();
     Main.panel.addToStatusArea('Another Window Session Manager', _indicator);
 
     _autostartServiceProvider = new Autostart.AutostartServiceProvider();
-    _openWindowsInfoTracker = new OpenWindowsInfoTracker.OpenWindowsInfoTracker();
-    _windowTilingSupport = new WindowTilingSupport.WindowTilingSupport();
+    
+    WindowTilingSupport.initialize();
 
+    _openWindowsTracker = new OpenWindowsTracker.OpenWindowsTracker();
 }
 
 function disable() {
@@ -37,15 +37,11 @@ function disable() {
         _autostartServiceProvider = null;
     }
 
-    if (_openWindowsInfoTracker) {
-        _openWindowsInfoTracker.destroy();
-        _openWindowsInfoTracker = null;
+    if (_openWindowsTracker) {
+        _openWindowsTracker.destroy();
+        _openWindowsTracker = null;
     }
     
-    if (_windowTilingSupport) {
-        _windowTilingSupport.destroy();
-        _windowTilingSupport = null;
-    }
 }
 
 function init() {

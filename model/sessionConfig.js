@@ -39,8 +39,7 @@ class WindowTiling {
 
 var SessionConfigObject = class {
 
-    window_id; // str, hexadecimal
-    window_id_the_int_type; // int
+    window_id; // str, hexadecimal on X11, int on Wayland
     desktop_number; // int
     pid; // int
     username; // str
@@ -49,6 +48,9 @@ var SessionConfigObject = class {
     window_title; // str
 
     app_name; // str
+    wm_class; // str
+    wm_class_instance; // str
+
     cmd; // list
     process_create_time; // str
 
@@ -70,7 +72,12 @@ var SessionConfigObject = class {
     // TODO Primary monitor can be changed, what if the primary monitor have been changed when restoring apps? The monitor number is the same as saved monitor_number?
     is_on_primary_monitor;
 
+    fullscreen; // boolean
+    minimized; // boolean
+
     window_tiling; // WindowTiling
+
+    is_focused; // boolean, whether is the currently active window
 }
 
 var SessionConfig = class {
@@ -78,6 +85,12 @@ var SessionConfig = class {
     session_create_time; // str
     backup_time; // str
     restore_times; // list = []
+    active_workspace_index; // int
+    // TODO 
+    // https://gjs-docs.gnome.org/meta9~9_api/meta.workspace#method-activate_with_focus
+    // https://gjs-docs.gnome.org/meta9~9_api/meta.window#method-activate
+    focused_window; // SessionConfigObject
+    windows_count; // int
     x_session_config_objects = []; // list[SessionConfigObject]
 
 

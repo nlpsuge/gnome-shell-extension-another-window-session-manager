@@ -13,8 +13,6 @@ const PrefsUtils = Me.imports.utils.prefsUtils;
 const SubprocessUtils = Me.imports.utils.subprocessUtils;
 const DateUtils = Me.imports.utils.dateUtils;
 
-const OpenWindowsInfoTracker = Me.imports.openWindowsInfoTracker;
-
 const Constants = Me.imports.constants;
 
 const UiHelper = Me.imports.ui.uiHelper;

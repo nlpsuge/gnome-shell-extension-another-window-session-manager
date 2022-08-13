@@ -2,13 +2,16 @@
 
 const { Shell, Gio, GLib, Meta } = imports.gi;
 
+const Main = imports.ui.main;
+
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
+const DateUtils = Me.imports.utils.dateUtils;
 
-const WindowTilingSupport = Me.imports.windowTilingSupport;
+const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
 
 var MoveSession = class {
 
@@ -69,6 +72,7 @@ var MoveSession = class {
             const saved_window_session = interestingWindow.saved_window_session;
             const title = open_window.get_title();
             const desktop_number = saved_window_session.desktop_number;
+            const is_focused = saved_window_session.is_focused;
 
             try {
                 this._restoreMonitor(open_window, saved_window_session);
@@ -83,7 +87,7 @@ var MoveSession = class {
                     this._log.debug(`The window '${shellApp.get_name()} - ${title}' is already sticky on workspace ${desktop_number}`);
                 } else {
                     this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${open_window.get_workspace().index()}`);
-                    open_window.change_workspace_by_index(desktop_number, false);
+                    this._changeWorkspace(open_window, desktop_number);
                 }
 
                 // restore window state if necessary due to moving windows could lost window state
@@ -101,9 +105,7 @@ var MoveSession = class {
 
     // Inspired by https://github.com/Leleat/Tiling-Assistant/blob/main/tiling-assistant%40leleat-on-github/src/extension/resizeHandler.js
     _restoreTiling(metaWindow, saved_window_session) {
-        const window_tiling = saved_window_session.window_tiling;
-        if (!window_tiling) return;
-        WindowTilingSupport.windowsAboutToTileMap.set(metaWindow, window_tiling);
+        WindowTilingSupport.prepareToTile(metaWindow, saved_window_session.window_tiling);
     }
 
     /**
@@ -190,7 +192,7 @@ var MoveSession = class {
             const shellApp = this._windowTracker.get_window_app(metaWindow);
             this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
         }
-        metaWindow.change_workspace_by_index(desktop_number, false);
+        this._changeWorkspace(metaWindow, desktop_number);
         return saved_window_session;
     }
 
@@ -221,7 +223,7 @@ var MoveSession = class {
                     this._log.debug(`The window '${shellApp.get_name()} - ${metaWindow.get_title()}' is already sticky on workspace ${desktop_number}`);
                 } else {
                     this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
-                    metaWindow.change_workspace_by_index(desktop_number, false);
+                    this._changeWorkspace(metaWindow, desktop_number);
                 }
                 // The window state get lost during moving the window, and we need to restore window state again.
                 this._restoreWindowState(metaWindow, saved_window_session);
@@ -230,6 +232,15 @@ var MoveSession = class {
                 return GLib.SOURCE_REMOVE;
             });
             this._sourceIds.push(sourceId);
+        }
+    }
+
+    _changeWorkspace(metaWindow, desktop_number) {
+        const currentFocusedWindow = global.display.get_focus_window();
+        metaWindow.change_workspace_by_index(desktop_number, false);
+        if (currentFocusedWindow === metaWindow) {
+            this._log.debug(`Refocusing the previous focused window ${metaWindow.get_title()}`);
+            Main.activateWindow(metaWindow, DateUtils.get_current_time());
         }
     }
 

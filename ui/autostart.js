@@ -186,17 +186,20 @@ var AutostartDialog = GObject.registerClass(
             if (!open)
                 return;
                 
-            if (!this._sessionName) {
+            if (this._sessionName) {
+                const [exists, sessionFilePath] = FileUtils.sessionExists(this._sessionName);
+                if (exists) {
+                    this._startTimer();
+                    this._sync();
+                } else {
+                    this._confirmDialogContent.description = `ERROR: Session '${this._sessionName}' does not exist`;
+                    this._confirmDialogContent._description.set_style('color:red;');
+                    this._confirmButton.set_reactive(false);
+                }
+            } else {
                 this._confirmDialogContent.description = "ERROR: You don't active any session to restore";
                 this._confirmDialogContent._description.set_style('color:red;');
                 this._confirmButton.set_reactive(false);
-            } else if (!FileUtils.sessionExists(this._sessionName)) {
-                this._confirmDialogContent.description = `ERROR: Session '${this._sessionName}' does not exist`;
-                this._confirmDialogContent._description.set_style('color:red;');
-                this._confirmButton.set_reactive(false);
-            } else {
-                this._startTimer();
-                this._sync();
             }
         }
 

@@ -22,6 +22,7 @@ const CloseSession = Me.imports.closeSession;
 const { Button } = Me.imports.ui.button;
 
 const PrefsUtils = Me.imports.utils.prefsUtils;
+const CommonError = Me.imports.utils.CommonError;
 
 var SessionItemButtons = GObject.registerClass(
 class SessionItemButtons extends GObject.Object {
@@ -185,8 +186,10 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _onClickSave(button, event) {
-        this._saveSession.saveSession(this.sessionItem._filename).catch(e => {
-            this._log.error(e)
+        this._saveSession.saveSessionAsync(this.sessionItem._filename).catch(e => {
+            let message = `Failed to save session`;
+            this._log.error(e, e.desc ?? message);
+            global.notify_error(message, e.cause?.message ?? e.desc ?? message);
         });
     }
     
