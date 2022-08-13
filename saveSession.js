@@ -148,7 +148,6 @@ var SaveSession = class {
         sessionConfigObject.windows_count = runningShellApp.get_n_windows();
         sessionConfigObject.fullscreen = metaWindow.is_fullscreen();
         sessionConfigObject.minimized = metaWindow.minimized;
-        sessionConfigObject.is_focused = global.display.get_focus_window() === metaWindow;
 
         const frameRect = metaWindow.get_frame_rect();
         let window_position = sessionConfigObject.window_position;

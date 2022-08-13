@@ -72,7 +72,6 @@ var MoveSession = class {
             const saved_window_session = interestingWindow.saved_window_session;
             const title = open_window.get_title();
             const desktop_number = saved_window_session.desktop_number;
-            const is_focused = saved_window_session.is_focused;
 
             try {
                 this._restoreMonitor(open_window, saved_window_session);
