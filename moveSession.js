@@ -351,8 +351,15 @@ var MoveSession = class {
 
             const currentMonitor = global.display.get_current_monitor();
             const rectWorkArea = metaWindow.get_work_area_for_monitor(currentMonitor);
+            
+            // For more info about the below issue see also: https://github.com/Leleat/Tiling-Assistant/blob/1e4176a9a7037ee5dd0612e4c9f9dbe45d4e67cf/tiling-assistant%40leleat-on-github/src/extension/tilingWindowManager.js#L186-L199
+            
+            // Move first. Just in case that some apps can only be resized but not moved after `metaWindow.move_resize_frame()`
+            metaWindow.move_frame(true, to_x, to_y);
             metaWindow.move_resize_frame(
-                false,
+                // Set `user_op` to true to fix an issue that a window does not move to negative x (like -176),
+                // in which case if `user_op` is false it will move to (0,Y,W,H).
+                true, // user_op
                 to_x,
                 
                 // Fix the below issue:
