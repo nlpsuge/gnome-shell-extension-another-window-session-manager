@@ -45,9 +45,10 @@ var OpenWindowsTracker = class {
             'notify::minimized',
             'notify::on-all-workspaces',
             'notify::title',
+            'notify::wm-class',
             'position-changed',
             'size-changed',
-            'workspace-changed'
+            'workspace-changed',
         ];
 
         this._windowTracker = Shell.WindowTracker.get_default();
@@ -128,7 +129,10 @@ var OpenWindowsTracker = class {
             if (this._restoringSession) {
                 const sessionFilePath = `${sessionPath}/${window.get_wm_class()}/${MetaWindowUtils.getStableWindowId(window)}.json`;
                 // Apps in the `this._blacklist` does not save a session
-                if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) return;
+                if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
+                    this._log.warn(`${sessionFilePath} not found!`);
+                    return;
+                }
 
                 const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
                 let [success, contents] = sessionPathFile.load_contents(null);
@@ -137,6 +141,7 @@ var OpenWindowsTracker = class {
                 }
         
                 let sessionConfig = FileUtils.getJsonObj(contents);
+                this._log.debug(`Restoring window session from ${sessionFilePath}`);
                 this._restoreWindowState(sessionConfig);
             }
             
@@ -161,7 +166,6 @@ var OpenWindowsTracker = class {
     }
 
     _restoreWindowState(sessionContent) {
-        this._log.debug(`Restoring window session according to ${sessionContent}`);
         const app = this._windowTracker.get_app_from_pid(sessionContent.pid);
         if (app && app.get_name() == sessionContent.app_name) {
             const restoringShellAppData = RestoreSession.restoringApps.get(app);

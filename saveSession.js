@@ -54,11 +54,12 @@ var SaveSession = class {
             return;
         }
 
-        this._log.debug(`Generating window session ${sessionName}`);
         const app = this._windowTracker.get_window_app(metaWindow);
         if (!app) return;
         if (this._ignoreWindows(metaWindow)) return;
 
+        this._log.debug(`Generating window session ${sessionName}`);
+        
         const [canContinue, sessionConfigObject] = this._builtSessionDetails(
             app, 
             metaWindow, 
