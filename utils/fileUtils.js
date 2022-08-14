@@ -116,9 +116,6 @@ async function listAllSessions(sessionPath, recursion, debug, callback) {
         for (const info of infos) {
             const file = fileEnumerator.get_child(info);
             if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
-                if (debug) {
-                    log(`${info.get_name()} is a folder, checking`);
-                }
                 listAllSessions(file.get_path(), recursion, debug, callback);
             }
 
@@ -173,13 +170,13 @@ function loadAutostartDesktopTemplate() {
     return loadTemplate(desktop_template_path_restore_at_autostart);
 }
 
-function loadDesktopTemplate() {
-    return loadTemplate(desktop_template_path);
+function loadDesktopTemplate(cancellable = null) {
+    return loadTemplate(desktop_template_path, cancellable);
 }
 
-function loadTemplate(path) {
+function loadTemplate(path, cancellable = null) {
     const desktop_template_file = Gio.File.new_for_path(path);
-    let [success, contents] = desktop_template_file.load_contents(null);
+    let [success, contents] = desktop_template_file.load_contents(cancellable);
     if (success) {
         if (contents instanceof Uint8Array) {
             return imports.byteArray.toString(contents);

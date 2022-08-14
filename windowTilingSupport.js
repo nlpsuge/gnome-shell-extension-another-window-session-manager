@@ -110,8 +110,6 @@ var WindowTilingSupport = class {
             const anotherTilingWindow = grabbedWindow._tile_match_awsm;
 
             this._log.debug(`Untiling ${grabbedWindow.get_title()}`);
-            this._log.debug('grabbedWindow get_tile_match' + grabbedWindow.get_tile_match());
-            this._log.debug('anotherTilingWindow get_tile_match' + anotherTilingWindow.get_tile_match());
             delete grabbedWindow._tile_match_awsm;
 
             if (anotherTilingWindow) {

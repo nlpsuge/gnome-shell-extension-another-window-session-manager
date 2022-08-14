@@ -60,6 +60,7 @@ var OpenWindowsTracker = class {
 
         this._saveSession = new SaveSession.SaveSession();
         this._restoringSession = false;
+        this._runningSaveCancelableMap = new Map();
 
         this._confirmedLogoutId = 0;
         this._confirmedRebootId = 0;
@@ -90,34 +91,27 @@ var OpenWindowsTracker = class {
 
         const windowCreatedId = this._display.connect('window-created', (display, window, userData) => {
             this._onWindowCreatedSaveOrUpdateWindowsMapping(display, window, userData);
-            
-            const app = this._windowTracker.get_window_app(window);
-            log('windows created ' + app?.get_name());
+
             this._restoreOrSaveWindowSession(window);
         });
 
         const runningApps = this._defaultAppSystem.get_running();
         if (runningApps.length) {
-            log('apps size ' + runningApps.length)
-
             for (const app of runningApps) {
                 const windows = app.get_windows();
                 for (const window of windows) {
                     this._connectWindowSignalsToSaveSession(window);
                 }
-
             }
         }
 
         const windowTiledId = WindowTilingSupport.connect('window-tiled', (signals, w1, w2) => {
-            log(`window-tiled emits ${w1} ${w2}`);
             // w2 will be saved in another 'window-tiled'
             this._saveSessionToTmpAsync(w1);
         });
         this._signals.push([windowTiledId, WindowTilingSupport]);
         
         const windowUntiledId = WindowTilingSupport.connect('window-untiled', (signals, w1, w2) => {
-            log(`window-untiled emits ${w1} ${w2}`);
             this._saveSessionToTmpAsync(w1);
             this._saveSessionToTmpAsync(w2);
         });
@@ -186,10 +180,17 @@ var OpenWindowsTracker = class {
             if (!window) return;
             if (this._blacklist.has(window.get_wm_class())) return;
 
+            // Cancel running save operation
+            this._cancelRunningSave(window);
+        
+            const cancellable = new Gio.Cancellable();
+            this._runningSaveCancelableMap.set(window, cancellable);
+
             await this._saveSession.saveWindowSessionAsync(
                 window,
                 `${MetaWindowUtils.getStableWindowId(window)}.json`,
-                `${sessionPath}/${window.get_wm_class()}`
+                `${sessionPath}/${window.get_wm_class()}`,
+                cancellable
             );
         } catch (error) {
             this._log.error(error);
@@ -305,7 +306,24 @@ var OpenWindowsTracker = class {
 
     }
 
+    _cancelRunningSave(window) {
+        const cancellable = this._runningSaveCancelableMap.get(window);
+        if (cancellable && !cancellable.is_cancelled()) {
+            cancellable.cancel();
+        }
+    }
+
+    _cancelAllRunningSave() {
+        for (const cancellable of this._runningSaveCancelableMap.values()) {
+            if (!cancellable.is_cancelled())
+                cancellable.cancel();
+        }
+        this._runningSaveCancelableMap.clear();
+    }    
+
     destroy() {
+        this._cancelAllRunningSave();
+
         if (this._signals && this._signals.length) {
             this._signals.forEach(([id, obj]) => {
                 if (id && obj) {

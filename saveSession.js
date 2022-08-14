@@ -33,7 +33,7 @@ var SaveSession = class {
     }
 
     async saveSessionAsync(sessionName, baseDir = null, backup = true) {
-        this._log.info(`Generating session ${sessionName}`);
+        this._log.debug(`Generating session ${sessionName}`);
 
         const sessionConfig = await this._buildSession(sessionName);
 
@@ -49,19 +49,26 @@ var SaveSession = class {
 
     }
 
-    async saveWindowSessionAsync(metaWindow, sessionName, baseDir) {
-        this._log.info(`Generating window session ${sessionName}`);
+    async saveWindowSessionAsync(metaWindow, sessionName, baseDir, cancellable = null) {
+        if (cancellable && cancellable.is_cancelled()) {
+            return;
+        }
+
+        this._log.debug(`Generating window session ${sessionName}`);
         const app = this._windowTracker.get_window_app(metaWindow);
         if (!app) return;
         if (this._ignoreWindows(metaWindow)) return;
 
-        const [canContinue, sessionConfigObject] = this._builtSessionDetails(app, metaWindow);
+        const [canContinue, sessionConfigObject] = this._builtSessionDetails(
+            app, 
+            metaWindow, 
+            cancellable);
         if (!canContinue) return;
 
         await this._saveSessionConfigAsync({
             ...sessionConfigObject, 
             session_name: sessionName
-        }, baseDir);
+        }, baseDir, cancellable);
     }
     
     async _buildSession(sessionName) {
@@ -114,8 +121,12 @@ var SaveSession = class {
         return { metaWindows, ignoredWindowsMap };
     }
 
-    _builtSessionDetails(runningShellApp, metaWindow) {
+    _builtSessionDetails(runningShellApp, metaWindow, cancellable = null) {
         const sessionConfigObject = new SessionConfig.SessionConfigObject();
+        if (cancellable && cancellable.is_cancelled()) {
+            return [false, sessionConfigObject];
+        }
+
         const appName = runningShellApp.get_name();
 
         sessionConfigObject.window_id = MetaWindowUtils.getStableWindowId(metaWindow);
@@ -206,7 +217,7 @@ var SaveSession = class {
                 // Try to get the working directory to complete the command line
                 const proc = this._subprocessLauncher.spawnv(['pwdx', `${metaWindow.get_pid()}`]);
                 // TODO Use async version in the future
-                const result = proc.communicate_utf8(null, null);
+                const result = proc.communicate_utf8(null, cancellable);
                 let [, stdout, stderr] = result;
                 let status = proc.get_exit_status();
                 if (status === 0 && stdout) {
@@ -226,7 +237,7 @@ var SaveSession = class {
             };
 
             const desktopFileName = '__' + appName + '.desktop';
-            const desktopFileContent = FileUtils.loadDesktopTemplate().fill(argument);
+            const desktopFileContent = FileUtils.loadDesktopTemplate(cancellable).fill(argument);
             if (!desktopFileContent) {
                 const errMsg = `Failed to generate a .desktop file ${desktopFileName} using ${JSON.stringify(argument)}`;
                 this._log.error(new Error(errMsg));
@@ -323,7 +334,7 @@ var SaveSession = class {
         const session_file = Gio.File.new_for_path(session_file_path);
         // Backup first if exists
         if (GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
-            this._log.info(`Backing up existing session ${sessionName}`);
+            this._log.debug(`Backing up existing session ${sessionName}`);
 
             const session_file_backup_path = FileUtils.get_sessions_backups_path();
             const session_file_backup = GLib.build_filenamev([session_file_backup_path, sessionName + '.backup-' + new Date().getTime()]);
@@ -361,8 +372,11 @@ var SaveSession = class {
         }
     }
 
-    _saveSessionConfigAsync(sessionConfig, baseDir = null) {
-        this._log.info(`Saving session ${sessionConfig.session_name} to local file`);
+    _saveSessionConfigAsync(sessionConfig, baseDir = null, cancellable = null) {
+        if (cancellable && cancellable.is_cancelled()) {
+            return;
+        }
+        this._log.debug(`Saving session ${sessionConfig.session_name} to local file`);
 
         const sessionConfigJson = JSON.stringify(sessionConfig, null, 4);
         const sessions_path = FileUtils.get_sessions_path(baseDir);
@@ -390,7 +404,7 @@ var SaveSession = class {
                 null,
                 false,
                 Gio.FileCreateFlags.REPLACE_DESTINATION,
-                null,
+                cancellable,
                 (file, asyncResult) => {
                     let success = false;
                     let causedBy = null;
@@ -407,7 +421,13 @@ var SaveSession = class {
                     }
                     const errMsg = `Cannot save session: ${sessionFile.get_path()}`;
                     const reason = `Failed to save session into ${sessionFile.get_path()}!`;
-                    reject(new CommonError.CommonError(errMsg, {desc: reason, cause: causedBy}));
+                    
+                    if (causedBy && causedBy.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
+                        this._log.debug(`${errMsg}. Saving session was cancelled by a newer save`);
+                        resolve(success);
+                    } else {
+                        reject(new CommonError.CommonError(errMsg, {desc: reason, cause: causedBy}));
+                    }
                 });
             });
     }
