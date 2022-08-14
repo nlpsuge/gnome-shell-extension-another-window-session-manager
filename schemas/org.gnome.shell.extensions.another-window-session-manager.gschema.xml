@@ -78,6 +78,21 @@
       <description>
       </description>
     </key>
+    <key name='raise-windows-together' type="b">
+      <default>true</default>
+      <summary>Raise all two windows together</summary>
+      <description>
+      Raise all two windows together while one of the pairs is raised while tiling.
+      </description>
+    </key>
+    <key name='stash-and-restore-states' type="b">
+      <default>true</default>
+      <summary>Stash and restore states</summary>
+      <description>
+      Stash states during the users is using applications. 
+      And restore them after Gnome Shell restarts via `Alt+F2 -> r` and `killall -3 gnome-shell`.
+      </description>
+    </key>
     
   </schema>
 </schemalist>

@@ -167,6 +167,8 @@ var OpenWindowsTracker = class {
     }
 
     _restoreWindowState(sessionContent) {
+        if (!this._settings.get_boolean('stash-and-restore-states')) return;
+
         const app = this._windowTracker.get_app_from_pid(sessionContent.pid);
         if (app && app.get_name() == sessionContent.app_name) {
             const restoringShellAppData = RestoreSession.restoringApps.get(app);
@@ -182,6 +184,8 @@ var OpenWindowsTracker = class {
 
     async _saveSessionToTmpAsync(window) {
         try {
+            if (!this._settings.get_boolean('stash-and-restore-states')) return;
+            
             if (!window) return;
             if (this._blacklist.has(window.get_wm_class())) return;
 

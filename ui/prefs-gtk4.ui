@@ -400,18 +400,18 @@
                         </property>
                       </object>
                     </child>
-                    <!-- <child>
+                    <child>
                       <object class="GtkListBoxRow">
                         <property name="focusable">1</property>
                         <property name="child">
                           <object class="GtkBox">
                             <child>
                               <object class="GtkLabel">
-                                <property name="label" translatable="yes">Raise windows to the top while resizing</property>
+                                <property name="label" translatable="yes">Raise windows together</property>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkSwitch" id="raise_windows_to_the_top_switch">
+                              <object class="GtkSwitch" id="raise_windows_together_switch">
                                 <property name="focusable">1</property>
                                 <property name="active">1</property>
                                 <property name="halign">end</property>
@@ -422,7 +422,39 @@
                           </object>
                         </property>
                       </object>
-                    </child> -->
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkFrame" id="stash_and_restore_states_frame">
+                <property name="margin-top">30</property>
+                <property name="child">
+                  <object class="GtkListBox">
+                    <child>
+                      <object class="GtkListBoxRow">
+                        <property name="focusable">1</property>
+                        <property name="child">
+                          <object class="GtkBox">
+                            <child>
+                              <object class="GtkLabel" id="stash_and_restore_states_label">
+                                <property name="label" translatable="yes">Stash and restore</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkSwitch" id="stash_and_restore_states_switch">
+                                <property name="focusable">1</property>
+                                <property name="active">1</property>
+                                <property name="halign">end</property>
+                                <property name="valign">center</property>
+                                <property name="hexpand">1</property>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
                   </object>
                 </property>
               </object>

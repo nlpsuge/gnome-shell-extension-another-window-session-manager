@@ -44,8 +44,7 @@ var WindowTilingSupport = class {
         // Connect `raised` only once and this will prevent `JS ERROR: too much recursion`
         if (!this._signalsConnectedMap.get(metaWindow)) {
             const raisedId = metaWindow.connect('raised', () => {
-                // TOTO Add to Settings
-                const raisedTogether = true;
+                const raisedTogether = this._settings.get_boolean('raise-windows-together');
                 if (raisedTogether) {
                     const anotherWindowRaisedId = this._signalsConnectedMap.get(windowAboutToResize);
                     windowAboutToResize.block_signal_handler(anotherWindowRaisedId);
