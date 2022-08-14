@@ -38,18 +38,23 @@ var WindowTilingSupport = class {
 
         metaWindow._tile_match_awsm = windowAboutToResize;
         windowAboutToResize._tile_match_awsm = metaWindow;
+        
         this._signals.emit('window-tiled', metaWindow, windowAboutToResize);
-        const raisedId = metaWindow.connect('raised', () => {
-            // TOTO Add to Settings
-            const raisedTogether = true;
-            if (raisedTogether) {
-                const anotherWindowRaisedId = this._signalsConnectedMap.get(windowAboutToResize);
-                windowAboutToResize.block_signal_handler(anotherWindowRaisedId);
-                windowAboutToResize.raise();
-                windowAboutToResize.unblock_signal_handler(anotherWindowRaisedId);
-            }
-        });
-        this._signalsConnectedMap.set(metaWindow, raisedId);
+
+        // Connect `raised` only once and this will prevent `JS ERROR: too much recursion`
+        if (!this._signalsConnectedMap.get(metaWindow)) {
+            const raisedId = metaWindow.connect('raised', () => {
+                // TOTO Add to Settings
+                const raisedTogether = true;
+                if (raisedTogether) {
+                    const anotherWindowRaisedId = this._signalsConnectedMap.get(windowAboutToResize);
+                    windowAboutToResize.block_signal_handler(anotherWindowRaisedId);
+                    windowAboutToResize.raise();
+                    windowAboutToResize.unblock_signal_handler(anotherWindowRaisedId);
+                }
+            });
+            this._signalsConnectedMap.set(metaWindow, raisedId);
+        }
     }
 
     static _grabOpBegin(display, grabbedWindow, grabOp) {
@@ -116,8 +121,9 @@ var WindowTilingSupport = class {
                 this._log.debug(`Untiling ${anotherTilingWindow.get_title()}`);
                 delete anotherTilingWindow._tile_match_awsm;
             }
-
             this._grabbedWindowsAboutToUntileMap.delete(grabbedWindow);
+
+            this._disconnectRaisedSignals();
 
             this._signals.emit('window-untiled', grabbedWindow, anotherTilingWindow);
         }
@@ -161,6 +167,15 @@ var WindowTilingSupport = class {
         this._signals.disconnect(id);
     }
 
+    static _disconnectRaisedSignals() {
+        if (this._signalsConnectedMap) {
+            this._signalsConnectedMap.forEach((id, obj) => {
+                obj.disconnect(id);
+            });
+            this._signalsConnectedMap.clear();
+        }
+    }
+
     static destroy() {
 
         if (this._grabbedWindowsAboutToUntileMap) {
@@ -168,13 +183,9 @@ var WindowTilingSupport = class {
             this._grabbedWindowsAboutToUntileMap = null;
         }
 
-        if (this._signalsConnectedMap) {
-            this._signalsConnectedMap.forEach((id, obj) => {
-                obj.disconnect(id);
-            });
-            this._signalsConnectedMap.clear();
-            this._signalsConnectedMap = null;
-        }
+        this._disconnectRaisedSignals();
+
+        this._signalsConnectedMap = null;
 
         if (this._grabOpBeginId) {
             global.display.disconnect(this._grabOpBeginId);

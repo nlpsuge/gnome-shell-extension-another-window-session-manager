@@ -130,7 +130,8 @@ var OpenWindowsTracker = class {
                 const sessionFilePath = `${sessionPath}/${window.get_wm_class()}/${MetaWindowUtils.getStableWindowId(window)}.json`;
                 // Apps in the `this._blacklist` does not save a session
                 if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
-                    this._log.warn(`${sessionFilePath} not found!`);
+                    if (!this._blacklist.has(window.get_wm_class())) 
+                        this._log.warn(`${sessionFilePath} not found!`);
                     return;
                 }
 
