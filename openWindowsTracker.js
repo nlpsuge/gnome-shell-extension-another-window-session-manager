@@ -97,6 +97,8 @@ var OpenWindowsTracker = class {
         });
 
         const runningApps = this._defaultAppSystem.get_running();
+        // runningApps.length is 0 when display opening
+        // runningApps.length is greater than 0 when this extension enabled
         if (runningApps.length) {
             for (const app of runningApps) {
                 const windows = app.get_windows();
@@ -202,7 +204,10 @@ var OpenWindowsTracker = class {
                 cancellable
             );
         } catch (error) {
-            this._log.error(error);
+            // Ignore cancelation errors
+            if (!error?.cause?.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
+                this._log.error(error);
+            }
         }
     }
 

@@ -94,7 +94,6 @@ var CloseSession = class {
                         || appInWhitelist 
                         || !this._skip_app_with_multiple_windows)
                     {
-                        window._aboutToClose = true;
                         closed = await this._awaitDeleteWindow(app, window);
                         if (!closed) {
                             reason = 'it has at least one window still open';
@@ -111,7 +110,6 @@ var CloseSession = class {
                 // Window could be `undefined` here, maybe even though this._awaitDeleteWindow()
                 // returns true, the window still takes some time to close.
                 if (window?.can_close()) {
-                    window._aboutToClose = true;
                     closed = await this._awaitDeleteWindow(app, window);
                     if (!closed) {
                         reason = 'it has at least one window still open, maybe it is not closable or still closing';
@@ -132,6 +130,7 @@ var CloseSession = class {
                 app.disconnect(windowsChangedId);
                 resolve(app.get_n_windows() === 0);
             });
+            metaWindow._aboutToClose = true;
             metaWindow.delete(DateUtils.get_current_time());
         });
     }

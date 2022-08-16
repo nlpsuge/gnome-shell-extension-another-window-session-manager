@@ -422,13 +422,7 @@ var SaveSession = class {
                     }
                     const errMsg = `Cannot save session: ${sessionFile.get_path()}`;
                     const reason = `Failed to save session into ${sessionFile.get_path()}!`;
-                    
-                    if (causedBy && causedBy.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
-                        this._log.debug(`${errMsg}. Saving session was cancelled by a newer save`);
-                        resolve(success);
-                    } else {
-                        reject(new CommonError.CommonError(errMsg, {desc: reason, cause: causedBy}));
-                    }
+                    reject(new CommonError.CommonError(errMsg, {desc: reason, cause: causedBy}));
                 });
             });
     }
