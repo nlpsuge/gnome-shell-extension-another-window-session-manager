@@ -41,6 +41,8 @@ function disable() {
         _openWindowsTracker.destroy();
         _openWindowsTracker = null;
     }
+
+    WindowTilingSupport.destroy();
     
 }
 

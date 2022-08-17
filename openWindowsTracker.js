@@ -103,6 +103,7 @@ var OpenWindowsTracker = class {
             for (const app of runningApps) {
                 const windows = app.get_windows();
                 for (const window of windows) {
+                    this._saveSessionToTmpAsync(window);
                     this._connectWindowSignalsToSaveSession(window);
                 }
             }
@@ -126,27 +127,7 @@ var OpenWindowsTracker = class {
 
     async _restoreOrSaveWindowSession(window) {
         try {
-            if (!window.get_workspace()) return;
-
-            if (this._restoringSession) {
-                const sessionFilePath = `${sessionPath}/${window.get_wm_class()}/${MetaWindowUtils.getStableWindowId(window)}.json`;
-                // Apps in the `this._blacklist` does not save a session
-                if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
-                    if (!this._blacklist.has(window.get_wm_class())) 
-                        this._log.warn(`${sessionFilePath} not found!`);
-                    return;
-                }
-
-                const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
-                let [success, contents] = sessionPathFile.load_contents(null);
-                if (!success) {
-                    return;
-                }
-        
-                let sessionConfig = FileUtils.getJsonObj(contents);
-                this._log.debug(`Restoring window session from ${sessionFilePath}`);
-                this._restoreWindowState(sessionConfig);
-            }
+            this._restoreWindowState(window);
             
             this._saveSessionToTmpAsync(window);
             this._connectWindowSignalsToSaveSession(window);
@@ -158,20 +139,36 @@ var OpenWindowsTracker = class {
     _connectWindowSignalsToSaveSession(window) {
         this._windowInterestingSignalsWhileSave.forEach(signal => {
             const windowSignalId = window.connect(signal, () => {
-                const workspace = window.get_workspace();
-                // workspace is nullish during gnome shell restarts
-                if (!workspace) return;
-
                 this._saveSessionToTmpAsync(window);
             });
             this._signals.push([windowSignalId, window]);
         })
     }
 
-    _restoreWindowState(sessionContent) {
+    _restoreWindowState(window) {
         if (!this._settings.get_boolean('stash-and-restore-states')) return;
 
+        if (!this._restoringSession) return;
+
+        const sessionFilePath = `${sessionPath}/${window.get_wm_class()}/${MetaWindowUtils.getStableWindowId(window)}.json`;
+        // Apps in the `this._blacklist` does not save a session
+        if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
+            if (!this._blacklist.has(window.get_wm_class())) 
+                this._log.warn(`${sessionFilePath} not found while restoring!`);
+            return;
+        }
+
+        const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
+        let [success, contents] = sessionPathFile.load_contents(null);
+        if (!success) {
+            return;
+        }
+
+        const sessionContent = FileUtils.getJsonObj(contents);
         const app = this._windowTracker.get_app_from_pid(sessionContent.pid);
+        
+        this._log.debug(`Restoring window session from ${sessionFilePath}`);
+
         if (app && app.get_name() == sessionContent.app_name) {
             const restoringShellAppData = RestoreSession.restoringApps.get(app);
             if (restoringShellAppData) {
@@ -189,6 +186,9 @@ var OpenWindowsTracker = class {
             if (!this._settings.get_boolean('stash-and-restore-states')) return;
             
             if (!window) return;
+            const workspace = window.get_workspace();
+            // workspace is nullish during gnome shell restarts
+            if (!workspace) return;
             if (this._blacklist.has(window.get_wm_class())) return;
 
             // Cancel running save operation
