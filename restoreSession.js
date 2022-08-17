@@ -70,7 +70,7 @@ var RestoreSession = class {
         let session_config = FileUtils.getJsonObj(contents);
         let session_config_objects = session_config.x_session_config_objects;
         if (!session_config_objects) {
-            logError(new Error(`Session details not found: ${session_file_path}`));
+            this._log.error(new Error(`Session details not found: ${session_file_path}`));
             return;
         }
 
@@ -79,7 +79,7 @@ var RestoreSession = class {
             if (!desktop_file_id) {
                 return true;
             }
-            const shellApp = this._defaultAppSystem.lookup_app(desktop_file_id)
+            const shellApp = this._defaultAppSystem.lookup_app(desktop_file_id);
             if (!shellApp) {
                 return true;
             }

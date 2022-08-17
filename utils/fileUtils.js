@@ -11,7 +11,8 @@ const home_dir = GLib.get_home_dir();
 const config_path_base = GLib.build_filenamev([home_dir, '.config', 'another-window-session-manager']);
 var sessions_path = GLib.build_filenamev([config_path_base, 'sessions']);
 var sessions_backup_folder_name = 'backups';
-var sessions_backup_path = GLib.build_filenamev([sessions_path, sessions_backup_folder_name]);
+const sessions_backup_path = GLib.build_filenamev([sessions_path, sessions_backup_folder_name]);
+
 var desktop_template_path = GLib.build_filenamev([Me.path, '/template/template.desktop']);
 var desktop_template_path_restore_at_autostart = GLib.build_filenamev([Me.path, '/template/_gnome-shell-extension-another-window-session-manager.desktop']);
 var desktop_file_store_path_base = '~/.local/share/applications';
@@ -28,8 +29,19 @@ var desktop_template_path_ydotool_uinput_rules = GLib.build_filenamev([Me.path, 
 var system_udev_rules_path_ydotool_uinput_rules = '/etc/udev/rules.d/60-awsm-ydotool-uinput.rules';
 
 
-function get_sessions_path() {
-    return sessions_path;
+/**
+ * Get the absolute session path which contains sessions, 
+ * it's `~/.config/another-window-session-manager` by default.
+ * 
+ * @param {string} baseDir base directory, `~/.config/another-window-session-manager/sessions` by default
+ * @returns {string} the absolute session path which contains sessions
+ */
+function get_sessions_path(baseDir = null) {
+    if (baseDir) {
+        return baseDir;
+    } else {
+        return sessions_path;
+    }
 }
 
 function get_sessions_backups_path() {
@@ -104,9 +116,6 @@ async function listAllSessions(sessionPath, recursion, debug, callback) {
         for (const info of infos) {
             const file = fileEnumerator.get_child(info);
             if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
-                if (debug) {
-                    log(`${info.get_name()} is a folder, checking`);
-                }
                 listAllSessions(file.get_path(), recursion, debug, callback);
             }
 
@@ -119,21 +128,22 @@ async function listAllSessions(sessionPath, recursion, debug, callback) {
     }
 }
 
-function sessionExists(sessionName) {
-    const sessionFilePath = GLib.build_filenamev([sessions_path, sessionName]);
+function sessionExists(sessionName, baseDir = null) {
+    const sessionsPath = get_sessions_path(baseDir);
+    const sessionFilePath = GLib.build_filenamev([sessionsPath, sessionName]);
     if (GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
-        return true;
+        return [true, sessionFilePath];
     }
-    return false;
+    return [false];
 }
 
 function trashSession(sessionName) {
-    if (!sessionExists(sessionName)) {
+    const [exists, sessionFilePath] = sessionExists(sessionName);
+    if (!exists) {
         return true;
     }
 
     let trashed = false;
-    const sessionFilePath = GLib.build_filenamev([sessions_path, sessionName]);
     try {
         const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
         trashed = sessionPathFile.trash(null);
@@ -160,13 +170,13 @@ function loadAutostartDesktopTemplate() {
     return loadTemplate(desktop_template_path_restore_at_autostart);
 }
 
-function loadDesktopTemplate() {
-    return loadTemplate(desktop_template_path);
+function loadDesktopTemplate(cancellable = null) {
+    return loadTemplate(desktop_template_path, cancellable);
 }
 
-function loadTemplate(path) {
+function loadTemplate(path, cancellable = null) {
     const desktop_template_file = Gio.File.new_for_path(path);
-    let [success, contents] = desktop_template_file.load_contents(null);
+    let [success, contents] = desktop_template_file.load_contents(cancellable);
     if (success) {
         if (contents instanceof Uint8Array) {
             return imports.byteArray.toString(contents);

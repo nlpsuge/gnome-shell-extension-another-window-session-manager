@@ -11,9 +11,11 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const SaveSession = Me.imports.saveSession;
 const CloseSession = Me.imports.closeSession;
+const RestoreSession = Me.imports.restoreSession;
 
 const IconFinder = Me.imports.utils.iconFinder;
 const FileUtils = Me.imports.utils.fileUtils;
+const Log = Me.imports.utils.log;
 
 const { Button } = Me.imports.ui.button;
 
@@ -143,6 +145,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
                 Main.overview.toggle();
             }
 
+            RestoreSession.restoringApps.clear();
             this.closeSession.closeWindows().catch(e => {
                 this._log.error(e)
             });
@@ -233,6 +236,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this.saveCurrentSessionEntry.hide();
         this._addYesAndNoButtons();
 
+        this._log = new Log.Log();
         this._saveSession = new SaveSession.SaveSession();
 
         this._timeline = this.createTimeLine();
@@ -328,34 +332,24 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             return;
         }
 
-        try {
-            this._saveSession.saveSession(sessionName);
-        } catch (e) {
-            logError(e, `Failed to save session`);
-            global.notify_error(`Failed to save session`, e.message);
-            this._displayMessage(e.message);
-            return;
-        }
-
         // clear entry
         this.saveCurrentSessionEntry.set_text('');
-
+        
         this.saveCurrentSessionEntry.hide();
+        super.hideYesAndNoButtons();
 
         this.savingLabel.set_text(`Saving open windows as '${sessionName}' ...`);
-        this._timeline.set_actor(this.savingLabel);
-        const newFrameId = this._timeline.connect('new-frame', (_timeline, _frame) => {
-            this._timeline.disconnect(newFrameId);
-            super.hideYesAndNoButtons();
-            this.savingLabel.show();
-        });
-        this._timeline.start();
-        const completedId = this._timeline.connect('completed', () => {
-            this._timeline.disconnect(completedId);
-            this._timeline.stop();
+        this.savingLabel.show();
+
+        this._saveSession.saveSessionAsync(sessionName).then(() => {
             this.savingLabel.hide();
-            this.hideYesAndNoButtons();
+        }).catch(e => {
+            let message = `Failed to save session`;
+            this._log.error(e, e.desc ?? message);
+            global.notify_error(message, e.cause?.message ?? e.desc ?? message);
+            this._displayMessage(e.cause?.message ?? e.message);
         });
+
     }
 
     _displayMessage(message) {

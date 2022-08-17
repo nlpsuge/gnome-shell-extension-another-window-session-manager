@@ -85,6 +85,27 @@ const Prefs = GObject.registerClass(
             );
 
             this._settings.bind(
+                'restore-window-tiling',
+                this.restore_window_tiling_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
+                'raise-windows-together',
+                this.raise_windows_together_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
+                'stash-and-restore-states',
+                this.stash_and_restore_states_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
                 'enable-close-by-rules',
                 this.close_by_rules_switch,
                 'active',
@@ -120,6 +141,9 @@ const Prefs = GObject.registerClass(
             this.restore_session_interval_spinbutton = this._builder.get_object('restore_session_interval_spinbutton');
             this.timer_on_the_autostart_dialog_spinbutton = this._builder.get_object('timer_on_the_autostart_dialog_spinbutton');
             this.autostart_delay_spinbutton = this._builder.get_object('autostart_delay_spinbutton');
+            this.restore_window_tiling_switch = this._builder.get_object('restore_window_tiling_switch');
+            this.raise_windows_together_switch = this._builder.get_object('raise_windows_together_switch');
+            this.stash_and_restore_states_switch = this._builder.get_object('stash_and_restore_states_switch');
 
             this.restore_at_startup_switch = this._builder.get_object('restore_at_startup_switch');
             this.restore_at_startup_switch.connect('notify::active', (widget) => {

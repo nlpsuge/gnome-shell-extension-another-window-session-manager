@@ -2,12 +2,16 @@
 
 const { Shell, Gio, GLib, Meta } = imports.gi;
 
+const Main = imports.ui.main;
+
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
+const DateUtils = Me.imports.utils.dateUtils;
 
+const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
 
 var MoveSession = class {
 
@@ -58,11 +62,11 @@ var MoveSession = class {
 
     moveWindowsByShellApp(shellApp, saved_window_sessions) {
         const interestingWindows = this._getAutoMoveInterestingWindows(shellApp, saved_window_sessions);
-
+        
         if (!interestingWindows.length) {
             return;
         }
-
+        
         for (const interestingWindow of interestingWindows) {
             const open_window = interestingWindow.open_window;
             const saved_window_session = interestingWindow.saved_window_session;
@@ -71,9 +75,8 @@ var MoveSession = class {
 
             try {
                 this._restoreMonitor(open_window, saved_window_session);
-
                 this._restoreWindowGeometry(open_window, saved_window_session);
-
+                this._restoreTiling(open_window, saved_window_session);
                 this._createEnoughWorkspace(desktop_number);
 
                 // Sticky windows don't need moving, in fact moving would unstick them
@@ -83,7 +86,7 @@ var MoveSession = class {
                     this._log.debug(`The window '${shellApp.get_name()} - ${title}' is already sticky on workspace ${desktop_number}`);
                 } else {
                     this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${open_window.get_workspace().index()}`);
-                    open_window.change_workspace_by_index(desktop_number, false);
+                    this._changeWorkspace(open_window, desktop_number);
                 }
 
                 // restore window state if necessary due to moving windows could lost window state
@@ -97,6 +100,11 @@ var MoveSession = class {
             saved_window_session.moved = true;
         }
 
+    }
+
+    // Inspired by https://github.com/Leleat/Tiling-Assistant/blob/main/tiling-assistant%40leleat-on-github/src/extension/resizeHandler.js
+    _restoreTiling(metaWindow, saved_window_session) {
+        WindowTilingSupport.prepareToTile(metaWindow, saved_window_session.window_tiling);
     }
 
     /**
@@ -171,7 +179,7 @@ var MoveSession = class {
         }
 
         if (saved_window_session.moved) {
-            this._restoreWindowStateAndGeometry(metaWindow, saved_window_session);
+            this._restoreWindowStates(metaWindow, saved_window_session);
             return saved_window_session;
         }
 
@@ -183,7 +191,7 @@ var MoveSession = class {
             const shellApp = this._windowTracker.get_window_app(metaWindow);
             this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
         }
-        metaWindow.change_workspace_by_index(desktop_number, false);
+        this._changeWorkspace(metaWindow, desktop_number);
         return saved_window_session;
     }
 
@@ -195,7 +203,7 @@ var MoveSession = class {
 
         if (saved_window_session.moved) {
             const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._restoreWindowStateAndGeometry(metaWindow, saved_window_session);
+                this._restoreWindowStates(metaWindow, saved_window_session);
                 return GLib.SOURCE_REMOVE;
             });
             this._sourceIds.push(sourceId);
@@ -203,6 +211,7 @@ var MoveSession = class {
             const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 this._restoreMonitor(metaWindow, saved_window_session);
                 this._restoreWindowGeometry(metaWindow, saved_window_session);
+                this._restoreTiling(metaWindow, saved_window_session);
                 const desktop_number = saved_window_session.desktop_number;
                 // It's necessary to move window again to ensure an app goes to its own workspace.
                 // In a sort of situation, some apps probably just don't want to move when call createEnoughWorkspaceAndMoveWindows() from `Meta.Display::window-created` signal.
@@ -213,7 +222,7 @@ var MoveSession = class {
                     this._log.debug(`The window '${shellApp.get_name()} - ${metaWindow.get_title()}' is already sticky on workspace ${desktop_number}`);
                 } else {
                     this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
-                    metaWindow.change_workspace_by_index(desktop_number, false);
+                    this._changeWorkspace(metaWindow, desktop_number);
                 }
                 // The window state get lost during moving the window, and we need to restore window state again.
                 this._restoreWindowState(metaWindow, saved_window_session);
@@ -222,6 +231,15 @@ var MoveSession = class {
                 return GLib.SOURCE_REMOVE;
             });
             this._sourceIds.push(sourceId);
+        }
+    }
+
+    _changeWorkspace(metaWindow, desktop_number) {
+        const currentFocusedWindow = global.display.get_focus_window();
+        metaWindow.change_workspace_by_index(desktop_number, false);
+        if (currentFocusedWindow === metaWindow) {
+            this._log.debug(`Refocusing the previous focused window ${metaWindow.get_title()}`);
+            Main.activateWindow(metaWindow, DateUtils.get_current_time());
         }
     }
 
@@ -252,11 +270,17 @@ var MoveSession = class {
     }
 
     /**
+     * Restore varies window states, including:
+     * * window states, such as Always on Top, Always on Visible Workspace
+     * * window geometry
+     * * window tiling
+     * 
      * @see https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en
      */
-    _restoreWindowStateAndGeometry(metaWindow, saved_window_session) {
+    _restoreWindowStates(metaWindow, saved_window_session) {
         this._restoreWindowState(metaWindow, saved_window_session);
         this._restoreWindowGeometry(metaWindow, saved_window_session);
+        this._restoreTiling(metaWindow, saved_window_session);
     }
 
     _restoreWindowState(metaWindow, saved_window_session) {
@@ -309,15 +333,15 @@ var MoveSession = class {
             // Fix: https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/25
             // TODO Note that this is not a perfect solution to address the above issue.
             this._delayRestoreGeometryId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                this._restoreWindowGeometryIfNecessary(metaWindow, saved_window_session);
+                this._moveResizeFrame(metaWindow, saved_window_session);
                 return GLib.SOURCE_REMOVE;
             });
         } else {
-            this._restoreWindowGeometryIfNecessary(metaWindow, saved_window_session);
+            this._moveResizeFrame(metaWindow, saved_window_session);
         }
     }
 
-    _restoreWindowGeometryIfNecessary(metaWindow, saved_window_session) {
+    _moveResizeFrame(metaWindow, saved_window_session) {
         const window_position = saved_window_session.window_position;
         if (window_position.provider === 'Meta') {
             const to_x = window_position.x_offset;
@@ -325,17 +349,31 @@ var MoveSession = class {
             const to_width = window_position.width;
             const to_height = window_position.height;
 
-            const frameRect = metaWindow.get_frame_rect();
-            const current_x = frameRect.x;
-            const current_y = frameRect.y;
-            const current_width = frameRect.width;
-            const current_height = frameRect.height;
-            if (to_x !== current_x ||
-                to_y !== current_y ||
-                current_width !== to_width ||
-                current_height !== to_height) {
-                metaWindow.move_resize_frame(true, to_x, to_y, to_width, to_height);
-            }
+            const currentMonitor = global.display.get_current_monitor();
+            const rectWorkArea = metaWindow.get_work_area_for_monitor(currentMonitor);
+            
+            // For more info about the below issue see also: https://github.com/Leleat/Tiling-Assistant/blob/1e4176a9a7037ee5dd0612e4c9f9dbe45d4e67cf/tiling-assistant%40leleat-on-github/src/extension/tilingWindowManager.js#L186-L199
+            
+            // Move first. Just in case that some apps can only be resized but not moved after `metaWindow.move_resize_frame()`
+            metaWindow.move_frame(true, to_x, to_y);
+            metaWindow.move_resize_frame(
+                // Set `user_op` to true to fix an issue that a window does not move to negative x (like -176),
+                // in which case if `user_op` is false it will move to (0,Y,W,H).
+                true, // user_op
+                to_x,
+                
+                // Fix the below issue:
+                // No rect to clip to found!
+                // No rect whose size to clamp to found!
+
+                // Window might flies outside of the screen when resizing due to 
+                // the y axis of the saved window is less than the one of work area, see:
+                // https://gitlab.gnome.org/GNOME/mutter/-/issues/1461
+                // https://gitlab.gnome.org/GNOME/mutter/-/issues/1499
+
+                Math.max(to_y, rectWorkArea.y),
+                to_width,
+                to_height);
         }
     }
 
@@ -366,7 +404,7 @@ var MoveSession = class {
                 if (windows_count === 1 || title === saved_window_session.window_title) {
                     if (open_window_workspace_index === desktop_number) {
                         this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
-                        this._restoreWindowStateAndGeometry(open_window, saved_window_session);
+                        this._restoreWindowStates(open_window, saved_window_session);
                         saved_window_session.moved = true;
                         return;
                     }
