@@ -46,7 +46,7 @@ After confirm to save:
 
 ### Restore sessions
 To modify the delay, timer, and how to restore a session:
-![image](https://user-images.githubusercontent.com/2271720/176686337-1cb35fcd-bf16-4942-bb92-3f43299ce1af.png)
+![image](https://user-images.githubusercontent.com/2271720/185134291-b496f34b-dad0-4a1f-8641-17232dfac93c.png)
 
 ### Close windows
 ![image](https://user-images.githubusercontent.com/2271720/176687352-e99a5f7d-9260-4f63-abd4-abaa4671daf3.png)
@@ -59,9 +59,11 @@ To modify the delay, timer, and how to restore a session:
 1. Restore a session at startup (See also: [#9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9#issuecomment-1097012874)). Please note that this feature is **disabled by default**.
 1. Restore window state, including `Always on Top`, `Always on Visible Workspace` and maximization
 1. Restore window workspace, size and position
+1. Restore 2 column window tiling
+1. Stash all supported window states so that those states will be restored after gnome shell restarts via `Alt+F2 -> r` or `killall -3 gnome-shell`.
 1. Move windows to their own workspace according to a saved session
 1. Support multi-monitor
-1. Trash saved session
+1. Remove saved session to trash
 1. Search saved session by the session name fuzzily
 1. ...
 
