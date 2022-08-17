@@ -30,6 +30,8 @@ var SaveSession = class {
             flags: (Gio.SubprocessFlags.STDOUT_PIPE |
                     Gio.SubprocessFlags.STDERR_PIPE)});
         this._defaultAppSystem = Shell.AppSystem.get_default();
+
+        this._sourceIds = [];
     }
 
     async saveSessionAsync(sessionName, baseDir = null, backup = true) {
@@ -377,9 +379,7 @@ var SaveSession = class {
         if (cancellable && cancellable.is_cancelled()) {
             return;
         }
-        this._log.debug(`Saving session ${sessionConfig.session_name} to local file`);
 
-        const sessionConfigJson = JSON.stringify(sessionConfig, null, 4);
         const sessions_path = FileUtils.get_sessions_path(baseDir);
         const session_file_path = GLib.build_filenamev([sessions_path, sessionConfig.session_name]);
         const sessionFile = Gio.File.new_for_path(session_file_path);
@@ -396,35 +396,43 @@ var SaveSession = class {
             return Promise.reject(new CommonError.CommonError(errMsg, {desc: reason}));
         }
 
+        const sessionConfigJson = JSON.stringify(sessionConfig, null, 4);
+        
+        this._log.debug(`Saving session ${sessionConfig.session_name} to local file`);
+
         return new Promise((resolve, reject) => {
-            // Use replace_contents_bytes_async instead of replace_contents_async, see: 
-            // https://gitlab.gnome.org/GNOME/gjs/-/blob/gnome-42/modules/core/overrides/Gio.js#L513
-            // https://gitlab.gnome.org/GNOME/gjs/-/issues/192
-            sessionFile.replace_contents_bytes_async(
-                ByteArray.fromString(sessionConfigJson),
-                null,
-                false,
-                Gio.FileCreateFlags.REPLACE_DESTINATION,
-                cancellable,
-                (file, asyncResult) => {
-                    let success = false;
-                    let causedBy = null;
-                    try {
-                        success = sessionFile.replace_contents_finish(asyncResult);
-                        if (success) {
-                            this._log.info(`Saved session into ${sessionFile.get_path()}!`);
-                            resolve(success);
-                            // TODO Notification
-                            return;
+            const sourceId = GLib.idle_add(GLib.PRIORITY_HIGH_IDLE, () => {
+                // Use replace_contents_bytes_async instead of replace_contents_async, see: 
+                // https://gitlab.gnome.org/GNOME/gjs/-/blob/gnome-42/modules/core/overrides/Gio.js#L513
+                // https://gitlab.gnome.org/GNOME/gjs/-/issues/192
+                sessionFile.replace_contents_bytes_async(
+                    ByteArray.fromString(sessionConfigJson),
+                    null,
+                    false,
+                    Gio.FileCreateFlags.REPLACE_DESTINATION,
+                    cancellable,
+                    (file, asyncResult) => {
+                        let success = false;
+                        let causedBy = null;
+                        try {
+                            success = sessionFile.replace_contents_finish(asyncResult);
+                            if (success) {
+                                this._log.info(`Saved session into ${sessionFile.get_path()}!`);
+                                resolve(success);
+                                // TODO Notification
+                                return;
+                            }
+                        } catch (e) {
+                            causedBy = e;
                         }
-                    } catch (e) {
-                        causedBy = e;
-                    }
-                    const errMsg = `Cannot save session: ${sessionFile.get_path()}`;
-                    const reason = `Failed to save session into ${sessionFile.get_path()}!`;
-                    reject(new CommonError.CommonError(errMsg, {desc: reason, cause: causedBy}));
+                        const errMsg = `Cannot save session: ${sessionFile.get_path()}`;
+                        const reason = `Failed to save session into ${sessionFile.get_path()}!`;
+                        reject(new CommonError.CommonError(errMsg, {desc: reason, cause: causedBy}));
+                    });
                 });
+                return GLib.SOURCE_REMOVE;
             });
+            this._sourceIds.push(sourceId);
     }
 
     _setFieldsFromProcess(processInfoArray, sessionConfigObject) {
@@ -450,6 +458,12 @@ var SaveSession = class {
         }
         if (this._subprocessLauncher) {
             this._subprocessLauncher = null;
+        }
+        if (this._sourceIds) {
+            this._sourceIds.forEach(sourceId => {
+                GLib.Source.remove(sourceId);
+            });
+            this._sourceIds = null;
         }
         
     }
