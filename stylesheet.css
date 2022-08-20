@@ -1,3 +1,46 @@
+.awsm-toggle-switch {
+    background-image: url("./icons/toggle-off-autorestore-symbolic.svg");
+}
+
+.awsm-toggle-switch:checked {
+    background-image: url("./icons/toggle-on-autorestore-symbolic.svg");
+}
+
+/* Restore Session Dialog */
+.restore-session-dialog {
+    width: 30em;
+}
+  
+
+/**
+* *-tooltip: Adapted from: https://github.com/GSConnect/gnome-shell-extension-gsconnect/blob/master/src/stylesheet.css
+*/
+.awsm-tooltip {
+    border-radius: 3px;
+    min-width: 0;
+    min-height: 0;
+    padding: 6px;
+}
+
+.awsm-tooltip > StBoxLayout {
+    spacing: 6px;
+}
+
+.awsm-tooltip StIcon {
+    icon-size: 16px;
+}
+
+.awsm-tooltip StLabel {
+    font-weight: normal;
+    text-align: left;
+}
+
+.awsm-tooltip StLabel:rtl {
+    text-align: right;
+}
+
+
+
 .session-menu-section {
     max-height:600px;
 }
@@ -8,10 +51,31 @@
     font-style: italic
 }
 
-.aws-item-separator {
+.confirm-before-operate:hover, .confirm-before-operate:focus {
+    background-color: rgba(255,255,255,0.2);
+    border: none;
+    padding: 5px;
+}
+
+.button-item {
     border-radius: 32px;
     padding: 4px;
     border: 1px solid #282c2c;
+}
+
+.button-item > StIcon {
+    icon-size: 14px;
+}
+
+.aws-item-separator {
+    border-radius: 32px;
+    padding: 4px;
+    /* 
+    Remove cycle / border in the background in case everyone think this separator is a clickable button, actually it's just a view-only separator.
+
+    https://developer.mozilla.org/en-US/docs/Web/CSS/border 
+    */
+    border: none;
 }
 
 .aws-item-separator > StIcon {

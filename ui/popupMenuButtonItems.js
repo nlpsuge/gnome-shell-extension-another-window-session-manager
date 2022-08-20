@@ -2,6 +2,8 @@
 
 const { GObject, St, Clutter } = imports.gi;
 
+const Main = imports.ui.main;
+
 const PopupMenu = imports.ui.popupMenu;
 
 const ExtensionUtils = imports.misc.extensionUtils;
@@ -9,9 +11,13 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const SaveSession = Me.imports.saveSession;
 const CloseSession = Me.imports.closeSession;
+const RestoreSession = Me.imports.restoreSession;
 
 const IconFinder = Me.imports.utils.iconFinder;
 const FileUtils = Me.imports.utils.fileUtils;
+const Log = Me.imports.utils.log;
+
+const { Button } = Me.imports.ui.button;
 
 var PopupMenuButtonItems = GObject.registerClass(
 class PopupMenuButtonItems extends GObject.Object {
@@ -23,7 +29,6 @@ class PopupMenuButtonItems extends GObject.Object {
     }
 
     addButtonItems() {
-        // TODO Add label and make the item clickable so user don't need to click the icon whose size is too small to find to click?
         const popupMenuButtonItemClose = new PopupMenuButtonItemClose('close-symbolic.svg');
         const popupMenuButtonItemSave = new PopupMenuButtonItemSave('save-symbolic.svg');
         
@@ -52,8 +57,7 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
         this.noButton = this.createButton('edit-undo-symbolic');
         this.yesButton.add_style_class_name('confirm-before-operate');
         this.noButton.add_style_class_name('confirm-before-operate');
-        this.yesButton.hide();
-        this.noButton.hide();
+        this.hideYesAndNoButtons();
     }
 
     showYesAndNoButtons() {
@@ -67,32 +71,29 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
     }
 
     createButton(iconSymbolic) {
-        let icon = new St.Icon({
-            gicon: IconFinder.find(iconSymbolic),
-            style_class: 'system-status-icon'
-        });
-
-        let button = new St.Button({
-            style_class: 'aws-item-button',
-            can_focus: true,
-            child: icon,
-            x_align: Clutter.ActorAlign.END,
-            x_expand: false,
-            y_expand: true,
-            track_hover: true
-        });
-
+        const button = new Button({
+            icon_symbolic: iconSymbolic,
+            button_style_class: 'button-item',
+        }).button;
         return button;
     }
 
     createTimeLine() {
         // Set actor when using
         const timeline = new Clutter.Timeline({
-            // 1.5s
-            duration: 1500,
+            // 2s
+            duration: 2000,
             repeat_count: 0,
         });
         return timeline;
+    }
+
+    // Add the icon description. Only once icon may be too weird?
+    addIconDescription(iconDescription) {
+        this.iconDescriptionLabel = new St.Label({
+            text: iconDescription
+        });
+        this.actor.add_child(this.iconDescriptionLabel);
     }
 
 });
@@ -110,6 +111,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.closeSession = new CloseSession.CloseSession();
 
         this._createButton(iconSymbolic);
+        this.addIconDescription('Close open windows');
         this._addConfirm();
         this._addYesAndNoButtons();
         this._addClosingPrompt();
@@ -118,6 +120,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
         this._timeline = this.createTimeLine();
 
+        // Respond to menu item's 'activate' signal so user don't need to click the icon whose size is too small to find to click
         this.connect('activate', this._onActivate.bind(this));
 
     }
@@ -128,8 +131,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
     _hideConfirm() {
         this.confirmLabel.hide();
-        this.yesButton.hide();
-        this.noButton.hide();
+        this.hideYesAndNoButtons();
         this.closingLabel.hide();
     }
 
@@ -137,7 +139,16 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         super.createYesAndNoButtons();
         
         this.yesButton.connect('clicked', () => {
-            this.closeSession.closeWindows();
+            // TODO Do this when enable_close_by_rules is true? 
+            this._parent.close();
+            if (Main.overview.visible) {
+                Main.overview.toggle();
+            }
+
+            RestoreSession.restoringApps.clear();
+            this.closeSession.closeWindows().catch(e => {
+                this._log.error(e)
+            });
             this._hideConfirm();
 
             // Set the actor the timeline is associated with to make sure Clutter.Timeline works normally.
@@ -167,7 +178,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.closingLabel = new St.Label({
             style_class: 'confirm-before-operate',
             text: 'Closing open windows ...',
-            x_expand: true,
+            x_expand: false,
             x_align: Clutter.ActorAlign.CENTER,
         });
         this.actor.add_child(this.closingLabel);
@@ -185,22 +196,21 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.closingLabel.hide();
 
         this.confirmLabel.show();
-        this.yesButton.show();
-        this.noButton.show();
+        this.showYesAndNoButtons();
     }
 
     _addConfirm() {
         this.confirmLabel = new St.Label({
             style_class: 'confirm-before-operate',
-            text: 'Are you sure to close open windows?',
-            x_expand: true,
+            text: 'Confirm?',
+            x_expand: false,
             x_align: Clutter.ActorAlign.START,
         });
         this.actor.add_child(this.confirmLabel);
     }
 
     destroy() {
-        // TODO　Nullify others created objects?
+        // TODO Nullify others created objects?
 
         // TODO Also disconnect new-frame and completed?
         if (this._timeline) {
@@ -218,20 +228,24 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
     _init(iconSymbolic) {
         super._init();
-        this.saveCurrentSessionEntry;
+        this.saveCurrentSessionEntry = null;
         this._createButton(iconSymbolic);
+        this.addIconDescription('Save open windows');
         this._addEntry();
         // Hide this St.Entry, only shown when user click saveButton.
         this.saveCurrentSessionEntry.hide();
         this._addYesAndNoButtons();
 
+        this._log = new Log.Log();
         this._saveSession = new SaveSession.SaveSession();
 
         this._timeline = this.createTimeLine();
 
-        this.savingLabel;
+        this.savingLabel = null;
+        
         this._addSavingPrompt();
 
+        // Respond to menu item's 'activate' signal so user don't need to click the icon whose size is too small to find to click
         this.connect('activate', this._onActivate.bind(this));
 
     }
@@ -263,7 +277,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     _addSavingPrompt() {
         this.savingLabel = new St.Label({
             style_class: 'confirm-before-operate',
-            x_expand: true,
+            x_expand: false,
             x_align: Clutter.ActorAlign.CENTER,
         });
         this.actor.add_child(this.savingLabel);
@@ -291,17 +305,14 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             track_hover: true,
             can_focus: true
         });
-        const clutterText = this.saveCurrentSessionEntry.clutter_text
-        clutterText.connect('key-press-event', this._onKeyPressEvent.bind(this));
+        const clutterText = this.saveCurrentSessionEntry.clutter_text;
+        clutterText.connect('activate', this._onTextActivate.bind(this));
         this.actor.add_child(this.saveCurrentSessionEntry);
 
     }
 
-    _onKeyPressEvent(entry, event) {
-        const symbol = event.get_key_symbol();
-        if (symbol == Clutter.KEY_Return || symbol == Clutter.KEY_KP_Enter || symbol == Clutter.KEY_ISO_Enter) {
-            this._gotoSaveSession();
-        }
+    _onTextActivate(entry, event) {
+        this._gotoSaveSession();
     }
 
     _gotoSaveSession() {
@@ -315,28 +326,69 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             sessionName = FileUtils.default_sessionName;
         }
 
-        this._saveSession.saveSession(sessionName);
+        const [canSave, reason] = this._canSave(sessionName);
+        if (!canSave) {
+            this._displayMessage(reason);
+            return;
+        }
 
         // clear entry
         this.saveCurrentSessionEntry.set_text('');
-
+        
         this.saveCurrentSessionEntry.hide();
+        super.hideYesAndNoButtons();
 
         this.savingLabel.set_text(`Saving open windows as '${sessionName}' ...`);
+        this.savingLabel.show();
+
+        this._saveSession.saveSessionAsync(sessionName).then(() => {
+            this.savingLabel.hide();
+        }).catch(e => {
+            let message = `Failed to save session`;
+            this._log.error(e, e.desc ?? message);
+            global.notify_error(message, e.cause?.message ?? e.desc ?? message);
+            this._displayMessage(e.cause?.message ?? e.message);
+        });
+
+    }
+
+    _displayMessage(message) {
+        // To prevent saving session many times by holding and not releasing Enter
+        this.saveCurrentSessionEntry.hide();
+        this.savingLabel.set_text(message);
         this._timeline.set_actor(this.savingLabel);
-        this._timeline.connect('new-frame', (_timeline, _frame) => {
-            super.hideYesAndNoButtons();
+        const newFrameId = this._timeline.connect('new-frame', (_timeline, _frame) => {
+            this._timeline.disconnect(newFrameId);
             this.savingLabel.show();
+            this.hideYesAndNoButtons();
         });
         this._timeline.start();
-        this._timeline.connect('completed', () => {
+        const completedId = this._timeline.connect('completed', () => {
+            this._timeline.disconnect(completedId);
             this._timeline.stop();
             this.savingLabel.hide();
+            this.saveCurrentSessionEntry.show();
+            this.showYesAndNoButtons();
         });
     }
 
+    _canSave(sessionName) {
+        if (sessionName === FileUtils.sessions_backup_folder_name) {
+            return [false, `ERROR: ${sessionName} is a reserved word, can't be used.`];
+        }
+
+        if (FileUtils.isDirectory(sessionName)) {
+            return [false, `ERROR: Can't save windows using '${sessionName}', it's an existing directory!`];
+        }
+
+        if (sessionName.indexOf('/') != -1) {
+            return [false, `ERROR: Session names cannot contain '/'`];
+        }
+        return [true, ''];
+    }
+
     destroy() {
-        // TODO　Nullify others created objects?
+        // TODO Nullify others created objects?
 
         // TODO Also disconnect new-frame and completed?
         if (this._timeline) {

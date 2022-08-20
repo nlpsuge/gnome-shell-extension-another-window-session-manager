@@ -1,6 +1,6 @@
 'use strict';
 
-const { GObject, St, Clutter } = imports.gi;
+const { GObject, St, Clutter, GLib } = imports.gi;
 
 const PopupMenu = imports.ui.popupMenu;
 
@@ -12,16 +12,29 @@ const SessionItemButtons = Me.imports.ui.sessionItemButtons;
 var SessionItem = GObject.registerClass(
 class SessionItem extends PopupMenu.PopupMenuItem {
     
-    _init(fileInfo, file) {
+    _init(fileInfo, file, indicator) {
         // Initialize this component, so we can use this.label etc
         super._init("");
 
-        this._filename = fileInfo.get_name();
+        this._indicator = indicator;
+
+        this._available = true;
+
         this._filepath = file.get_path();
-        this._modification_time = 'Unknown';
-        const modification_date_time = fileInfo.get_modification_date_time();
-        if (modification_date_time) {
-            this._modification_time = modification_date_time.to_local().format('%Y-%m-%d %T');
+        if(fileInfo != null) {
+            this._filename = fileInfo.get_name(); 
+            const modification_date_time = fileInfo.get_modification_date_time();
+            if (modification_date_time) {
+                this._modification_time = modification_date_time.to_local().format('%Y-%m-%d %T');
+            } else {
+                this._modification_time = '( Unknown )';
+                this._available = false;
+            }
+        } else {
+            this._filename = file.get_basename();
+            this._modification_time = '( Please save this session before using it )';
+            
+            this._available = false;
         }
 
         this.label.set_x_expand(true);
