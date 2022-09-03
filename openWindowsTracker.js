@@ -321,6 +321,10 @@ var OpenWindowsTracker = class {
     }
 
     _cancelRunningSave(window) {
+        if (!this._runningSaveCancelableMap) {
+            return;
+        }
+        
         const cancellable = this._runningSaveCancelableMap.get(window);
         if (cancellable && !cancellable.is_cancelled()) {
             cancellable.cancel();
@@ -328,6 +332,10 @@ var OpenWindowsTracker = class {
     }
 
     _cancelAllRunningSave() {
+        if (!this._runningSaveCancelableMap) {
+            return;
+        }
+
         for (const cancellable of this._runningSaveCancelableMap.values()) {
             if (!cancellable.is_cancelled())
                 cancellable.cancel();
