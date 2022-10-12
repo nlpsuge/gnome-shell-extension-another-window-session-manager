@@ -7,6 +7,8 @@ const Main = imports.ui.main;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
+const States = Me.imports.states;
+
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 const DateUtils = Me.imports.utils.dateUtils;
@@ -62,11 +64,11 @@ var MoveSession = class {
 
     moveWindowsByShellApp(shellApp, saved_window_sessions) {
         const interestingWindows = this._getAutoMoveInterestingWindows(shellApp, saved_window_sessions);
-        
+
         if (!interestingWindows.length) {
             return;
         }
-        
+
         for (const interestingWindow of interestingWindows) {
             const open_window = interestingWindow.open_window;
             const saved_window_session = interestingWindow.saved_window_session;
@@ -77,7 +79,6 @@ var MoveSession = class {
                 this._restoreMonitor(open_window, saved_window_session);
                 this._restoreWindowGeometry(open_window, saved_window_session);
                 this._restoreTiling(open_window, saved_window_session);
-                this._createEnoughWorkspace(desktop_number);
 
                 // Sticky windows don't need moving, in fact moving would unstick them
                 // See: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/gnome-41/js/ui/windowManager.js#L1070
@@ -86,7 +87,7 @@ var MoveSession = class {
                     this._log.debug(`The window '${shellApp.get_name()} - ${title}' is already sticky on workspace ${desktop_number}`);
                 } else {
                     this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${open_window.get_workspace().index()}`);
-                    this._changeWorkspace(open_window, desktop_number);
+                    this._changeWorkspace(open_window, saved_window_session);
                 }
 
                 // restore window state if necessary due to moving windows could lost window state
@@ -151,7 +152,7 @@ var MoveSession = class {
             }
             return;
         }
-        
+
         // It causes Gnome shell to crash, if we move a monitor to a non-existing monitor on X11 and Wayland!
         // We move all windows on non-existing monitors to the primary monitor
         const totalMonitors = global.display.get_n_monitors()
@@ -169,7 +170,7 @@ var MoveSession = class {
             metaWindow.move_to_monitor(toMonitorNumber);
             return;
         }
-        
+
     }
 
     createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions) {
@@ -186,12 +187,11 @@ var MoveSession = class {
         this._restoreMonitor(metaWindow, saved_window_session);
 
         const desktop_number = saved_window_session.desktop_number;
-        this._createEnoughWorkspace(desktop_number);
         if (this._log.isDebug()) {
             const shellApp = this._windowTracker.get_window_app(metaWindow);
             this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
         }
-        this._changeWorkspace(metaWindow, desktop_number);
+        this._changeWorkspace(metaWindow, saved_window_session);
         return saved_window_session;
     }
 
@@ -215,14 +215,13 @@ var MoveSession = class {
                 const desktop_number = saved_window_session.desktop_number;
                 // It's necessary to move window again to ensure an app goes to its own workspace.
                 // In a sort of situation, some apps probably just don't want to move when call createEnoughWorkspaceAndMoveWindows() from `Meta.Display::window-created` signal.
-                this._createEnoughWorkspace(desktop_number);
                 const shellApp = this._windowTracker.get_window_app(metaWindow);
                 const is_sticky = saved_window_session.window_state.is_sticky;
                 if (is_sticky && metaWindow.is_on_all_workspaces()) {
                     this._log.debug(`The window '${shellApp.get_name()} - ${metaWindow.get_title()}' is already sticky on workspace ${desktop_number}`);
                 } else {
                     this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
-                    this._changeWorkspace(metaWindow, desktop_number);
+                    this._changeWorkspace(metaWindow, saved_window_session);
                 }
                 // The window state get lost during moving the window, and we need to restore window state again.
                 this._restoreWindowState(metaWindow, saved_window_session);
@@ -234,10 +233,20 @@ var MoveSession = class {
         }
     }
 
-    _changeWorkspace(metaWindow, desktop_number) {
+    _changeWorkspace(metaWindow, saved_window_session) {
+        const options = saved_window_session.options;
+
+        const desktop_number = saved_window_session.desktop_number;
+        this._createEnoughWorkspace(desktop_number);
+
         const currentFocusedWindow = global.display.get_focus_window();
-        metaWindow.change_workspace_by_index(desktop_number, false);
-        if (currentFocusedWindow === metaWindow) {
+
+        if (options && options.statesMask & States.States.WINDOW_WORKSPACE) {
+            metaWindow.change_workspace_by_index(desktop_number, false);
+        }
+
+        if (currentFocusedWindow === metaWindow &&
+            options && options.statesMask & States.States.ACTIVE_WINDOW) {
             this._log.debug(`Refocusing the previous focused window ${metaWindow.get_title()}`);
             Main.activateWindow(metaWindow, DateUtils.get_current_time());
         }
@@ -350,10 +359,12 @@ var MoveSession = class {
             const to_height = window_position.height;
 
             const currentMonitor = global.display.get_current_monitor();
+            const workspace = metaWindow.get_workspace();
+            log('meta_window_get_workspace ' + workspace);
             const rectWorkArea = metaWindow.get_work_area_for_monitor(currentMonitor);
-            
+
             // For more info about the below issue see also: https://github.com/Leleat/Tiling-Assistant/blob/1e4176a9a7037ee5dd0612e4c9f9dbe45d4e67cf/tiling-assistant%40leleat-on-github/src/extension/tilingWindowManager.js#L186-L199
-            
+
             // Move first. Just in case that some apps can only be resized but not moved after `metaWindow.move_resize_frame()`
             metaWindow.move_frame(true, to_x, to_y);
             metaWindow.move_resize_frame(
@@ -361,7 +372,7 @@ var MoveSession = class {
                 // in which case if `user_op` is false it will move to (0,Y,W,H).
                 true, // user_op
                 to_x,
-                
+
                 // Fix the below issue:
                 // No rect to clip to found!
                 // No rect whose size to clamp to found!

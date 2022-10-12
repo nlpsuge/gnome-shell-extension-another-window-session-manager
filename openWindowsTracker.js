@@ -9,6 +9,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const SaveSession = Me.imports.saveSession;
 const RestoreSession = Me.imports.restoreSession;
+const States = Me.imports.states;
 
 const Log = Me.imports.utils.log;
 const PrefsUtils = Me.imports.utils.prefsUtils;
@@ -81,6 +82,8 @@ var OpenWindowsTracker = class {
         this._display = global.display;
 
         const x11DisplayOpenedId = this._display.connect('x11-display-opened', () => {
+            const workspaceManager = global.workspace_manager;
+            log('n_workspace ' + workspaceManager.get_n_workspaces());
             this._restoringSession = true;
             // `installed-changed` emits after `shell_app_system_init()` is called 
             // and all `window-created` of existing window emits.
