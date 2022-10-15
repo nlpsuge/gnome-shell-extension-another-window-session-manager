@@ -401,7 +401,7 @@ var SaveSession = class {
         this._log.debug(`Saving session ${sessionConfig.session_name} to local file`);
 
         return new Promise((resolve, reject) => {
-            const sourceId = GLib.idle_add(GLib.PRIORITY_HIGH_IDLE, () => {
+            GLib.idle_add(GLib.PRIORITY_HIGH_IDLE, () => {
                 // Use replace_contents_bytes_async instead of replace_contents_async, see: 
                 // https://gitlab.gnome.org/GNOME/gjs/-/blob/gnome-42/modules/core/overrides/Gio.js#L513
                 // https://gitlab.gnome.org/GNOME/gjs/-/issues/192
@@ -432,7 +432,6 @@ var SaveSession = class {
                 });
                 return GLib.SOURCE_REMOVE;
             });
-            this._sourceIds.push(sourceId);
     }
 
     _setFieldsFromProcess(processInfoArray, sessionConfigObject) {
