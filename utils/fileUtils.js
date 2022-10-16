@@ -189,18 +189,28 @@ function loadTemplate(path, cancellable = null) {
     return '';
 }
 
-// test
-// let index = 0;
-// listAllSessions(null, false, (file, info) => {
-//     if (info.get_file_type() === Gio.FileType.REGULAR) {
-//         let parent = file.get_parent();
-//         let parentPath;
-//         if (parent === null) {
-//             // Impossible in the case
-//             parentPath = '/';
-//         } else {
-//             parentPath = parent.get_path();
-//         }
-//         log(`Processing ${file.get_path()} under ${parentPath}. ${index++}`);
-//     }
-// });
+/**
+ * Open session file using an external editor
+ * 
+ * @param {string} filePath 
+ */
+function findDefaultApp(filePath) {
+    const session_file = Gio.File.new_for_path(filePath);
+    return new Promise((resolve, reject) => {
+        session_file.query_default_handler_async(
+            GLib.PRIORITY_DEFAULT,
+            null,
+            (file, asyncResult) => {
+                try {
+                    const app = session_file.query_default_handler_finish(asyncResult);
+                    if (app) {
+                        resolve([app, session_file]);
+                    } else {
+                        reject(new Error(`Cannot find the default application to ${filePath}`));
+                    }   
+                } catch (error) {
+                    reject(error);
+                }
+            });
+    });    
+}

@@ -1,6 +1,6 @@
 'use strict';
 
-const { GObject, St, Clutter } = imports.gi;
+const { GObject, St, Clutter, GLib } = imports.gi;
 
 const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
@@ -10,6 +10,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const IconFinder = Me.imports.utils.iconFinder;
 const FileUtils = Me.imports.utils.fileUtils;
+const DateUtils = Me.imports.utils.dateUtils;
 const Tooltip = Me.imports.utils.tooltip;
 const GnomeVersion = Me.imports.utils.gnomeVersion;
 const Log = Me.imports.utils.log;
@@ -96,6 +97,25 @@ class SessionItemButtons extends GObject.Object {
 
         this._addSeparator();
     
+        const viewButton = this._addViewButton();
+        new Tooltip.Tooltip({
+            parent: viewButton,
+            markup: 'Open session file using an external editor',
+        });
+        viewButton.connect('clicked', () => {
+            const sessions_path = FileUtils.get_sessions_path();
+            const session_file_path = GLib.build_filenamev([sessions_path, this.sessionItem._filename]);
+            FileUtils.findDefaultApp(session_file_path).then(([app, file]) => {
+                try {
+                    app.launch([file], global.create_app_launch_context(DateUtils.get_current_time(), -1));
+                } catch (error) {
+                    this._log.error(error, `Failed to open ${session_file_path} using ${app.get_filename()}`);
+                }
+            }).catch(error => {
+                this._log.error(error, `Failed to find the default application to ${session_file_path}`);
+            });
+        });
+
         const deleteButton = this._addDeleteButton();
         new Tooltip.Tooltip({
             parent: deleteButton,
@@ -128,7 +148,17 @@ class SessionItemButtons extends GObject.Object {
         return button;
     }
 
+    _addViewButton() {
+        const [exists, sessionFilePath] = FileUtils.sessionExists(this.sessionItem._filename);
+        return this._addTextButton('View', exists);
+    }
+
     _addDeleteButton() {
+        const reactive = this.sessionItem._filename != FileUtils.recently_closed_session_name;
+        return this._addTextButton('Delete', reactive);
+    }
+
+    _addTextButton(label, reactive) {
         let button = new St.Button({
             style_class: 'button',
             can_focus: true,
@@ -136,9 +166,9 @@ class SessionItemButtons extends GObject.Object {
             x_expand: false,
             y_expand: true,
             track_hover: true,
-            reactive: this.sessionItem._filename != FileUtils.recently_closed_session_name,
+            reactive: reactive,
         });
-        button.set_label('Delete');
+        button.set_label(label);
         this.sessionItem.actor.add_child(button);
         return button;
     }
