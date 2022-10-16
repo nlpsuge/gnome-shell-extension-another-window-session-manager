@@ -69,8 +69,9 @@ var RestoreSession = class {
 
         let session_config = FileUtils.getJsonObj(contents);
         let session_config_objects = session_config.x_session_config_objects;
-        if (!session_config_objects) {
+        if (!(session_config_objects && session_config_objects.length)) {
             this._log.error(new Error(`Session details not found: ${session_file_path}`));
+            global.notify_error(`No session to restore from ${session_file_path}`, `Reason: session is empty.`);
             return;
         }
 
