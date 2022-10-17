@@ -126,6 +126,7 @@ var CloseSession = class {
 
     _awaitDeleteWindow(app, metaWindow) {
         return new Promise((resolve, reject) => {
+            // We use 'windows-changed' here because a confirm window could be popped up
             const windowsChangedId = app.connect('windows-changed', () => {
                 app.disconnect(windowsChangedId);
                 resolve(app.get_n_windows() === 0);
