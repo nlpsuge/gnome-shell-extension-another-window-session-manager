@@ -417,7 +417,7 @@ var SaveSession = class {
                         try {
                             success = sessionFile.replace_contents_finish(asyncResult);
                             if (success) {
-                                this._log.info(`Saved session into ${sessionFile.get_path()}!`);
+                                this._log.info(`Session saved to ${sessionFile.get_path()}!`);
                                 resolve(success);
                                 // TODO Notification
                                 return;
@@ -426,7 +426,7 @@ var SaveSession = class {
                             causedBy = e;
                         }
                         const errMsg = `Cannot save session: ${sessionFile.get_path()}`;
-                        const reason = `Failed to save session into ${sessionFile.get_path()}!`;
+                        const reason = `Failed to save session to ${sessionFile.get_path()}!`;
                         reject(new CommonError.CommonError(errMsg, {desc: reason, cause: causedBy}));
                     });
                 });
