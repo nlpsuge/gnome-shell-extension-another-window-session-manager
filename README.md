@@ -1,9 +1,7 @@
 # gnome-shell-extension-another-window-session-manager
-Close and save open windows. And restore from a saved windows session.
+Close open windows gracefully and save them as a session. And you can restore them when necessary manually or automatically at startup.
 
 Most importantly, it supports both X11 and Wayland!
-
-This project is in early development, but it's basically working now. More features will be added in the future.
 
 This extension is based on several [Gnome technologies](https://www.gnome.org/technologies/) and APIs including [Meta](https://gjs-docs.gnome.org/meta9~9_api), [Shell](https://gjs-docs.gnome.org/shell01~0.1_api/) and [St(Shell Toolkit)](https://gjs-docs.gnome.org/st10~1.0_api/).
 
@@ -52,8 +50,8 @@ To modify the delay, timer, and how to restore a session:
 ![image](https://user-images.githubusercontent.com/2271720/176687352-e99a5f7d-9260-4f63-abd4-abaa4671daf3.png)
 
 # Main features
-1. Close open windows
-1. Close apps with multiple windows via `ydotool` so you don't lose sessions of this app (See also: [How to make Close by rules work](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work))
+1. Close open windows gracefully
+1. Close apps with multiple windows gracefully via `ydotool` so you don't lose sessions of this app (See also: [How to make Close by rules work](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work))
 1. Save open windows
 1. Restore session(s)
 1. Restore a session at startup (See also: [#9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9#issuecomment-1097012874)). Please note that this feature is **disabled by default**.
@@ -136,13 +134,11 @@ Use `gdbus` to call the remote method, which is provided by this exension, to im
 
 * ydotool
 
-Send keys to close the application with multiple windows.
+Send keys to close the application gracefully with multiple windows.
 
 # Known issues
 
 1. On both X11 and Wayland, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) continually during the process of restoring, the window size and position may can't be restored, and it may restore many instances of an application. **As a workaround, click the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) only once until all apps are restored.**
-2. ~~On both X11 and Wayland, due to [this bug](https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134) within mutter, in Overview, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) then immediately click the newly created workspace, the Gnome Shell can crash. To fix this issue, the Overview will be toggled hidden after clicking the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) when in Overview. I will remove this behavior once I find a better solution or it's fixed in a new version of Gnome Shell.~~ ([Fixed in Gnome 42](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/pull/38))
-3. ...
 
 # Support applications launched via a command line or applications that don't have a proper .desktop file
 If the .desktop is missing from a session file, restoring an application relies on the command line completely.
