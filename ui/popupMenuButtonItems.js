@@ -88,7 +88,7 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
         return timeline;
     }
 
-    // Add the icon description. Only once icon may be too weird?
+    // Add the icon description
     addIconDescription(iconDescription) {
         this.iconDescriptionLabel = new St.Label({
             text: iconDescription

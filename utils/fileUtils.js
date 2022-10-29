@@ -190,7 +190,7 @@ function loadTemplate(path, cancellable = null) {
 }
 
 /**
- * Open session file using an external editor
+ * Find the default app to open session file
  * 
  * @param {string} filePath 
  */
