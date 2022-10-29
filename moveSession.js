@@ -7,6 +7,8 @@ const Main = imports.ui.main;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
+const UiHelper = Me.imports.ui.uiHelper;
+
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 const DateUtils = Me.imports.utils.dateUtils;
@@ -69,6 +71,8 @@ var MoveSession = class {
         
         for (const interestingWindow of interestingWindows) {
             const open_window = interestingWindow.open_window;
+            if (UiHelper.ignoreWindows(open_window)) continue;
+
             const saved_window_session = interestingWindow.saved_window_session;
             const title = open_window.get_title();
             const desktop_number = saved_window_session.desktop_number;
@@ -173,6 +177,8 @@ var MoveSession = class {
     }
 
     createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions) {
+        if (UiHelper.ignoreWindows(metaWindow)) return;
+
         const saved_window_session = this._getOneMatchedSavedWindow(metaWindow, saved_window_sessions);
         if (!saved_window_session) {
             return null;
@@ -196,6 +202,8 @@ var MoveSession = class {
     }
 
     moveWindowsByMetaWindow(metaWindow, saved_window_sessions) {
+        if (UiHelper.ignoreWindows(metaWindow)) return;
+
         const saved_window_session = this._getOneMatchedSavedWindow(metaWindow, saved_window_sessions);
         if (!saved_window_session) {
             return;
@@ -278,6 +286,8 @@ var MoveSession = class {
      * @see https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en
      */
     _restoreWindowStates(metaWindow, saved_window_session) {
+        if (UiHelper.ignoreWindows(metaWindow)) return;
+        
         this._restoreWindowState(metaWindow, saved_window_session);
         this._restoreWindowGeometry(metaWindow, saved_window_session);
         this._restoreTiling(metaWindow, saved_window_session);
