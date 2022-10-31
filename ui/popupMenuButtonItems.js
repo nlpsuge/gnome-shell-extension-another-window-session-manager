@@ -1,6 +1,6 @@
 'use strict';
 
-const { GObject, St, Clutter } = imports.gi;
+const { GObject, St, Clutter, Shell } = imports.gi;
 
 const Main = imports.ui.main;
 
@@ -26,6 +26,8 @@ class PopupMenuButtonItems extends GObject.Object {
         super._init();
         this._log = new Log.Log();
 
+        this._windowTracker = Shell.WindowTracker.get_default();
+
         this.buttonItems = [];
         this.addButtonItems();
     }
@@ -36,7 +38,7 @@ class PopupMenuButtonItems extends GObject.Object {
             'close-symbolic.svg', 
             'Close open windows', 
             'Closing open windows ...',
-            () => {
+            (that) => {
                 RestoreSession.restoringApps.clear();
                 closeSession.closeWindows().catch(e => {
                     this._log.error(e)
@@ -47,8 +49,40 @@ class PopupMenuButtonItems extends GObject.Object {
             null, 
             'Close current application', 
             'Closing current application ...',
-            () => {
-                closeSession.closeCurrentApp();
+            (that) => {
+                closeSession.closeWindows(that.currentApp).catch(e => {
+                    this._log.error(e);
+                });
+            }, 
+            (that) => {
+                
+                let workspaceManager = global.workspace_manager;
+                const windows = workspaceManager.get_active_workspace().list_windows();
+                if (windows && windows.length) {
+                    windows.sort((w1, w2) => {
+                        const userTime1 = w1.get_user_time;
+                        const userTime2 = w2.get_user_time;
+                        const diff = userTime1 - userTime2;
+                        if (diff === 0) {
+                            return 0;
+                        }
+                
+                        if (diff > 0) {
+                            return 1;
+                        }
+                
+                        if (diff < 0) {
+                            return -1;
+                        }
+                    });
+                    const currentWindow = windows[0];
+                    log(currentWindow.get_title())
+                    const currentApp = this._windowTracker.get_window_app(currentWindow);
+                    if (currentApp) {
+                        that._currentApp = currentApp;
+                        that.iconDescriptionLabel.set_text(`Close current application (${currentApp.get_name()})`);
+                    }
+                }
             });
         const popupMenuButtonItemSave = new PopupMenuButtonItemSave('save-symbolic.svg');
         
@@ -123,9 +157,10 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
 var PopupMenuButtonItemClose = GObject.registerClass(
 class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
-    _init(group, iconSymbolic, label, closePrompt,callbackIfConfirm) {
+    _init(group, iconSymbolic, label, closePrompt,callbackIfConfirm, update) {
         super._init();
         this.callbackIfConfirm = callbackIfConfirm;
+        this.update = update;
         this.confirmLabel;
         
         this.closingLabel;
@@ -136,6 +171,8 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.addIconDescription(label);
         if (group) {
             this.iconDescriptionLabel.connect('notify::allocation', () => {
+                if (this.update) 
+                    this.update(this);
                 const margin = group.iconDescriptionLabel.get_x() - group.closeButton.get_x();
                 this.iconDescriptionLabel.get_clutter_text().set_margin_left(margin);
             });
@@ -173,7 +210,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
                 Main.overview.toggle();
             }
 
-            this.callbackIfConfirm();
+            this.callbackIfConfirm(this);
             this._hideConfirm();
 
             // Set the actor the timeline is associated with to make sure Clutter.Timeline works normally.

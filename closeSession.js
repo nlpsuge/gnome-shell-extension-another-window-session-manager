@@ -26,7 +26,6 @@ var CloseSession = class {
 
         this._skip_app_with_multiple_windows = true;
         this._defaultAppSystem = Shell.AppSystem.get_default();
-        this._windowTracker = Shell.WindowTracker.get_default();
 
         this._subprocessLauncher = new Gio.SubprocessLauncher({
             flags: (Gio.SubprocessFlags.STDOUT_PIPE |
@@ -40,10 +39,12 @@ var CloseSession = class {
     async closeWindows(app) {
         this._log.debug('Closing open windows');
 
-        let workspaceManager = global.workspace_manager;
-        for (let i = 0; i < workspaceManager.n_workspaces; i++) {
-            // Make workspaces non-persistent, so they can be removed if no windows in it
-            workspaceManager.get_workspace_by_index(i)._keepAliveId = false;
+        if (!app) {
+            let workspaceManager = global.workspace_manager;
+            for (let i = 0; i < workspaceManager.n_workspaces; i++) {
+                // Make workspaces non-persistent, so they can be removed if no windows in it
+                workspaceManager.get_workspace_by_index(i)._keepAliveId = false;
+            }
         }
 
         let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules(app);
@@ -64,21 +65,6 @@ var CloseSession = class {
                     }
                 });
         }
-    }
-
-    closeCurrentApp() {
-        let workspaceManager = global.workspace_manager;
-        const windows = workspaceManager.get_active_workspace().list_windows();
-        if (windows && windows.length) {
-            const allWindowsByStacking = global.display.sort_windows_by_stacking(windows).reverse();
-            const currentWindow = allWindowsByStacking[0];
-            const currentApp = this._windowTracker.get_window_app(currentWindow);
-            if (currentApp) {
-                this.closeWindows(currentApp).catch(e => {
-                    this._log.error(e);
-                });
-            }
-        }  
     }
 
     /**
@@ -407,10 +393,6 @@ var CloseSession = class {
     destroy() {
         if (this._defaultAppSystem) {
             this._defaultAppSystem = null;
-        }
-
-        if (this._windowTracker) {
-            this._windowTracker = null;
         }
 
         if (this._log) {
