@@ -264,7 +264,7 @@ class AwsIndicator extends PanelMenu.Button {
     }
 
     _addButtonItems() {
-        this._popupMenuButtonItems = new PopupMenuButtonItems.PopupMenuButtonItems();
+        this._popupMenuButtonItems = new PopupMenuButtonItems.PopupMenuButtonItems(this.menu);
         const buttonItems = this._popupMenuButtonItems.buttonItems;
         buttonItems.forEach(item => {
             this.menu.addMenuItem(item, this._itemIndex++);

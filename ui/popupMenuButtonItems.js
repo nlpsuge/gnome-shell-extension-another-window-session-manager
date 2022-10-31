@@ -1,6 +1,6 @@
 'use strict';
 
-const { GObject, St, Clutter } = imports.gi;
+const { GObject, St, Clutter, Atk, Gtk, GLib } = imports.gi;
 
 const Main = imports.ui.main;
 
@@ -22,14 +22,15 @@ const { Button } = Me.imports.ui.button;
 var PopupMenuButtonItems = GObject.registerClass(
 class PopupMenuButtonItems extends GObject.Object {
 
-    _init() {
+    _init(menu) {
+        this._rootMenu = menu;
         super._init();
         this.buttonItems = [];
         this.addButtonItems();
     }
 
     addButtonItems() {
-        const popupMenuButtonItemClose = new PopupMenuButtonItemClose('close-symbolic.svg');
+        const popupMenuButtonItemClose = new PopupMenuButtonItemClose('close-symbolic.svg', this._rootMenu);
         const popupMenuButtonItemSave = new PopupMenuButtonItemSave('save-symbolic.svg');
         
         this.buttonItems.push(popupMenuButtonItemClose);
@@ -40,11 +41,12 @@ class PopupMenuButtonItems extends GObject.Object {
 
 
 var PopupMenuButtonItem = GObject.registerClass(
-class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
+class PopupMenuButtonItem extends GObject.Object {
 
-    _init() {
-        super._init('');
-
+    _init(menuItem) {
+        super._init();
+        this.menuItem = menuItem;
+        
         this.yesButton = null;
         this.noButton = null;
     }
@@ -93,32 +95,94 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
         this.iconDescriptionLabel = new St.Label({
             text: iconDescription
         });
-        this.actor.add_child(this.iconDescriptionLabel);
+        this.menuItem.actor.add_child(this.iconDescriptionLabel);
     }
 
 });
 
 
 var PopupMenuButtonItemClose = GObject.registerClass(
-class PopupMenuButtonItemClose extends PopupMenuButtonItem {
+class PopupMenuButtonItemClose extends PopupMenu.PopupSubMenuMenuItem {
 
-    _init(iconSymbolic) {
-        super._init();
+    _init(iconSymbolic, rootMenu) {
+        this._rootMenu = rootMenu;
+        super._init('Close open windows', true);
+
+        // Remove white background on submenu
+        // this.actor.set_style('background-color: transparent;');
+        // Remove white background on submenu items
+        // this.menu.actor.style_class = 'panel-status-indicators-box';
+
+        this._buttonItemAccessory = new PopupMenuButtonItem(this);
         this.confirmLabel;
         
         this.closingLabel;
 
         this.closeSession = new CloseSession.CloseSession();
 
-        this._createButton(iconSymbolic);
-        this.addIconDescription('Close open windows');
+        // this._createButton(iconSymbolic);
+        // this._buttonItemAccessory.addIconDescription('Close open windows');
+        // const subMenuCloseActiveApp = new PopupMenu.PopupSubMenuMenuItem(
+        //     'Close open windows', true);
+
+        // this.icon = new St.Icon({
+        //     gicon: IconFinder.find(iconSymbolic),
+        //     style_class: 'system-status-icon'
+        // });
+        
+        this.icon.set_gicon(IconFinder.find(iconSymbolic));
+        // this.icon.style_class = 'system-status-icon';
+        // this.icon.set_margin_left(50);
+        // this.icon.set_margin_right(50);
+
+        // const width = this.icon.get_width();
+        // log(width);
+        
+        const item1 = new PopupMenu.PopupMenuItem('Close all windows');
+        item1.label.connect('notify::allocation', () => {
+            const width = this.icon.get_width();
+            item1.label.get_clutter_text().set_margin_left(width * 2);
+        });
+        
+        const item2 = new PopupMenu.PopupMenuItem('Close active application');
+
+        item2.connect('activate', () => {
+            log('xxxx')
+        });
+
+        // Remove all activate signals on all menu items, so the panel menu can always stay open
+        // See: PopupMenu#itemActivated() => this.menu._getTopMenu().close
+        this.menu.itemActivated = function(animate) {};
+
+        // don't close submenu
+        this.menu.close = function(animate) {};
+        log('ccddddss')
+
+        item2.label.connect('notify::allocation', () => {
+            const width = this.icon.get_width();
+            item2.label.get_clutter_text().set_margin_left(width * 2);
+        });
+
+        rootMenu.connect('open-state-changed', () => {
+            log('ssssww')
+
+            // Submenu is always expanded ...
+            super.setSubmenuShown(true);
+            // .. and hide the arrow icon
+            this._triangleBin.hide();
+            item2.track_hover = true;
+        });
+
+        this.menu.addMenuItem(item1);
+        this.menu.addMenuItem(item2);
+        
         this._addConfirm();
         this._addYesAndNoButtons();
         this._addClosingPrompt();
 
         this._hideConfirm();
 
-        this._timeline = this.createTimeLine();
+        this._timeline = this._buttonItemAccessory.createTimeLine();
 
         // Respond to menu item's 'activate' signal so user don't need to click the icon whose size is too small to find to click
         this.connect('activate', this._onActivate.bind(this));
@@ -131,14 +195,14 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
     _hideConfirm() {
         this.confirmLabel.hide();
-        this.hideYesAndNoButtons();
+        this._buttonItemAccessory.hideYesAndNoButtons();
         this.closingLabel.hide();
     }
 
     _addYesAndNoButtons() {
-        super.createYesAndNoButtons();
+        this._buttonItemAccessory.createYesAndNoButtons();
         
-        this.yesButton.connect('clicked', () => {
+        this._buttonItemAccessory.yesButton.connect('clicked', () => {
             // TODO Do this when enable_close_by_rules is true? 
             this._parent.close();
             if (Main.overview.visible) {
@@ -165,12 +229,12 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
         });
 
-        this.noButton.connect('clicked', () => {
+        this._buttonItemAccessory.noButton.connect('clicked', () => {
             this._hideConfirm();
         });
 
-        this.actor.add_child(this.yesButton);
-        this.actor.add_child(this.noButton);
+        this.actor.add_child(this._buttonItemAccessory.yesButton);
+        this.actor.add_child(this._buttonItemAccessory.noButton);
 
     }
 
@@ -185,7 +249,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     }
 
     _createButton(iconSymbolic) {
-        const closeButton = super.createButton(iconSymbolic);
+        const closeButton = this._buttonItemAccessory.createButton(iconSymbolic);
         this.actor.add_child(closeButton);
         closeButton.connect('clicked', this._onClicked.bind(this));
     }
@@ -196,7 +260,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.closingLabel.hide();
 
         this.confirmLabel.show();
-        this.showYesAndNoButtons();
+        this._buttonItemAccessory.showYesAndNoButtons();
     }
 
     _addConfirm() {
@@ -221,16 +285,16 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     }
 
 });
-
-
+    
 var PopupMenuButtonItemSave = GObject.registerClass(
-class PopupMenuButtonItemSave extends PopupMenuButtonItem {
+class PopupMenuButtonItemSave extends PopupMenu.PopupMenuItem {
 
     _init(iconSymbolic) {
-        super._init();
+        super._init('');
+        this._buttonItemAccessory = new PopupMenuButtonItem(this);
         this.saveCurrentSessionEntry = null;
         this._createButton(iconSymbolic);
-        this.addIconDescription('Save open windows');
+        this._buttonItemAccessory.addIconDescription('Save open windows');
         this._addEntry();
         // Hide this St.Entry, only shown when user click saveButton.
         this.saveCurrentSessionEntry.hide();
@@ -239,7 +303,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this._log = new Log.Log();
         this._saveSession = new SaveSession.SaveSession();
 
-        this._timeline = this.createTimeLine();
+        this._timeline = this._buttonItemAccessory.createTimeLine();
 
         this.savingLabel = null;
         
@@ -251,18 +315,18 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     }
 
     _addYesAndNoButtons() {
-        super.createYesAndNoButtons();
+        this._buttonItemAccessory.createYesAndNoButtons();
         
-        this.yesButton.connect('clicked', this._onClickedYes.bind(this));
-        this.noButton.connect('clicked', () => {
+        this._buttonItemAccessory.yesButton.connect('clicked', this._onClickedYes.bind(this));
+        this._buttonItemAccessory.noButton.connect('clicked', () => {
             // clear entry
             this.saveCurrentSessionEntry.set_text('');
             this.saveCurrentSessionEntry.hide();
-            super.hideYesAndNoButtons();
+            this._buttonItemAccessory.hideYesAndNoButtons();
         });
 
-        this.actor.add_child(this.yesButton);
-        this.actor.add_child(this.noButton);
+        this.actor.add_child(this._buttonItemAccessory.yesButton);
+        this.actor.add_child(this._buttonItemAccessory.noButton);
 
     }
 
@@ -284,7 +348,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     }
 
     _createButton(iconSymbolic) {
-        const saveButton = super.createButton(iconSymbolic);
+        const saveButton = this._buttonItemAccessory.createButton(iconSymbolic);
         this.actor.add_child(saveButton);
         saveButton.connect('clicked', this._onClickedBeginSave.bind(this));
     }
@@ -295,7 +359,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
         this.saveCurrentSessionEntry.show();
         this.saveCurrentSessionEntry.grab_key_focus();
-        super.showYesAndNoButtons();
+        this._buttonItemAccessory.showYesAndNoButtons();
     }
 
     _addEntry() {
@@ -336,7 +400,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this.saveCurrentSessionEntry.set_text('');
         
         this.saveCurrentSessionEntry.hide();
-        super.hideYesAndNoButtons();
+        this._buttonItemAccessory.hideYesAndNoButtons();
 
         this.savingLabel.set_text(`Saving open windows as '${sessionName}' ...`);
         this.savingLabel.show();
@@ -360,7 +424,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         const newFrameId = this._timeline.connect('new-frame', (_timeline, _frame) => {
             this._timeline.disconnect(newFrameId);
             this.savingLabel.show();
-            this.hideYesAndNoButtons();
+            this._buttonItemAccessory.hideYesAndNoButtons();
         });
         this._timeline.start();
         const completedId = this._timeline.connect('completed', () => {
@@ -368,7 +432,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             this._timeline.stop();
             this.savingLabel.hide();
             this.saveCurrentSessionEntry.show();
-            this.showYesAndNoButtons();
+            this._buttonItemAccessory.showYesAndNoButtons();
         });
     }
 
