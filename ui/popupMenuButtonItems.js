@@ -24,15 +24,36 @@ class PopupMenuButtonItems extends GObject.Object {
 
     _init() {
         super._init();
+        this._log = new Log.Log();
+
         this.buttonItems = [];
         this.addButtonItems();
     }
 
     addButtonItems() {
-        const popupMenuButtonItemClose = new PopupMenuButtonItemClose('close-symbolic.svg');
+        const closeSession = new CloseSession.CloseSession();
+        const popupMenuButtonItemCloseAll = new PopupMenuButtonItemClose(null, 
+            'close-symbolic.svg', 
+            'Close open windows', 
+            'Closing open windows ...',
+            () => {
+                RestoreSession.restoringApps.clear();
+                closeSession.closeWindows().catch(e => {
+                    this._log.error(e)
+                });
+            });
+        const popupMenuButtonItemCloseCurrent = new PopupMenuButtonItemClose(
+            popupMenuButtonItemCloseAll,
+            null, 
+            'Close current application', 
+            'Closing current application ...',
+            () => {
+                closeSession.closeCurrentApp();
+            });
         const popupMenuButtonItemSave = new PopupMenuButtonItemSave('save-symbolic.svg');
         
-        this.buttonItems.push(popupMenuButtonItemClose);
+        this.buttonItems.push(popupMenuButtonItemCloseAll);
+        this.buttonItems.push(popupMenuButtonItemCloseCurrent);
         this.buttonItems.push(popupMenuButtonItemSave);
     }
 
@@ -102,19 +123,26 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
 var PopupMenuButtonItemClose = GObject.registerClass(
 class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
-    _init(iconSymbolic) {
+    _init(group, iconSymbolic, label, closePrompt,callbackIfConfirm) {
         super._init();
+        this.callbackIfConfirm = callbackIfConfirm;
         this.confirmLabel;
         
         this.closingLabel;
 
-        this.closeSession = new CloseSession.CloseSession();
+        this.closeButton;
 
         this._createButton(iconSymbolic);
-        this.addIconDescription('Close open windows');
+        this.addIconDescription(label);
+        if (group) {
+            this.iconDescriptionLabel.connect('notify::allocation', () => {
+                const margin = group.iconDescriptionLabel.get_x() - group.closeButton.get_x();
+                this.iconDescriptionLabel.get_clutter_text().set_margin_left(margin);
+            });
+        }
         this._addConfirm();
         this._addYesAndNoButtons();
-        this._addClosingPrompt();
+        this._addClosingPrompt(closePrompt);
 
         this._hideConfirm();
 
@@ -145,10 +173,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
                 Main.overview.toggle();
             }
 
-            RestoreSession.restoringApps.clear();
-            this.closeSession.closeWindows().catch(e => {
-                this._log.error(e)
-            });
+            this.callbackIfConfirm();
             this._hideConfirm();
 
             // Set the actor the timeline is associated with to make sure Clutter.Timeline works normally.
@@ -174,10 +199,10 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
     }
 
-    _addClosingPrompt() {
+    _addClosingPrompt(closePrompt) {
         this.closingLabel = new St.Label({
             style_class: 'confirm-before-operate',
-            text: 'Closing open windows ...',
+            text: closePrompt,
             x_expand: false,
             x_align: Clutter.ActorAlign.CENTER,
         });
@@ -185,9 +210,10 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     }
 
     _createButton(iconSymbolic) {
-        const closeButton = super.createButton(iconSymbolic);
-        this.actor.add_child(closeButton);
-        closeButton.connect('clicked', this._onClicked.bind(this));
+        if (!iconSymbolic) return;
+        this.closeButton = super.createButton(iconSymbolic);
+        this.actor.add_child(this.closeButton);
+        this.closeButton.connect('clicked', this._onClicked.bind(this));
     }
 
     _onClicked(button, event) {

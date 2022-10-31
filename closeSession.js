@@ -26,6 +26,7 @@ var CloseSession = class {
 
         this._skip_app_with_multiple_windows = true;
         this._defaultAppSystem = Shell.AppSystem.get_default();
+        this._windowTracker = Shell.WindowTracker.get_default();
 
         this._subprocessLauncher = new Gio.SubprocessLauncher({
             flags: (Gio.SubprocessFlags.STDOUT_PIPE |
@@ -36,7 +37,7 @@ var CloseSession = class {
         this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'smplayer.desktop'];
     }
 
-    async closeWindows() {
+    async closeWindows(app) {
         this._log.debug('Closing open windows');
 
         let workspaceManager = global.workspace_manager;
@@ -45,9 +46,9 @@ var CloseSession = class {
             workspaceManager.get_workspace_by_index(i)._keepAliveId = false;
         }
 
-        let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
+        let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules(app);
         for(const app of running_apps_closing_by_rules) {
-            await this._tryCloseAppsByRules(app).catch(e => {
+            await this._tryCloseAppByRules(app).catch(e => {
                 this._log.error(e);
             });
         }
@@ -63,6 +64,21 @@ var CloseSession = class {
                     }
                 });
         }
+    }
+
+    closeCurrentApp() {
+        let workspaceManager = global.workspace_manager;
+        const windows = workspaceManager.get_active_workspace().list_windows();
+        if (windows && windows.length) {
+            const allWindowsByStacking = global.display.sort_windows_by_stacking(windows).reverse();
+            const currentWindow = allWindowsByStacking[0];
+            const currentApp = this._windowTracker.get_window_app(currentWindow);
+            if (currentApp) {
+                this.closeWindows(currentApp).catch(e => {
+                    this._log.error(e);
+                });
+            }
+        }  
     }
 
     /**
@@ -136,7 +152,7 @@ var CloseSession = class {
         });
     }
 
-    async _tryCloseAppsByRules(app) {
+    async _tryCloseAppByRules(app) {
         // Help close dialogs.
         // Or even might help close the app without sending keys further, for example if the apps
         // has one normal window and some attached dialogs. 
@@ -261,14 +277,14 @@ var CloseSession = class {
         
     }
 
-    _getRunningAppsClosingByRules() {
+    _getRunningAppsClosingByRules(app) {
         if (!this._settings.get_boolean('enable-close-by-rules')) {
             return [[], this._defaultAppSystem.get_running()];
         }
 
         let running_apps_closing_by_rules = [];
         let new_running_apps = [];
-        let running_apps = this._defaultAppSystem.get_running();
+        let running_apps = app ? [app] : this._defaultAppSystem.get_running();
         for (const app of running_apps) {
             const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
             const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
@@ -391,6 +407,10 @@ var CloseSession = class {
     destroy() {
         if (this._defaultAppSystem) {
             this._defaultAppSystem = null;
+        }
+
+        if (this._windowTracker) {
+            this._windowTracker = null;
         }
 
         if (this._log) {
