@@ -115,7 +115,7 @@ var SaveSession = class {
 
         let metaWindows = runningShellApp.get_windows();
         metaWindows = metaWindows.filter(metaWindow => {
-            if (this._ignoreWindows(metaWindow)) {
+            if (UiHelper.ignoreWindows(metaWindow)) {
                 ignoredWindowsMap.get(runningShellApp).push(metaWindow);
                 return false;
             }
@@ -261,7 +261,7 @@ var SaveSession = class {
         for (const runningShellApp of runningShellApps) {
             let metaWindows = runningShellApp.get_windows();
             for (const metaWindow of metaWindows) {
-                if (this._ignoreWindows(metaWindow)) {
+                if (UiHelper.ignoreWindows(metaWindow)) {
                     continue;
                 }
 
