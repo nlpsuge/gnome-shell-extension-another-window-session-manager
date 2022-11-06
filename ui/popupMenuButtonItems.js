@@ -1,6 +1,6 @@
 'use strict';
 
-const { GObject, St, Clutter, Shell } = imports.gi;
+const { GObject, St, Clutter } = imports.gi;
 
 const Main = imports.ui.main;
 
@@ -24,70 +24,15 @@ class PopupMenuButtonItems extends GObject.Object {
 
     _init() {
         super._init();
-        this._log = new Log.Log();
-
-        this._windowTracker = Shell.WindowTracker.get_default();
-
         this.buttonItems = [];
         this.addButtonItems();
     }
 
     addButtonItems() {
-        const closeSession = new CloseSession.CloseSession();
-        const popupMenuButtonItemCloseAll = new PopupMenuButtonItemClose(null, 
-            'close-symbolic.svg', 
-            'Close open windows', 
-            'Closing open windows ...',
-            (that) => {
-                RestoreSession.restoringApps.clear();
-                closeSession.closeWindows().catch(e => {
-                    this._log.error(e)
-                });
-            });
-        const popupMenuButtonItemCloseCurrent = new PopupMenuButtonItemClose(
-            popupMenuButtonItemCloseAll,
-            null, 
-            'Close current application', 
-            'Closing current application ...',
-            (that) => {
-                closeSession.closeWindows(that.currentApp).catch(e => {
-                    this._log.error(e);
-                });
-            }, 
-            (that) => {
-                
-                let workspaceManager = global.workspace_manager;
-                const windows = workspaceManager.get_active_workspace().list_windows();
-                if (windows && windows.length) {
-                    windows.sort((w1, w2) => {
-                        const userTime1 = w1.get_user_time;
-                        const userTime2 = w2.get_user_time;
-                        const diff = userTime1 - userTime2;
-                        if (diff === 0) {
-                            return 0;
-                        }
-                
-                        if (diff > 0) {
-                            return 1;
-                        }
-                
-                        if (diff < 0) {
-                            return -1;
-                        }
-                    });
-                    const currentWindow = windows[0];
-                    log(currentWindow.get_title())
-                    const currentApp = this._windowTracker.get_window_app(currentWindow);
-                    if (currentApp) {
-                        that._currentApp = currentApp;
-                        that.iconDescriptionLabel.set_text(`Close current application (${currentApp.get_name()})`);
-                    }
-                }
-            });
+        const popupMenuButtonItemClose = new PopupMenuButtonItemClose('close-symbolic.svg');
         const popupMenuButtonItemSave = new PopupMenuButtonItemSave('save-symbolic.svg');
         
-        this.buttonItems.push(popupMenuButtonItemCloseAll);
-        this.buttonItems.push(popupMenuButtonItemCloseCurrent);
+        this.buttonItems.push(popupMenuButtonItemClose);
         this.buttonItems.push(popupMenuButtonItemSave);
     }
 
@@ -157,29 +102,19 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
 var PopupMenuButtonItemClose = GObject.registerClass(
 class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
-    _init(group, iconSymbolic, label, closePrompt,callbackIfConfirm, update) {
+    _init(iconSymbolic) {
         super._init();
-        this.callbackIfConfirm = callbackIfConfirm;
-        this.update = update;
         this.confirmLabel;
         
         this.closingLabel;
 
-        this.closeButton;
+        this.closeSession = new CloseSession.CloseSession();
 
         this._createButton(iconSymbolic);
-        this.addIconDescription(label);
-        if (group) {
-            this.iconDescriptionLabel.connect('notify::allocation', () => {
-                if (this.update) 
-                    this.update(this);
-                const margin = group.iconDescriptionLabel.get_x() - group.closeButton.get_x();
-                this.iconDescriptionLabel.get_clutter_text().set_margin_left(margin);
-            });
-        }
+        this.addIconDescription('Close open windows');
         this._addConfirm();
         this._addYesAndNoButtons();
-        this._addClosingPrompt(closePrompt);
+        this._addClosingPrompt();
 
         this._hideConfirm();
 
@@ -210,7 +145,10 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
                 Main.overview.toggle();
             }
 
-            this.callbackIfConfirm(this);
+            RestoreSession.restoringApps.clear();
+            this.closeSession.closeWindows().catch(e => {
+                this._log.error(e)
+            });
             this._hideConfirm();
 
             // Set the actor the timeline is associated with to make sure Clutter.Timeline works normally.
@@ -236,10 +174,10 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
     }
 
-    _addClosingPrompt(closePrompt) {
+    _addClosingPrompt() {
         this.closingLabel = new St.Label({
             style_class: 'confirm-before-operate',
-            text: closePrompt,
+            text: 'Closing open windows ...',
             x_expand: false,
             x_align: Clutter.ActorAlign.CENTER,
         });
@@ -247,10 +185,9 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     }
 
     _createButton(iconSymbolic) {
-        if (!iconSymbolic) return;
-        this.closeButton = super.createButton(iconSymbolic);
-        this.actor.add_child(this.closeButton);
-        this.closeButton.connect('clicked', this._onClicked.bind(this));
+        const closeButton = super.createButton(iconSymbolic);
+        this.actor.add_child(closeButton);
+        closeButton.connect('clicked', this._onClicked.bind(this));
     }
 
     _onClicked(button, event) {
