@@ -18,6 +18,7 @@ class Button extends GObject.Object {
 
         Object.assign(this, properties);
 
+        // TODO Why create a default button in te constructor, bad design?
         this.button = this._createButton(this.icon_symbolic);
         
     }

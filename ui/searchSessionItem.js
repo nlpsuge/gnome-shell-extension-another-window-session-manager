@@ -15,13 +15,15 @@ const Tooltip = Me.imports.utils.tooltip;
 var SearchSessionItem = GObject.registerClass(
     class SearchSessionItem extends PopupMenu.PopupBaseMenuItem {
 
-        _init() {
+        _init(wantFilter) {
             super._init({
                 activate: false,
                 reactive: true,
                 hover: false,
                 can_focus: false
             });
+
+            this._wantFilter = wantFilter;
 
             this._entry = new St.Entry({
                 name: 'searchEntry',
@@ -52,6 +54,8 @@ var SearchSessionItem = GObject.registerClass(
         }
 
         _addFilters() {
+            if (!this._wantFilter) return;
+
             const filterLabel = new St.Label({
                 text: 'Filter: ',
                 x_align: Clutter.ActorAlign.CENTER,

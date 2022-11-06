@@ -9,6 +9,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const PopupMenu = imports.ui.popupMenu;
 const PanelMenu = imports.ui.panelMenu;
+const LookingGlass = imports.ui.lookingGlass;
 
 const MoveSession = Me.imports.moveSession;
 const RestoreSession = Me.imports.restoreSession;
@@ -17,6 +18,8 @@ const FileUtils = Me.imports.utils.fileUtils;
 const SessionItem = Me.imports.ui.sessionItem;
 const SearchSessionItem = Me.imports.ui.searchSessionItem;
 const PopupMenuButtonItems = Me.imports.ui.popupMenuButtonItems;
+const Notebook = Me.imports.ui.notebook;
+const SearchableList = Me.imports.ui.searchableList;
 const IconFinder = Me.imports.utils.iconFinder;
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const Log = Me.imports.utils.log;
@@ -30,6 +33,7 @@ class AwsIndicator extends PanelMenu.Button {
         super._init(0.0, "Another Window Session Manager");
 
         this._windowTracker = Shell.WindowTracker.get_default();
+        this._defaultAppSystem = Shell.AppSystem.get_default();
 
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
@@ -42,8 +46,6 @@ class AwsIndicator extends PanelMenu.Button {
         this._sessions_path = FileUtils.sessions_path;
 
         this.monitors = [];
-
-        this._sessionsMenuSection = null;
 
         // TODO backup path
 
@@ -223,9 +225,7 @@ class AwsIndicator extends PanelMenu.Button {
 
     _onOpenStateChanged(menu, state) {
         if (state) {
-            this._searchSessionItem.reset();
-            this._searchSessionItem._clearIcon.hide();
-            Mainloop.idle_add(() => this._searchSessionItem._entry.grab_key_focus());
+            this._sessionListSection.initSearchEntry();
         }
         super._onOpenStateChanged(menu, state);
     }
@@ -235,14 +235,91 @@ class AwsIndicator extends PanelMenu.Button {
         
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(), this._itemIndex++);
 
-        this._searchSessionItem = new SearchSessionItem.SearchSessionItem();
-        const searchEntryText = this._searchSessionItem._entry.get_clutter_text()
-        searchEntryText.connect('text-changed', this._onSearch.bind(this));
-        this._searchSessionItem._filterAutoRestoreSwitch.connect('notify::state', this._onAutoRestoreSwitchChanged.bind(this));
+        this._sessionListSection = new SearchableList.SearchableList(true);
+        this._runningSection = new PopupMenu.PopupMenuSection();
+        this._recentlyClosedSection = new PopupMenu.PopupMenuSection();
+        
+        const notebook = new Notebook.Notebook();
+        notebook.appendPage('Session List', this._sessionListSection);
+        notebook.appendPage('Running Apps/Windows', this._runningSection);
+        notebook.appendPage('Recently Closed', this._recentlyClosedSection);
+        this.menu.addMenuItem(notebook, this._itemIndex++);
 
-        this.menu.addMenuItem(this._searchSessionItem, this._itemIndex++);
-                
-        this._addScrollableSessionsMenuSection();
+        this._buildSessionListSection();
+        this._buildRunningSection();
+        this._buildRecentlyClosedSection();
+
+        // this._sessionListButton.set_style('border-style: none none solid none; border-color: blue;');
+
+        // this._runningButton.connect('notify::hover', (widget) => {
+        //     if (widget.get_hover()) {
+        //         this._showRunningSection()
+        //     }
+        // });
+
+        // this._recentlyClosedButton.connect('notify::hover', (label) => {
+        //     if (label.get_hover()) {
+        //         this._showRecentlyClosedSection(label);
+        //     }
+        // });
+
+        
+        // TODO
+        // this._sessionListSection.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(), this._sessionListItemIndex++);
+        
+    }
+
+    _buildRunningSection() {
+        // this._switchSection(this._runningButton, null);
+        
+        const runningApps = this._defaultAppSystem.get_running();
+        // const runningAppsMap = new Map();
+        // const runningAppsStatisticMap = new Map();
+        for (const runningApp of runningApps) {
+            const name = runningApp.get_app_info()?.get_filename() 
+                            ?? runningApp.get_name()
+                            ?? runningApp.get_windows()[0]?.get_wm_class() 
+                            ?? runningApp.get_windows()[0].get_wm_class_instance()
+                            ?? "Unknown app";
+            // const existingApps = runningAppsMap.get(name);
+            // if (existingApps) {
+            //     existingApps.push(runningApp);
+            // } else {
+            //     runningAppsMap.set(name, [runningApp]);
+            // }
+
+            // const windowsCount = runningAppsStatisticMap.get(name);
+
+            const appGroupItem = new PopupMenu.PopupSubMenuMenuItem(`${name}(${runningApp.get_n_windows()} windows)`, true);
+            appGroupItem.icon.gicon = runningApp.get_icon();
+            const windows = runningApp.get_windows();
+            windows.forEach(window => {
+                const windowItem = new PopupMenu.PopupMenuItem(window.get_title());
+
+                appGroupItem.menu.addMenuItem(windowItem);
+            });
+
+            this._runningSection.addMenuItem(appGroupItem);
+        }
+
+    }
+
+    _buildRecentlyClosedSection() {
+
+    }
+
+    _buildSessionListSection() {
+        // this._sessionListItemIndex = 0;
+
+        // this._searchSessionItem = new SearchSessionItem.SearchSessionItem();
+        // const searchEntryText = this._searchSessionItem._entry.get_clutter_text();
+        // searchEntryText.connect('text-changed', this._onSearch.bind(this));
+        // this._searchSessionItem._filterAutoRestoreSwitch.connect('notify::state', this._onSearch.bind(this));
+
+        // this._sessionListSection.addMenuItem(this._searchSessionItem, this._sessionListItemIndex++);
+
+        // const scrollableSessionsMenuSection = this._getScrollableSessionsMenuSection();
+        // this._sessionListSection.addMenuItem(scrollableSessionsMenuSection, this._sessionListItemIndex++);
         this._addSessionItems().catch((error => {
             this._log.error(error, 'Error adding session items while creating indicator menu');
         }));
@@ -250,23 +327,60 @@ class AwsIndicator extends PanelMenu.Button {
         this._addSessionFolderMonitor();
     }
 
-    _addScrollableSessionsMenuSection() {
-        this._sessionsMenuSection = new PopupMenu.PopupMenuSection();
-        this._scrollableSessionsMenuSection = new PopupMenu.PopupMenuSection();
-        let scrollView = new St.ScrollView({
-            style_class: 'session-menu-section',
-            overlay_scrollbars: true
+    _createNotebookButton(label) {
+        return new St.Button({
+            label: label,
+            style_class: 'notebook tabs',
+            reactive: true,
+            track_hover: true,
+            can_focus: true,
         });
-        scrollView.add_actor(this._sessionsMenuSection.actor);
-        this._scrollableSessionsMenuSection.actor.add_actor(scrollView);
-
-        this.menu.addMenuItem(this._scrollableSessionsMenuSection);
     }
+
+    _showRecentlyClosedSection(label) {
+        this._switchSection(label, null);
+
+        
+    }
+
+    _switchSection(widget, section) {
+        const tabs = this._sessionListTab.get_children();
+        for (const tab of tabs) {
+            log(tab)
+            if (tab !== widget) {
+                tab.set_style('box-shadow: none');
+            }
+        }
+        
+        // hover white #f6f5f4
+        // https://developer.mozilla.org/en-US/docs/Web/CSS/box-shadow
+        // https://developer.mozilla.org/en-US/docs/Web/CSS/border-radius
+        widget.set_style('box-shadow: inset 0 -4px purple;');
+
+        // section.actor.hide();
+    }
+
+    // _getScrollableSessionsMenuSection() {
+    //     this._sessionListSection.listSection = new PopupMenu.PopupMenuSection();
+    //     const oldStyleClassName = this._sessionListSection.listSection.actor.get_style_class_name();
+    //     this._sessionListSection.listSection.actor.set_style_class_name(`${oldStyleClassName} font`);
+    //     const scrollableSessionsMenuSection = new PopupMenu.PopupMenuSection();
+    //     let scrollView = new St.ScrollView({
+    //         style_class: 'session-menu-section',
+    //         overlay_scrollbars: true
+    //     });
+    //     scrollView.add_actor(this._sessionListSection.listSection.actor);
+    //     scrollableSessionsMenuSection.actor.add_actor(scrollView);
+
+    //     return scrollableSessionsMenuSection;
+    // }
 
     _addButtonItems() {
         this._popupMenuButtonItems = new PopupMenuButtonItems.PopupMenuButtonItems();
         const buttonItems = this._popupMenuButtonItems.buttonItems;
         buttonItems.forEach(item => {
+            const oldStyleClassName = item.actor.get_style_class_name();
+            item.actor.set_style_class_name(`${oldStyleClassName} font`);
             this.menu.addMenuItem(item, this._itemIndex++);
         });
 
@@ -276,7 +390,7 @@ class AwsIndicator extends PanelMenu.Button {
         if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
             // TODO Empty session
             this._log.info(`${this._sessions_path} not found! It's harmless, please save some windows in the panel menu to create it automatically.`);
-            this._sessionsMenuSection.removeAll();
+            this._sessionListSection.removeAllItems();
             return;
         }
 
@@ -335,7 +449,7 @@ class AwsIndicator extends PanelMenu.Button {
             return modification_date_time2.compare(modification_date_time1);
         });
 
-        this._sessionsMenuSection.removeAll();
+        this._sessionListSection.removeAllItems();
 
         let info = null;
         try {
@@ -348,13 +462,13 @@ class AwsIndicator extends PanelMenu.Button {
         
         // Recently Closed Session always on the top
         let item = new SessionItem.SessionItem(info, FileUtils.recently_closed_session_file, this);
-        this._sessionsMenuSection.addMenuItem(item, this._itemIndex++);
+        this._sessionListSection.addItem(item);
 
         for (const sessionFileInfo of sessionFileInfos) {
             const info = sessionFileInfo.info;
             const file = sessionFileInfo.file;
             let item = new SessionItem.SessionItem(info, file, this);
-            this._sessionsMenuSection.addMenuItem(item, this._itemIndex++);
+            this._sessionListSection.addItem(item);
         }
         
     }
@@ -388,18 +502,20 @@ class AwsIndicator extends PanelMenu.Button {
 
     // https://gjs-docs.gnome.org/gio20~2.66p/gio.filemonitor#signal-changed
     // Looks like the document is wrong ...
+    // https://gjs-docs.gnome.org/gio20~2.66p/gio.filemonitorevent
     _sessionChanged(monitor, fileMonitored, other_file, eventType) {
         const pathMonitored = fileMonitored.get_path();
         this._log.debug(`Session changed, readd all session items from ${this._sessions_path}. ${pathMonitored} changed. other_file: ${other_file?.get_path()}. Event type: ${eventType}`);
 
         // Ignore CHANGED and CREATED events, since in both cases
         // we'll get a CHANGES_DONE_HINT event when done.
-        if (eventType === Gio.FileMonitorEvent.CHANGED ||
-            eventType === Gio.FileMonitorEvent.CREATED) 
+        if (eventType === Gio.FileMonitorEvent.CHANGED || // 0
+            eventType === Gio.FileMonitorEvent.CREATED) // 3
             return;
                 
         // Ignore temporary files generated by Gio
-        if (fileMonitored.get_basename().startsWith('.goutputstream-')) {
+        if (eventType !== Gio.FileMonitorEvent.RENAMED // 8
+                && fileMonitored.get_basename().startsWith('.goutputstream-')) {
             return;
         }
 
@@ -428,59 +544,54 @@ class AwsIndicator extends PanelMenu.Button {
         // say thousands of them, but who creates that much?
         // 
         // Can use Gio.FileMonitorEvent to modify the results 
-        // of this._sessionsMenuSection._getMenuItems() when the performance
+        // of this._sessionListSection.getItems() when the performance
         // is a problem to be resolved, it's a more complex implement.
         this._addSessionItems().catch((error => {
             this._log.error(error, 'Error adding session items while session was changed');
         }));
     }
 
-    _onAutoRestoreSwitchChanged() {
-        this._search();
-        this._filterAutoRestore();
-    }
+    // _filterAutoRestore() {
+    //     const switchState = this._searchSessionItem._filterAutoRestoreSwitch.state;
+    //     if (switchState) {
+    //         const menuItems = this._sessionListSection.getItems();
+    //         for (const menuItem of menuItems) {
+    //             const sessionName = menuItem._filename;
+    //             if (menuItem.actor.visible) {
+    //                 const visible = sessionName == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+    //                 menuItem.actor.visible = visible;
+    //             }
+    //         }
+    //     }
+    // }
 
-    _filterAutoRestore() {
-        const switchState = this._searchSessionItem._filterAutoRestoreSwitch.state;
-        if (switchState) {
-            const menuItems = this._sessionsMenuSection._getMenuItems();
-            for (const menuItem of menuItems) {
-                const sessionName = menuItem._filename;
-                if (menuItem.actor.visible) {
-                    const visible = sessionName == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
-                    menuItem.actor.visible = visible;
-                }
-            }
-        }
-    }
+    // _onSearch() {
+    //     this._search();
+    //     this._filterAutoRestore();
+    // }
 
-    _onSearch() {
-        this._search();
-        this._filterAutoRestore();
-    }
+    // _search() {
+    //     this._searchSessionItem._clearIcon.show();
 
-    _search() {
-        this._searchSessionItem._clearIcon.show();
-
-        let searchText = this._searchSessionItem._entry.text;
-        if (!(searchText && searchText.trim())) {
-            // when search entry is empty, hide clear button
-            if (!searchText) {
-                this._searchSessionItem._clearIcon.hide();
-            }
-            const menuItems = this._sessionsMenuSection._getMenuItems();
-            for (const menuItem of menuItems) {
-                menuItem.actor.visible = true;
-            }
-        } else {
-            const menuItems = this._sessionsMenuSection._getMenuItems();
-            searchText = searchText.toLowerCase().trim();
-            for (const menuItem of menuItems) {
-                const sessionName = menuItem._filename.toLowerCase();
-                menuItem.actor.visible = new RegExp(searchText).test(sessionName);
-            }
-        }
-    }
+    //     let searchText = this._searchSessionItem._entry.text;
+    //     if (!(searchText && searchText.trim())) {
+    //         // when search entry is empty, hide clear button
+    //         if (!searchText) {
+    //             this._searchSessionItem._clearIcon.hide();
+    //         }
+    //         const menuItems = this._sessionListSection.getItems();
+    //         for (const menuItem of menuItems) {
+    //             menuItem.actor.visible = true;
+    //         }
+    //     } else {
+    //         const menuItems = this._sessionListSection.getItems();
+    //         searchText = searchText.toLowerCase().trim();
+    //         for (const menuItem of menuItems) {
+    //             const sessionName = menuItem._filename.toLowerCase();
+    //             menuItem.actor.visible = new RegExp(searchText).test(sessionName);
+    //         }
+    //     }
+    // }
 
     destroy() {
         if (this.monitors) {
