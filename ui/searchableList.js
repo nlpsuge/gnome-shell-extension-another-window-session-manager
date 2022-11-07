@@ -66,6 +66,8 @@ var SearchableList = class SearchableList extends PopupMenu.PopupMenuSection {
     _getScrollableSessionsMenuSection() {
         const oldStyleClassName = this.listSection.actor.get_style_class_name();
         this.listSection.actor.set_style_class_name(`${oldStyleClassName} font`);
+        // Works
+        // this.listSection.actor.set_style('font-size: 30px;');
         const scrollableSessionsMenuSection = new PopupMenu.PopupMenuSection();
         let scrollView = new St.ScrollView({
             style_class: 'session-menu-section',

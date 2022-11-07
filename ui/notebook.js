@@ -2,7 +2,7 @@
 
 const PopupMenu = imports.ui.popupMenu;
 
-const { Clutter, GObject, St } = imports.gi;
+const { Clutter, GObject, St, GLib } = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -33,21 +33,42 @@ var Notebook = class Notebook extends PopupMenu.PopupMenuSection {
 
         this._tabPageMap = new Map();
 
+        // milliseconds
+        this._hover_timeout = 100;
+        this._mouseTimeOutId = 0;
+
     }
 
     appendPage(name, page) {
         const notebookButton = this._createNotebookButton(name);
+        // Make the tab button more easier to find and click
+        notebookButton.height = notebookButton.height * 2;
         this._tabs.add_child(notebookButton);
         this._tabPageMap.set(notebookButton, page);
 
         notebookButton.connect('notify::hover', (widget) => {
             if (widget.get_hover()) {
-                this._switchPage(widget);
-                this._addPage(widget, page);
+                this._mouseTimeOutId = GLib.timeout_add(
+                    GLib.PRIORITY_DEFAULT,
+                    this._hover_timeout,
+                    () => {
+                        this._switchPage(widget);
+                        this._addPage(widget, page);
+                        this._mouseTimeOutId = 0;
+                        return GLib.SOURCE_REMOVE;
+                    }); 
+            } else if (this._mouseTimeOutId !== 0) {
+                GLib.source_remove(this._mouseTimeOutId);
+                this._mouseTimeOutId = 0;
             }
         });
 
         this._addPage(notebookButton, page);
+
+    }
+
+    getPages() {
+        return this._getMenuItems();
     }
 
     _addPage(widget, page) {
@@ -91,6 +112,13 @@ var Notebook = class Notebook extends PopupMenu.PopupMenuSection {
             track_hover: true,
             can_focus: true,
         });
+    }
+
+    destroy() {
+        if (this._mouseTimeOutId !== 0) {
+            GLib.source_remove(this._mouseTimeOutId);
+            this._mouseTimeOutId = 0;
+        }
     }
 
 }

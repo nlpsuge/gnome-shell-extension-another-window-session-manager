@@ -34,7 +34,7 @@
   max-height: 600px; }
 
 .font {
-  font-size: 110%; }
+  font-size: 120%; }
 
 .confirm-before-operate {
   color: #F00;
@@ -90,7 +90,7 @@ Based on https://gitlab.com/bartl/todo-txt-gnome-shell-extension/-/blob/master/s
 
 .notebook.tabs {
   font-weight: bold;
-  font-size: 135%;
+  font-size: 140%;
   color: white;
   background-color: transparent;
   padding-left: 10px;

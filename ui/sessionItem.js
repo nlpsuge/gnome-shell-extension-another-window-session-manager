@@ -1,6 +1,6 @@
 'use strict';
 
-const { GObject, St, Clutter, GLib } = imports.gi;
+const { GObject, St, Clutter, GLib, Pango } = imports.gi;
 
 const PopupMenu = imports.ui.popupMenu;
 
@@ -8,6 +8,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const SessionItemButtons = Me.imports.ui.sessionItemButtons;
+
 
 var SessionItem = GObject.registerClass(
 class SessionItem extends PopupMenu.PopupMenuItem {
@@ -38,7 +39,8 @@ class SessionItem extends PopupMenu.PopupMenuItem {
         }
 
         this.label.set_x_expand(true);
-        this.label.clutter_text.set_text(this._filename);
+        const clutter_text = this.label.clutter_text;
+        clutter_text.set_text(this._filename);
 
         this._sessionItemButtons = new SessionItemButtons.SessionItemButtons(this);
         this._sessionItemButtons.addButtons();

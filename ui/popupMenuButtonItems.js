@@ -177,7 +177,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     _addClosingPrompt() {
         this.closingLabel = new St.Label({
             style_class: 'confirm-before-operate',
-            text: 'Closing open windows ...',
+            text: 'Closing open windows…',
             x_expand: false,
             x_align: Clutter.ActorAlign.CENTER,
         });
@@ -338,7 +338,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this.saveCurrentSessionEntry.hide();
         super.hideYesAndNoButtons();
 
-        this.savingLabel.set_text(`Saving open windows as '${sessionName}' ...`);
+        this.savingLabel.set_text(`Saving open windows as '${sessionName}'…`);
         this.savingLabel.show();
 
         this._saveSession.saveSessionAsync(sessionName).then(() => {

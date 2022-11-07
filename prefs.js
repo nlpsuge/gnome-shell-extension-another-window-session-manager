@@ -112,6 +112,13 @@ const Prefs = GObject.registerClass(
                 Gio.SettingsBindFlags.DEFAULT
             );
 
+            this._settings.bind(
+                'window-width',
+                this.window_width_change_spinbutton,
+                'value',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
             this._settings.connect('changed::enable-autorestore-sessions', (settings) => {
                 if (this._settings.get_boolean('enable-autorestore-sessions')) {
                     this._installAutostartDesktopFile();
@@ -167,6 +174,9 @@ const Prefs = GObject.registerClass(
             });
 
             this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
+
+
+            this.window_width_change_spinbutton = this._builder.get_object('window_width_change_spinbutton');
 
         }
 

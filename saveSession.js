@@ -144,7 +144,7 @@ var SaveSession = class {
             // so that I can ignore it. If the workspace of an window is null, it probably means that
             // the window has been closed, so this window can be ignored safely.
             if (!workspace) {
-                this._log.warn(`No workspace associated with window "${metaWindow.get_title()}" was found, ignoring...`);
+                this._log.warn(`No workspace associated with window "${metaWindow.get_title()}" was found, ignoring…`);
                 return [false, sessionConfigObject];
             }
             sessionConfigObject.desktop_number = workspace.index();

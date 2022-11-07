@@ -93,6 +93,13 @@
       And restore them after Gnome Shell restarts via `Alt+F2 -> r` and `killall -3 gnome-shell`.
       </description>
     </key>
-    
+    <key name='window-width' type="i">
+      <default>50</default>
+      <summary>Set nautual width of the window of the popup menu</summary>
+      <description>
+      Set nautual width of the window of the popup menu. It's so annoy that the position of 
+      the button on the popup menu could be changed if the content length becomes longer or shorter.
+      </description>
+    </key>
   </schema>
 </schemalist>

@@ -112,10 +112,10 @@ var AutostartService = GObject.registerClass(
             this._autostartDialog = new AutostartDialog();
             if (this._settings.get_boolean('restore-at-startup-without-asking')) {
                 this._autostartDialog._confirm();
-                return `Restore session '${this._sessionName}' without asking ...`;
+                return `Restore session '${this._sessionName}' without asking…`;
             } else {
                 this._autostartDialog.open();
-                return 'Opening dialog to restore ...';
+                return 'Opening dialog to restore…';
             }
 
         }

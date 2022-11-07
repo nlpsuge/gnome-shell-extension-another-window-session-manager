@@ -58,11 +58,11 @@ $session_border_color: rgba(255, 255, 255, .1);
 
 
 .session-menu-section {
-    max-height:600px;
+    max-height: 600px;
 }
 
 .font {
-    font-size: 110%;
+    font-size: 120%;
 }
 
 .confirm-before-operate {
@@ -133,7 +133,7 @@ Based on https://gitlab.com/bartl/todo-txt-gnome-shell-extension/-/blob/master/s
     
     &.tabs {
         font-weight: bold;
-        font-size: 135%;
+        font-size: 140%;
         color: $fg_color;
         background-color: transparent;
         padding-left: 10px;

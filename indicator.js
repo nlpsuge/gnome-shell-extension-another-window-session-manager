@@ -57,7 +57,7 @@ class AwsIndicator extends PanelMenu.Button {
         this.add_child(icon);
 
         this._createMenu();
-
+        
         this.menu.connect('open-state-changed', this._onOpenStateChanged.bind(this));
 
         // Open menu
@@ -223,11 +223,23 @@ class AwsIndicator extends PanelMenu.Button {
         
     }
 
-    _onOpenStateChanged(menu, state) {
+    _onOpenStateChanged(menu, state) {  
         if (state) {
+            this._setWindowWidth();
             this._sessionListSection.initSearchEntry();
         }
         super._onOpenStateChanged(menu, state);
+    }
+
+    _setWindowWidth() {
+        const display = global.display;
+        const monitorGeometry /*Meta.Rectangle*/ = 
+                display.get_monitor_geometry(display.get_primary_monitor());
+        const screen_width = monitorGeometry.width;
+        const windowWidth = this._settings.get_int('window-width');
+        // Just a guess
+        const margin = 8;
+        this.menu.actor.natural_width = screen_width * windowWidth / 100 - margin;
     }
 
     _createMenu() {
@@ -239,15 +251,16 @@ class AwsIndicator extends PanelMenu.Button {
         this._runningSection = new PopupMenu.PopupMenuSection();
         this._recentlyClosedSection = new PopupMenu.PopupMenuSection();
         
-        const notebook = new Notebook.Notebook();
-        notebook.appendPage('Session List', this._sessionListSection);
-        notebook.appendPage('Running Apps/Windows', this._runningSection);
-        notebook.appendPage('Recently Closed', this._recentlyClosedSection);
-        this.menu.addMenuItem(notebook, this._itemIndex++);
+        this.notebook = new Notebook.Notebook();
+        this.notebook.appendPage('Session List', this._sessionListSection);
+        this.notebook.appendPage('Running Apps/Windows', this._runningSection);
+        this.notebook.appendPage('Recently Closed', this._recentlyClosedSection);
+        this.menu.addMenuItem(this.notebook, this._itemIndex++);
 
         this._buildSessionListSection();
         this._buildRunningSection();
         this._buildRecentlyClosedSection();
+
 
         // this._sessionListButton.set_style('border-style: none none solid none; border-color: blue;');
 
@@ -359,21 +372,6 @@ class AwsIndicator extends PanelMenu.Button {
 
         // section.actor.hide();
     }
-
-    // _getScrollableSessionsMenuSection() {
-    //     this._sessionListSection.listSection = new PopupMenu.PopupMenuSection();
-    //     const oldStyleClassName = this._sessionListSection.listSection.actor.get_style_class_name();
-    //     this._sessionListSection.listSection.actor.set_style_class_name(`${oldStyleClassName} font`);
-    //     const scrollableSessionsMenuSection = new PopupMenu.PopupMenuSection();
-    //     let scrollView = new St.ScrollView({
-    //         style_class: 'session-menu-section',
-    //         overlay_scrollbars: true
-    //     });
-    //     scrollView.add_actor(this._sessionListSection.listSection.actor);
-    //     scrollableSessionsMenuSection.actor.add_actor(scrollView);
-
-    //     return scrollableSessionsMenuSection;
-    // }
 
     _addButtonItems() {
         this._popupMenuButtonItems = new PopupMenuButtonItems.PopupMenuButtonItems();
@@ -627,6 +625,11 @@ class AwsIndicator extends PanelMenu.Button {
         if (this._displayId) {
             this._display.disconnect(this._displayId);
             this._displayId = 0;
+        }
+
+        if (this.notebook) {
+            this.notebook.destroy();
+            this.notebook = null;
         }
 
         super.destroy();

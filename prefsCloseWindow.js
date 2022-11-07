@@ -433,7 +433,7 @@ const RuleRow = GObject.registerClass({
             this._rendererAccelBox.append(lastNextArrow);
         }
         const newAccelButton = new Gtk.Button({
-            label: 'New accelerator...',
+            label: 'New accelerator…',
         });
         
         let order;
