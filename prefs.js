@@ -20,6 +20,8 @@ const Prefs = GObject.registerClass(
         _init() {
             Gtk.init()
             
+            this._window_width_change_scale_range = [30, 40, 50, 60, 70, 80, 90, 100];
+
             this._settings = ExtensionUtils.getSettings(
                 'org.gnome.shell.extensions.another-window-session-manager');
 
@@ -37,8 +39,7 @@ const Prefs = GObject.registerClass(
 
             this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(
                 !this._settings.get_boolean('restore-at-startup-without-asking')
-            );
-            
+            );            
         }
 
         _bindSettings() {
@@ -112,12 +113,10 @@ const Prefs = GObject.registerClass(
                 Gio.SettingsBindFlags.DEFAULT
             );
 
-            this._settings.bind(
-                'window-width',
-                this.window_width_change_spinbutton,
-                'value',
-                Gio.SettingsBindFlags.DEFAULT
-            );
+            this._settings.connect('changed::window-width', (settings) => {
+                const window_width = settings.get_int('window-width');
+                this.window_width_change_scale.set_value(window_width);
+            });
 
             this._settings.connect('changed::enable-autorestore-sessions', (settings) => {
                 if (this._settings.get_boolean('enable-autorestore-sessions')) {
@@ -176,8 +175,17 @@ const Prefs = GObject.registerClass(
             this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
 
 
-            this.window_width_change_spinbutton = this._builder.get_object('window_width_change_spinbutton');
-
+            this.window_width_change_scale = this._builder.get_object('window_width_change_scale');
+            this.window_width_change_scale.set_format_value_func((scale, value) => {
+                return value + ' %';
+            });
+            this._window_width_change_scale_range.slice().forEach(num => {
+                this.window_width_change_scale.add_mark(num, Gtk.PositionType.TOP, num.toString());
+            });
+            this.window_width_change_scale.connect('value-changed', (scale) => {
+                const value = scale.get_value();
+                this._settings.set_int('window-width', value);
+            });
         }
 
         _installAutostartDesktopFile() {

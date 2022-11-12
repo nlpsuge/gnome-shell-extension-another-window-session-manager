@@ -94,7 +94,7 @@
       </description>
     </key>
     <key name='window-width' type="i">
-      <default>50</default>
+      <default>60</default>
       <summary>Set nautual width of the window of the popup menu</summary>
       <description>
       Set nautual width of the window of the popup menu. It's so annoy that the position of 

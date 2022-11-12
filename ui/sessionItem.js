@@ -15,7 +15,9 @@ class SessionItem extends PopupMenu.PopupMenuItem {
     
     _init(fileInfo, file, indicator) {
         // Initialize this component, so we can use this.label etc
-        super._init("");
+        super._init("", {
+            hover: false,
+        });
 
         this._indicator = indicator;
 

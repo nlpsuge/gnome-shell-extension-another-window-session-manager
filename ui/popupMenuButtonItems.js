@@ -43,7 +43,9 @@ var PopupMenuButtonItem = GObject.registerClass(
 class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
 
     _init() {
-        super._init('');
+        super._init('', {
+            hover: false,
+        });
 
         this.yesButton = null;
         this.noButton = null;

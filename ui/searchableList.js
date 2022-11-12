@@ -1,6 +1,8 @@
 'use strict';
 
-const { Clutter, GObject, St } = imports.gi;
+const { Clutter, GObject, St, Shell, GLib } = imports.gi;
+
+const Main = imports.ui.main;
 
 const Mainloop = imports.mainloop;
 
@@ -21,6 +23,14 @@ var SearchableList = class SearchableList extends PopupMenu.PopupMenuSection {
         this._wantFilter = wantFilter;
 
         this.listSection = new PopupMenu.PopupMenuSection();
+
+        // Get rid of 'JS ERROR: Exception in callback for signal: open-state-changed: TypeError: this._getTopMenu()._setOpenedSubMenu is not a function'
+        this.listSection._setOpenedSubMenu = function(submenu) {
+            if (this._openedSubMenu)
+                this._openedSubMenu.close(true);
+            this._openedSubMenu = submenu;
+        }
+
         this._sessionListItemIndex = 0;
 
         this._prefsUtils = new PrefsUtils.PrefsUtils();
@@ -31,7 +41,9 @@ var SearchableList = class SearchableList extends PopupMenu.PopupMenuSection {
         this.searchItem = new SearchSessionItem.SearchSessionItem(wantFilter);
         const searchEntryText = this.searchItem._entry.get_clutter_text();
         searchEntryText.connect('text-changed', this._onSearch.bind(this));
-        this.searchItem._filterAutoRestoreSwitch.connect('notify::state', this._onSearch.bind(this));
+        if (this._wantFilter) {
+            this.searchItem._filterAutoRestoreSwitch.connect('notify::state', this._onSearch.bind(this));
+        }
         this.addMenuItem(this.searchItem, this._sessionListItemIndex++);
 
         // List
@@ -42,24 +54,29 @@ var SearchableList = class SearchableList extends PopupMenu.PopupMenuSection {
     }
 
     initSearchEntry() {
-        this.resetSearchEntry();
-        Mainloop.idle_add(() => this.searchItem._entry.grab_key_focus());
+        this._resetSearchEntry();
+
+        this._focusIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            global.stage.set_key_focus(this.searchItem._entry); 
+            this._focusIdleId = 0;
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
-    resetSearchEntry() {
+    _resetSearchEntry() {
         this.searchItem.reset();
         this.searchItem._clearIcon.hide();
     }
 
-    addItem(item) {
+    add(item) {
         this.listSection.addMenuItem(item, this._sessionListItemIndex++);
     }
 
-    getItems() {
+    getAll() {
         this.listSection._getMenuItems();
     }
 
-    removeAllItems() {
+    removeAll() {
         this.listSection.removeAll();
     }
 
@@ -86,9 +103,9 @@ var SearchableList = class SearchableList extends PopupMenu.PopupMenuSection {
         if (switchState) {
             const menuItems = this.listSection._getMenuItems();
             for (const menuItem of menuItems) {
-                const sessionName = menuItem._filename;
+                const text = menuItem.label.clutter_text.get_text();
                 if (menuItem.actor.visible) {
-                    const visible = sessionName == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+                    const visible = text == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
                     menuItem.actor.visible = visible;
                 }
             }
@@ -103,10 +120,10 @@ var SearchableList = class SearchableList extends PopupMenu.PopupMenuSection {
     _search() {
         this.searchItem._clearIcon.show();
 
-        let searchText = this.searchItem._entry.text;
-        if (!(searchText && searchText.trim())) {
+        let keyword = this.searchItem._entry.text;
+        if (!(keyword && keyword.trim())) {
             // when search entry is empty, hide clear button
-            if (!searchText) {
+            if (!keyword) {
                 this.searchItem._clearIcon.hide();
             }
             const menuItems = this.listSection._getMenuItems();
@@ -115,11 +132,17 @@ var SearchableList = class SearchableList extends PopupMenu.PopupMenuSection {
             }
         } else {
             const menuItems = this.listSection._getMenuItems();
-            searchText = searchText.toLowerCase().trim();
+            keyword = keyword.toLowerCase().trim();
             for (const menuItem of menuItems) {
-                const sessionName = menuItem._filename.toLowerCase();
-                menuItem.actor.visible = new RegExp(searchText).test(sessionName);
+                const text = menuItem.label.clutter_text.get_text().toLowerCase();
+                menuItem.actor.visible = new RegExp(keyword).test(text);
             }
+        }
+    }
+
+    destroy() {
+        if (this._focusIdleId) {
+            GLib.Source.remove(this._focusIdleId);
         }
     }
 

@@ -2,6 +2,8 @@
 
 const { GObject, St, Gio, GLib, Clutter, Shell, Meta } = imports.gi;
 
+const Main = imports.ui.main;
+
 const Mainloop = imports.mainloop;
 
 const ExtensionUtils = imports.misc.extensionUtils;
@@ -20,6 +22,8 @@ const SearchSessionItem = Me.imports.ui.searchSessionItem;
 const PopupMenuButtonItems = Me.imports.ui.popupMenuButtonItems;
 const Notebook = Me.imports.ui.notebook;
 const SearchableList = Me.imports.ui.searchableList;
+const RunningSubMenuMenuItem = Me.imports.ui.runningSubMenuMenuItem;
+
 const IconFinder = Me.imports.utils.iconFinder;
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const Log = Me.imports.utils.log;
@@ -223,15 +227,13 @@ class AwsIndicator extends PanelMenu.Button {
         
     }
 
-    _onOpenStateChanged(menu, state) {  
+    _onOpenStateChanged(menu, state) {
         if (state) {
-            this._setWindowWidth();
-            this._sessionListSection.initSearchEntry();
+            this._setWindowAppearance();  
         }
-        super._onOpenStateChanged(menu, state);
     }
 
-    _setWindowWidth() {
+    _setWindowAppearance() {
         const display = global.display;
         const monitorGeometry /*Meta.Rectangle*/ = 
                 display.get_monitor_geometry(display.get_primary_monitor());
@@ -248,18 +250,19 @@ class AwsIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(), this._itemIndex++);
 
         this._sessionListSection = new SearchableList.SearchableList(true);
-        this._runningSection = new PopupMenu.PopupMenuSection();
-        this._recentlyClosedSection = new PopupMenu.PopupMenuSection();
+        this._runningSection = new SearchableList.SearchableList(false);
+        this._recentlyClosedSection = new SearchableList.SearchableList(false);
         
         this.notebook = new Notebook.Notebook();
         this.notebook.appendPage('Session List', this._sessionListSection);
-        this.notebook.appendPage('Running Apps/Windows', this._runningSection);
-        this.notebook.appendPage('Recently Closed', this._recentlyClosedSection);
+        this.notebook.appendPage('Running Apps/Windows', this._runningSection, this._buildRunningSection.bind(this));
+        this.notebook.appendPage('Recently Closed', this._recentlyClosedSection, this._buildRecentlyClosedSection.bind(this));
+        
         this.menu.addMenuItem(this.notebook, this._itemIndex++);
 
         this._buildSessionListSection();
-        this._buildRunningSection();
-        this._buildRecentlyClosedSection();
+        // this._buildRunningSection();
+        // this._buildRecentlyClosedSection();
 
 
         // this._sessionListButton.set_style('border-style: none none solid none; border-color: blue;');
@@ -282,13 +285,51 @@ class AwsIndicator extends PanelMenu.Button {
         
     }
 
-    _buildRunningSection() {
-        // this._switchSection(this._runningButton, null);
-        
+    _buildRunningSection(runningSection) {
         const runningApps = this._defaultAppSystem.get_running();
         // const runningAppsMap = new Map();
         // const runningAppsStatisticMap = new Map();
         for (const runningApp of runningApps) {
+            const name = runningApp.get_app_info()?.get_filename() 
+                            ?? runningApp.get_name()
+                            ?? runningApp.get_windows()[0]?.get_wm_class() 
+                            ?? runningApp.get_windows()[0].get_wm_class_instance()
+                            ?? "Unknown app";
+            // const existingApps = runningAppsMap.get(name);
+            // if (existingApps) {
+            //     existingApps.push(runningApp);
+            // } else {
+            //     runningAppsMap.set(name, [runningApp]);
+            // }
+
+            // const windowsCount = runningAppsStatisticMap.get(name);
+
+            const appGroupItem = new RunningSubMenuMenuItem.RunningSubMenuMenuItem(
+                `${name}(${runningApp.get_n_windows()} windows)`, 
+                runningApp.get_icon());
+
+            const windows = runningApp.get_windows();
+            windows.forEach(window => {
+                const windowItem = new PopupMenu.PopupMenuItem(window.get_title(), {
+                    hover: false,
+                });
+
+                appGroupItem.menu.addMenuItem(windowItem);
+            });
+
+            runningSection.add(appGroupItem);
+        }
+
+    }
+
+    _buildRecentlyClosedSection(recentlyClosedSection) {
+        const runningApps = this._defaultAppSystem.get_running();
+        // const runningAppsMap = new Map();
+        // const runningAppsStatisticMap = new Map();
+        for (const runningApp of runningApps) {
+            if (!runningApp.get_name().includes('Code')) {
+                continue;
+            }
             const name = runningApp.get_app_info()?.get_filename() 
                             ?? runningApp.get_name()
                             ?? runningApp.get_windows()[0]?.get_wm_class() 
@@ -312,27 +353,11 @@ class AwsIndicator extends PanelMenu.Button {
                 appGroupItem.menu.addMenuItem(windowItem);
             });
 
-            this._runningSection.addMenuItem(appGroupItem);
+            recentlyClosedSection.add(appGroupItem);
         }
-
-    }
-
-    _buildRecentlyClosedSection() {
-
     }
 
     _buildSessionListSection() {
-        // this._sessionListItemIndex = 0;
-
-        // this._searchSessionItem = new SearchSessionItem.SearchSessionItem();
-        // const searchEntryText = this._searchSessionItem._entry.get_clutter_text();
-        // searchEntryText.connect('text-changed', this._onSearch.bind(this));
-        // this._searchSessionItem._filterAutoRestoreSwitch.connect('notify::state', this._onSearch.bind(this));
-
-        // this._sessionListSection.addMenuItem(this._searchSessionItem, this._sessionListItemIndex++);
-
-        // const scrollableSessionsMenuSection = this._getScrollableSessionsMenuSection();
-        // this._sessionListSection.addMenuItem(scrollableSessionsMenuSection, this._sessionListItemIndex++);
         this._addSessionItems().catch((error => {
             this._log.error(error, 'Error adding session items while creating indicator menu');
         }));
@@ -388,7 +413,7 @@ class AwsIndicator extends PanelMenu.Button {
         if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
             // TODO Empty session
             this._log.info(`${this._sessions_path} not found! It's harmless, please save some windows in the panel menu to create it automatically.`);
-            this._sessionListSection.removeAllItems();
+            this._sessionListSection.removeAll();
             return;
         }
 
@@ -447,7 +472,7 @@ class AwsIndicator extends PanelMenu.Button {
             return modification_date_time2.compare(modification_date_time1);
         });
 
-        this._sessionListSection.removeAllItems();
+        this._sessionListSection.removeAll();
 
         let info = null;
         try {
@@ -460,13 +485,13 @@ class AwsIndicator extends PanelMenu.Button {
         
         // Recently Closed Session always on the top
         let item = new SessionItem.SessionItem(info, FileUtils.recently_closed_session_file, this);
-        this._sessionListSection.addItem(item);
+        this._sessionListSection.add(item);
 
         for (const sessionFileInfo of sessionFileInfos) {
             const info = sessionFileInfo.info;
             const file = sessionFileInfo.file;
             let item = new SessionItem.SessionItem(info, file, this);
-            this._sessionListSection.addItem(item);
+            this._sessionListSection.add(item);
         }
         
     }
@@ -542,54 +567,12 @@ class AwsIndicator extends PanelMenu.Button {
         // say thousands of them, but who creates that much?
         // 
         // Can use Gio.FileMonitorEvent to modify the results 
-        // of this._sessionListSection.getItems() when the performance
+        // of this._sessionListSection.getAll() when the performance
         // is a problem to be resolved, it's a more complex implement.
         this._addSessionItems().catch((error => {
             this._log.error(error, 'Error adding session items while session was changed');
         }));
     }
-
-    // _filterAutoRestore() {
-    //     const switchState = this._searchSessionItem._filterAutoRestoreSwitch.state;
-    //     if (switchState) {
-    //         const menuItems = this._sessionListSection.getItems();
-    //         for (const menuItem of menuItems) {
-    //             const sessionName = menuItem._filename;
-    //             if (menuItem.actor.visible) {
-    //                 const visible = sessionName == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
-    //                 menuItem.actor.visible = visible;
-    //             }
-    //         }
-    //     }
-    // }
-
-    // _onSearch() {
-    //     this._search();
-    //     this._filterAutoRestore();
-    // }
-
-    // _search() {
-    //     this._searchSessionItem._clearIcon.show();
-
-    //     let searchText = this._searchSessionItem._entry.text;
-    //     if (!(searchText && searchText.trim())) {
-    //         // when search entry is empty, hide clear button
-    //         if (!searchText) {
-    //             this._searchSessionItem._clearIcon.hide();
-    //         }
-    //         const menuItems = this._sessionListSection.getItems();
-    //         for (const menuItem of menuItems) {
-    //             menuItem.actor.visible = true;
-    //         }
-    //     } else {
-    //         const menuItems = this._sessionListSection.getItems();
-    //         searchText = searchText.toLowerCase().trim();
-    //         for (const menuItem of menuItems) {
-    //             const sessionName = menuItem._filename.toLowerCase();
-    //             menuItem.actor.visible = new RegExp(searchText).test(sessionName);
-    //         }
-    //     }
-    // }
 
     destroy() {
         if (this.monitors) {
@@ -630,6 +613,21 @@ class AwsIndicator extends PanelMenu.Button {
         if (this.notebook) {
             this.notebook.destroy();
             this.notebook = null;
+        }
+
+        if (this._sessionListSection) {
+            this._sessionListSection.destroy();
+            this._sessionListSection = null;
+        }
+
+        if (this._runningSection) {
+            this._runningSection.destroy();
+            this._runningSection = null;
+        }
+
+        if (this._recentlyClosedSection) {
+            this._recentlyClosedSection.destroy();
+            this._recentlyClosedSection = null;
         }
 
         super.destroy();

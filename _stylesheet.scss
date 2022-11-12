@@ -147,19 +147,20 @@ Based on https://gitlab.com/bartl/todo-txt-gnome-shell-extension/-/blob/master/s
         border-top-width: 1px;
         border-bottom-width: 1px;
 
-        // TODO don't work
+        // TODO Not work
         // &.first-of-type {
         //     border-left-width: 1px;
         // }
     
+        // Works, but `&:first-child` does not work
         // &:last-child {
         //     border-right-width: 1px;
         // }
         
-        &.hover {
-            color: $fg_color;
-            background-color: mix($hover_bg_color, $session_border_color);
-        }
+        // Not work, do this in appendPage() of notebook.js 
+        // &.hover {
+        //     box-shadow: inset 0 -4px $borders_color;
+        // }
     }
 
 }

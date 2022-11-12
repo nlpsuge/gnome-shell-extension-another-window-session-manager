@@ -18,7 +18,7 @@ var SearchSessionItem = GObject.registerClass(
         _init(wantFilter) {
             super._init({
                 activate: false,
-                reactive: true,
+                reactive: false,
                 hover: false,
                 can_focus: false
             });

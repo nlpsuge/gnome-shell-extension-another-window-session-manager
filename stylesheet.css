@@ -103,6 +103,3 @@ Based on https://gitlab.com/bartl/todo-txt-gnome-shell-extension/-/blob/master/s
   /* border-width: 1px 0px 1px 0px; */
   border-top-width: 1px;
   border-bottom-width: 1px; }
-  .notebook.tabs.hover {
-    color: white;
-    background-color: rgba(82, 82, 82, 0.55); }
