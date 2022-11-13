@@ -309,9 +309,6 @@ class AwsIndicator extends PanelMenu.Button {
             });
 
         }).catch(e => {
-            if (!e instanceof Error) {
-                e = new Error(e);   
-            }
             this._log.error(e, 'Error listing all sessions')
         });
 
