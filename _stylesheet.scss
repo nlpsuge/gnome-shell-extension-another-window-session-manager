@@ -13,6 +13,8 @@ $hover_bg_color: if($variant=='light', darken($bg_color, 3%), lighten($bg_color,
 
 $session_border_color: rgba(255, 255, 255, .1);
 
+$checked_bg_color: if($variant=='light', darken($bg_color, 7%), lighten($bg_color, 7%));
+
 
 .awsm-toggle-switch {
     background-image: url("./icons/toggle-off-autorestore-symbolic.svg");
@@ -165,3 +167,19 @@ Based on https://gitlab.com/bartl/todo-txt-gnome-shell-extension/-/blob/master/s
 
 }
 
+.popup-sub-menu-aws {
+    &:open {
+        border-color: lighten($checked_bg_color, 10%);
+        border-left-width: 1px;
+        border-right-width: 1px;
+        border-top-width: 1px;
+        border-radius: 0;
+    }
+}
+
+.popup-sub-menu-box-aws {
+    border-color: lighten($checked_bg_color, 10%);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-bottom-width: 1px;
+}

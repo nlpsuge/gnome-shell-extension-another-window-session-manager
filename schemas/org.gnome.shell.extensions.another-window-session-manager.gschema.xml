@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
+  <enum id='org.gnome.shell.extensions.another-window-session-manager.tabs-position-on-popmenu'>
+    <value value='1' nick='Left'/>
+    <value value='2' nick='Center'/>
+    <value value='3' nick='Right'/>
+  </enum>
   
   <!-- Note that name in the path should be the same as in id-->
   <schema id="org.gnome.shell.extensions.another-window-session-manager" path="/org/gnome/shell/extensions/another-window-session-manager/">
@@ -99,6 +104,13 @@
       <description>
       Set nautual width of the window of the popup menu. It's so annoy that the position of 
       the button on the popup menu could be changed if the content length becomes longer or shorter.
+      </description>
+    </key>
+    <key name='tabs-position-on-popmenu' type="i">
+      <default>2</default>
+      <summary>Set the tabs position on the popup menu</summary>
+      <description>
+      
       </description>
     </key>
   </schema>

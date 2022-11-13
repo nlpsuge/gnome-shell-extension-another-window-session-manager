@@ -525,6 +525,76 @@
                       </object>
                     </child>
                     
+                    <child>
+                      <object class="GtkListBoxRow">
+                        <property name="focusable">1</property>
+                        <property name="child">
+                          <object class="GtkBox" id="tabs_position_on_popmenu_label_box">
+                            <property name="margin-top">18</property>
+                            <property name="margin-bottom">6</property>
+                            <property name="spacing">32</property>
+                            <child>
+                              <object class="GtkLabel" id="tabs_position_on_popmenu_label">
+                                <property name="hexpand">1</property>
+                                <property name="label" translatable="yes">Tabs position on pop menu</property>
+                                <property name="xalign">0</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkBox" id="tabs_position_on_popmenu_bottons_box">
+                                <property name="spacing">32</property>
+                                <child>
+                                  <object class="GtkToggleButton" id="tabs_position_left_button">
+                                    <property name="label" translatable="yes">Left</property>
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">True</property>
+                                    <property name="receives_default">False</property>
+                                    <property name="halign">center</property>
+                                    <property name="valign">center</property>
+                                    <property name="active">True</property>
+                                    <signal name="clicked" handler="tabs_position_left_button_clicked_cb" swapped="no"/>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkToggleButton" id="tabs_position_center_button">
+                                    <property name="label" translatable="yes">Center</property>
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">True</property>
+                                    <property name="receives_default">False</property>
+                                    <property name="halign">center</property>
+                                    <property name="valign">center</property>
+                                    <!-- Adds to the group of tabs_position_left_button. In a group of multiple toggle buttons, only one button can be active at a time. -->
+                                    <property name="group">tabs_position_left_button</property>
+                                    <signal name="clicked" handler="tabs_position_center_button_clicked_cb" swapped="no"/>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkToggleButton" id="tabs_position_right_button">
+                                    <property name="label" translatable="yes">Right</property>
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">True</property>
+                                    <property name="receives_default">False</property>
+                                    <property name="halign">center</property>
+                                    <property name="valign">center</property>
+                                    <!-- Adds to the group of tabs_position_left_button. In a group of multiple toggle buttons, only one button can be active at a time. -->
+                                    <property name="group">tabs_position_left_button</property>
+                                    <signal name="clicked" handler="tabs_position_right_button_clicked_cb" swapped="no"/>
+                                  </object>
+                                </child>
+                                <child>
+                                  <placeholder/>
+                                </child>
+                              </object>
+                            </child>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+
                   </object>
                 </property>
               </object>

@@ -254,6 +254,10 @@ class AwsIndicator extends PanelMenu.Button {
         this._recentlyClosedSection = new SearchableList.SearchableList(false);
         
         this.notebook = new Notebook.Notebook();
+        this.notebook._notebookBoxLayout.x_align = this._settings.get_int('tabs-position-on-popmenu');
+        this._settings.connect('changed::tabs-position-on-popmenu', () => {
+            this.notebook._notebookBoxLayout.x_align = this._settings.get_int('tabs-position-on-popmenu');
+        });
         this.notebook.appendPage('Session List', this._sessionListSection);
         this.notebook.appendPage('Running Apps/Windows', this._runningSection, this._buildRunningSection.bind(this));
         this.notebook.appendPage('Recently Closed', this._recentlyClosedSection, this._buildRecentlyClosedSection.bind(this));
@@ -287,9 +291,10 @@ class AwsIndicator extends PanelMenu.Button {
 
     _buildRunningSection(runningSection) {
         const runningApps = this._defaultAppSystem.get_running();
+        const sortedRunningApps = this._sortRunningApps(runningApps);
         // const runningAppsMap = new Map();
         // const runningAppsStatisticMap = new Map();
-        for (const runningApp of runningApps) {
+        for (const runningApp of sortedRunningApps) {
             const name = runningApp.get_app_info()?.get_filename() 
                             ?? runningApp.get_name()
                             ?? runningApp.get_windows()[0]?.get_wm_class() 
@@ -306,11 +311,11 @@ class AwsIndicator extends PanelMenu.Button {
 
             const appGroupItem = new RunningSubMenuMenuItem.RunningSubMenuMenuItem(
                 `${name}(${runningApp.get_n_windows()} windows)`, 
-                runningApp.get_icon());
+                runningApp);
 
-            const windows = runningApp.get_windows();
+            const windows = runningApp._windows_sorted;
             windows.forEach(window => {
-                const windowItem = new PopupMenu.PopupMenuItem(window.get_title(), {
+                const windowItem = new RunningSubMenuMenuItem.RunningItem(window, {
                     hover: false,
                 });
 
@@ -320,6 +325,32 @@ class AwsIndicator extends PanelMenu.Button {
             runningSection.add(appGroupItem);
         }
 
+    }
+
+    _sortRunningApps(runningApps) {
+        for (const runningApp of runningApps) {
+            const windows = runningApp.get_windows();
+            windows.sort((window1, window2) => {
+                return window2.get_user_time() - window1.get_user_time();
+            });
+            runningApp._windows_sorted = windows;
+        }
+
+        runningApps.sort((app1, app2) => {
+            const windows1 = app1.get_windows();
+            if (!windows1 || !windows1.length) {
+                return -1;
+            }
+
+            const windows2 = app2.get_windows();
+            if (!windows2 || !windows2.length) {
+                return -1;
+            }
+
+            return windows2[0].get_user_time() - windows1[0].get_user_time();
+        });
+
+        return runningApps;
     }
 
     _buildRecentlyClosedSection(recentlyClosedSection) {

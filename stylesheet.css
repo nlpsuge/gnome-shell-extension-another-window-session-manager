@@ -103,3 +103,16 @@ Based on https://gitlab.com/bartl/todo-txt-gnome-shell-extension/-/blob/master/s
   /* border-width: 1px 0px 1px 0px; */
   border-top-width: 1px;
   border-bottom-width: 1px; }
+
+.popup-sub-menu-aws:open {
+  border-color: #5b5b5b;
+  border-left-width: 1px;
+  border-right-width: 1px;
+  border-top-width: 1px;
+  border-radius: 0; }
+
+.popup-sub-menu-box-aws {
+  border-color: #5b5b5b;
+  border-left-width: 1px;
+  border-right-width: 1px;
+  border-bottom-width: 1px; }

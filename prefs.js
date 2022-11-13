@@ -113,6 +113,8 @@ const Prefs = GObject.registerClass(
                 Gio.SettingsBindFlags.DEFAULT
             );
 
+            const window_width = this._settings.get_int('window-width');
+            this.window_width_change_scale.set_value(window_width);
             this._settings.connect('changed::window-width', (settings) => {
                 const window_width = settings.get_int('window-width');
                 this.window_width_change_scale.set_value(window_width);
@@ -186,6 +188,25 @@ const Prefs = GObject.registerClass(
                 const value = scale.get_value();
                 this._settings.set_int('window-width', value);
             });
+
+            this.tabs_position_left_button = this._builder.get_object('tabs_position_left_button');
+            this.tabs_position_center_button = this._builder.get_object('tabs_position_center_button');
+            this.tabs_position_right_button = this._builder.get_object('tabs_position_right_button');
+            this._initTabsPositionOnMenu();
+            this._settings.connect('changed::tabs-position-on-popmenu', () => {
+                this._initTabsPositionOnMenu();
+            });
+        }
+
+        _initTabsPositionOnMenu() {
+            const tabs_position_on_menu = this._settings.get_int('tabs-position-on-popmenu');
+            if (tabs_position_on_menu === 1) {
+                this.tabs_position_left_button.set_active(true);
+            } else if (tabs_position_on_menu === 2) {
+                this.tabs_position_center_button.set_active(true);
+            } else if (tabs_position_on_menu === 3) {
+                this.tabs_position_right_button.set_active(true);
+            }
         }
 
         _installAutostartDesktopFile() {
@@ -239,6 +260,17 @@ const BuilderScope = GObject.registerClass({
         return this[handlerName].bind(connectObject || this);
     }
 
+    tabs_position_left_button_clicked_cb(button) {
+        this._preferences._settings.set_int('tabs-position-on-popmenu', 1);
+    }
+
+    tabs_position_center_button_clicked_cb(button) {
+        this._preferences._settings.set_int('tabs-position-on-popmenu', 2);
+    }
+
+    tabs_position_right_button_clicked_cb(button) {
+        this._preferences._settings.set_int('tabs-position-on-popmenu', 3);
+    }
 });
 
 function buildPrefsWidget() {

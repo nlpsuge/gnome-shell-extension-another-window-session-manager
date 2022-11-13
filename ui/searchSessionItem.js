@@ -31,7 +31,7 @@ var SearchSessionItem = GObject.registerClass(
                 can_focus: true,
                 hint_text: _('Type to search'),
                 track_hover: true,
-                x_expand: false,
+                x_expand: true,
                 y_expand: true
             });
 
