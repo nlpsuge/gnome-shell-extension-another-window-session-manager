@@ -476,7 +476,9 @@ class AwsIndicator extends PanelMenu.Button {
                 file: file
             });
 
-        }).catch(e => {this._log.error(e, 'Error listing all sessions')});
+        }).catch(e => {
+            this._log.error(e, 'Error listing all sessions')
+        });
 
         // Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator
         // The latest on the top, if a file has no modification time put it on the bottom
