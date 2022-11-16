@@ -92,7 +92,9 @@ class SessionItemButtons extends GObject.Object {
 
         this._settings.connect(`changed::${PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS}`, (settings) => {
             const toggled = this.sessionItem._filename == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
-            this._autostartSwitch.state = toggled;
+            if (this._autostartSwitch.state !== toggled) {
+                this._autostartSwitch.state = toggled;
+            }
         });
 
         this._addSeparator();

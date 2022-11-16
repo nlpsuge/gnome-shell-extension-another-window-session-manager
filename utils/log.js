@@ -27,7 +27,7 @@ var Log = class {
         if (!(e instanceof Error)) {
             e = new Error(e);
         }
-        logError(e, `[ERROR  ][Another window session manager] ${logContent}`);
+        logError(e, `[ERROR  ][Another window session manager] ${logContent ? logContent : ''}`);
     }
 
     info(logContent) {

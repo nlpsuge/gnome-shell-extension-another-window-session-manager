@@ -36,6 +36,13 @@ var CloseSession = class {
         this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'smplayer.desktop'];
     }
 
+    /**
+     * 
+     * The param `app` might be null. If so, this function will close all running applications;
+     * If not, it will only close the windows of this `app`.
+     * 
+     * @param {Shell.App} app 
+     */
     async closeWindows(app) {
         this._log.debug('Closing open windows');
 
@@ -58,10 +65,14 @@ var CloseSession = class {
             this._log.info(`Closing ${app.get_name()}`);
             this._closeOneApp(app)
                 .then(([closed, reason]) => {
-                    if (closed) {
-                        this._log.info(`Closed ${app.get_name()}`);
-                    } else {
-                        this._log.warn(`Can not close ${app.get_name()} because ${reason}`);
+                    try {
+                        if (closed) {
+                            this._log.info(`Closed ${app.get_name()}`);
+                        } else {
+                            Main.notifyError(`${app.get_name()} can't be closed`, `Because ${reason}`);
+                        }
+                    } catch(e) {
+                        this._log.error(e);
                     }
                 });
         }
@@ -143,7 +154,7 @@ var CloseSession = class {
         // Or even might help close the app without sending keys further, for example if the apps
         // has one normal window and some attached dialogs. 
         this._log.info(`Closing ${app.get_name()}`);
-        const [closed, reason] = await this._closeOneApp(app)
+        const [closed, reason] = await this._closeOneApp(app);
         if (closed) {
             this._log.warn(`${app.get_name()} has been closed`);
             return;
