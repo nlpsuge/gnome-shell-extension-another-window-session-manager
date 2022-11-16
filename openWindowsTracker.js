@@ -59,7 +59,7 @@ var OpenWindowsTracker = class {
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
 
-        this._saveSession = new SaveSession.SaveSession();
+        this._saveSession = new SaveSession.SaveSession(false);
         this._restoringSession = false;
         this._runningSaveCancelableMap = new Map();
 
@@ -154,7 +154,7 @@ var OpenWindowsTracker = class {
         // Apps in the `this._blacklist` does not save a session
         if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
             if (!this._blacklist.has(window.get_wm_class())) 
-                this._log.warn(`${sessionFilePath} not found while restoring!`);
+                this._log.warn(`${sessionFilePath} not found while restoring, skipping it…!`);
             return;
         }
 

@@ -2,6 +2,8 @@
 
 const { Shell, Gio, GLib } = imports.gi;
 
+const Main = imports.ui.main;
+
 const ByteArray = imports.byteArray;
 
 const ExtensionUtils = imports.misc.extensionUtils;
@@ -22,7 +24,9 @@ Me.imports.utils.string;
 
 var SaveSession = class {
 
-    constructor() {
+    constructor(notifyUser=true) {
+        this.notifyUser = notifyUser;
+
         this._log = new Log.Log();
 
         this._windowTracker = Shell.WindowTracker.get_default();
@@ -46,9 +50,6 @@ var SaveSession = class {
         }
 
         await this._saveSessionConfigAsync(sessionConfig, baseDir);
-
-        // TODO saved Notification
-
     }
 
     async saveWindowSessionAsync(metaWindow, sessionName, baseDir, cancellable = null) {
@@ -397,9 +398,11 @@ var SaveSession = class {
                         try {
                             success = sessionFile.replace_contents_finish(asyncResult);
                             if (success) {
-                                this._log.info(`Session saved to ${sessionFile.get_path()}!`);
+                                const savedMsg = `Session saved to ${sessionFile.get_path()}!`;
+                                this._log.info(savedMsg);
+                                if (this.notifyUser)
+                                    Main.notify(`Session saved to ${sessionConfig.session_name}`, savedMsg);
                                 resolve(success);
-                                // TODO Notification
                                 return;
                             }
                         } catch (e) {

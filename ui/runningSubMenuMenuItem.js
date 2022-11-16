@@ -7,12 +7,19 @@ const PopupMenu = imports.ui.popupMenu;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
+const { Button } = Me.imports.ui.button;
+
 const DateUtils = Me.imports.utils.dateUtils;
+
+const CloseSession = Me.imports.closeSession;
+
 
 var RunningSubMenuMenuItem = GObject.registerClass(
 class RunningSubMenuMenuItem extends PopupMenu.PopupSubMenuMenuItem {
     
     _init(text, app) {
+        this.app = app;
+
         const icon = app.get_icon();
         if (icon) {
             super._init(text, true);
@@ -44,10 +51,30 @@ class RunningSubMenuMenuItem extends PopupMenu.PopupSubMenuMenuItem {
             }
         });
 
+        this._closeSession = new CloseSession.CloseSession();
+
+
+        const closeAppButton = this._addButton('close-symbolic.svg');
+        closeAppButton.connect('clicked', this._onClickCloseApp.bind(this));
+        this.insert_child_below(closeAppButton, this._triangleBin);
+
+
 
 
     }
 
+    _onClickCloseApp(button, event) {
+        this._closeSession.closeWindows(this.app).catch(e => {
+            this._log.error(e)
+        });
+    }
+
+    _addButton(iconSymbolic) {
+        const button = new Button({
+            icon_symbolic: iconSymbolic,
+        }).button;
+        return button;
+    }
     
 });
 
@@ -56,11 +83,12 @@ var RunningItem = GObject.registerClass(
     class RunningItem extends PopupMenu.PopupMenuItem {
         
     _init(window) {
+        this.window = window;
+
         super._init("", {
             hover: false,
         });
 
-        this.window = window;
         this.label.set_x_expand(true);
         const clutter_text = this.label.clutter_text;
         clutter_text.set_text(this.window.get_title());
@@ -71,5 +99,26 @@ var RunningItem = GObject.registerClass(
         });
         this.actor.add_child(userTimeLabel);
 
+        const closeWindowButton = this._addButton('close-symbolic.svg');
+        if (!this.window.can_close()) {
+            closeWindowButton.reactive = false;
+        }
+        closeWindowButton.connect('clicked', this._onClickCloseWindow.bind(this));
+        this.add_child(closeWindowButton);
+
+
+    }
+
+    _onClickCloseWindow(button, event) {
+        if (this.window.can_close()) {
+            this.window.delete(DateUtils.get_current_time());
+        }
+    }
+
+    _addButton(iconSymbolic) {
+        const button = new Button({
+            icon_symbolic: iconSymbolic,
+        }).button;
+        return button;
     }
 });
