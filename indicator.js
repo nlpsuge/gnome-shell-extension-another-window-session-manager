@@ -61,7 +61,7 @@ class AwsIndicator extends PanelMenu.Button {
         this.add_child(icon);
 
         this._createMenu();
-        
+
         this.menu.connect('open-state-changed', this._onOpenStateChanged.bind(this));
 
         // Open menu
@@ -84,7 +84,7 @@ class AwsIndicator extends PanelMenu.Button {
     }
 
     // TODO Move this method and related code to a single .js file
-    _windowCreated(display, metaWindow, userData) {
+    async _windowCreated(display, metaWindow, userData) {
         if (!Meta.is_wayland_compositor()) {
             // We call createEnoughWorkspaceAndMoveWindows() if and only if all conditions checked.
             
@@ -110,7 +110,7 @@ class AwsIndicator extends PanelMenu.Button {
 
                     // On X11, we have to create enough workspace and move windows before receive the first-frame signal.
                     // If not, all windows will be shown in current workspace when stay in Overview, which is not pretty.
-                    let matchedSavedWindowSession = this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
+                    let matchedSavedWindowSession = await this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
                     
                     if (matchedSavedWindowSession) {
                         // We try to restore window state here if necessary.
@@ -229,13 +229,13 @@ class AwsIndicator extends PanelMenu.Button {
 
     _onOpenStateChanged(menu, state) {
         if (state) {
-            this._setWindowAppearance();  
+            this._setWindowAppearance();
         }
     }
 
     _setWindowAppearance() {
         const display = global.display;
-        const monitorGeometry /*Meta.Rectangle*/ = 
+        const monitorGeometry /*Meta.Rectangle*/ =
                 display.get_monitor_geometry(display.get_primary_monitor());
         const screen_width = monitorGeometry.width;
         const windowWidth = this._settings.get_int('window-width');
@@ -252,7 +252,7 @@ class AwsIndicator extends PanelMenu.Button {
         this._sessionListSection = new SearchableList.SearchableList(true);
         this._runningSection = new SearchableList.SearchableList(false);
         this._recentlyClosedSection = new SearchableList.SearchableList(false);
-        
+
         this.notebook = new Notebook.Notebook();
         this.notebook._notebookBoxLayout.x_align = this._settings.get_int('tabs-position-on-popmenu');
         this._settings.connect('changed::tabs-position-on-popmenu', () => {
@@ -261,7 +261,7 @@ class AwsIndicator extends PanelMenu.Button {
         this.notebook.appendPage('Session List', this._sessionListSection);
         this.notebook.appendPage('Running Apps/Windows', this._runningSection, this._buildRunningSection.bind(this));
         this.notebook.appendPage('Recently Closed', this._recentlyClosedSection, this._buildRecentlyClosedSection.bind(this));
-        
+
         this.menu.addMenuItem(this.notebook, this._itemIndex++);
 
         this._buildSessionListSection();
@@ -283,10 +283,10 @@ class AwsIndicator extends PanelMenu.Button {
         //     }
         // });
 
-        
+
         // TODO
         // this._sessionListSection.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(), this._sessionListItemIndex++);
-        
+
     }
 
     _buildRunningSection(runningSection) {
@@ -295,9 +295,9 @@ class AwsIndicator extends PanelMenu.Button {
         // const runningAppsMap = new Map();
         // const runningAppsStatisticMap = new Map();
         for (const runningApp of sortedRunningApps) {
-            const name = runningApp.get_app_info()?.get_filename() 
+            const name = runningApp.get_app_info()?.get_filename()
                             ?? runningApp.get_name()
-                            ?? runningApp.get_windows()[0]?.get_wm_class() 
+                            ?? runningApp.get_windows()[0]?.get_wm_class()
                             ?? runningApp.get_windows()[0].get_wm_class_instance()
                             ?? "Unknown app";
             // const existingApps = runningAppsMap.get(name);
@@ -310,7 +310,7 @@ class AwsIndicator extends PanelMenu.Button {
             // const windowsCount = runningAppsStatisticMap.get(name);
 
             const appGroupItem = new RunningSubMenuMenuItem.RunningSubMenuMenuItem(
-                `${name}(${runningApp.get_n_windows()} windows)`, 
+                `${name}(${runningApp.get_n_windows()} windows)`,
                 runningApp);
 
             const windows = runningApp._windows_sorted;
@@ -361,9 +361,9 @@ class AwsIndicator extends PanelMenu.Button {
             if (!runningApp.get_name().includes('Code')) {
                 continue;
             }
-            const name = runningApp.get_app_info()?.get_filename() 
+            const name = runningApp.get_app_info()?.get_filename()
                             ?? runningApp.get_name()
-                            ?? runningApp.get_windows()[0]?.get_wm_class() 
+                            ?? runningApp.get_windows()[0]?.get_wm_class()
                             ?? runningApp.get_windows()[0].get_wm_class_instance()
                             ?? "Unknown app";
             // const existingApps = runningAppsMap.get(name);
@@ -409,7 +409,7 @@ class AwsIndicator extends PanelMenu.Button {
     _showRecentlyClosedSection(label) {
         this._switchSection(label, null);
 
-        
+
     }
 
     _switchSection(widget, section) {
@@ -420,7 +420,7 @@ class AwsIndicator extends PanelMenu.Button {
                 tab.set_style('box-shadow: none');
             }
         }
-        
+
         // hover white #f6f5f4
         // https://developer.mozilla.org/en-US/docs/Web/CSS/box-shadow
         // https://developer.mozilla.org/en-US/docs/Web/CSS/border-radius
@@ -559,16 +559,27 @@ class AwsIndicator extends PanelMenu.Button {
     // https://gjs-docs.gnome.org/gio20~2.66p/gio.filemonitor#signal-changed
     // Looks like the document is wrong ...
     // https://gjs-docs.gnome.org/gio20~2.66p/gio.filemonitorevent
-    _sessionChanged(monitor, fileMonitored, other_file, eventType) {
+    _sessionChanged(monitor, fileMonitored, otherFile, eventType) {
         const pathMonitored = fileMonitored.get_path();
-        this._log.debug(`Session changed, readd all session items from ${this._sessions_path}. ${pathMonitored} changed. other_file: ${other_file?.get_path()}. Event type: ${eventType}`);
+        this._log.debug(`Session changed, readd all session items from ${this._sessions_path}. ${pathMonitored} changed. otherFile: ${otherFile?.get_path()}. Event type: ${eventType}`);
 
         // Ignore CHANGED and CREATED events, since in both cases
         // we'll get a CHANGES_DONE_HINT event when done.
         if (eventType === Gio.FileMonitorEvent.CHANGED || // 0
             eventType === Gio.FileMonitorEvent.CREATED) // 3
             return;
-                
+
+        // The eventType is Gio.FileMonitorEvent.RENAMED while modify the content of a text file,
+        // so otherFile is the correct file we need to read.
+        // The doc said:
+        // If using Gio.FileMonitorFlags.WATCH_MOVES on a directory monitor, and
+        // the information is available (and if supported by the backend),
+        // event_type may be Gio.FileMonitorEvent.RENAMED,
+        // Gio.FileMonitorEvent.MOVED_IN or Gio.FileMonitorEvent.MOVED_OUT.
+        if (eventType === Gio.FileMonitorEvent.RENAMED) {
+            fileMonitored = otherFile;
+        }
+
         // Ignore temporary files generated by Gio
         if (eventType !== Gio.FileMonitorEvent.RENAMED // 8
                 && fileMonitored.get_basename().startsWith('.goutputstream-')) {
