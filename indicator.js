@@ -78,7 +78,7 @@ class AwsIndicator extends PanelMenu.Button {
     }
 
     // TODO Move this method and related code to a single .js file
-    _windowCreated(display, metaWindow, userData) {
+    async _windowCreated(display, metaWindow, userData) {
         if (!Meta.is_wayland_compositor()) {
             // We call createEnoughWorkspaceAndMoveWindows() if and only if all conditions checked.
             
@@ -104,7 +104,7 @@ class AwsIndicator extends PanelMenu.Button {
 
                     // On X11, we have to create enough workspace and move windows before receive the first-frame signal.
                     // If not, all windows will be shown in current workspace when stay in Overview, which is not pretty.
-                    let matchedSavedWindowSession = this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
+                    let matchedSavedWindowSession = await this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
                     
                     if (matchedSavedWindowSession) {
                         // We try to restore window state here if necessary.
