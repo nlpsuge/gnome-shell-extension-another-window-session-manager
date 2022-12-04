@@ -211,46 +211,38 @@ var MoveSession = class {
         }
     }
 
-    moveWindowsByMetaWindow(metaWindow, saved_window_sessions) {
-        if (UiHelper.ignoreWindows(metaWindow)) return;
+    async moveWindowsByMetaWindow(metaWindow, saved_window_sessions) {
+        try {
+            if (UiHelper.ignoreWindows(metaWindow)) return;
 
-        const saved_window_session = this._getOneMatchedSavedWindow(metaWindow, saved_window_sessions);
-        if (!saved_window_session) {
-            return;
-        }
+            const saved_window_session = this._getOneMatchedSavedWindow(metaWindow, saved_window_sessions);
+            if (!saved_window_session) {
+                return;
+            }
 
-        if (saved_window_session.moved) {
-            const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._restoreWindowStates(metaWindow, saved_window_session);
-                return GLib.SOURCE_REMOVE;
-            });
-            this._sourceIds.push(sourceId);
-        } else {
-            const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, async () => {
-                try {
-                    await this._restoreWindowStates(metaWindow, saved_window_session);
-                    const desktop_number = saved_window_session.desktop_number;
-                    // It's necessary to move window again to ensure an app goes to its own workspace.
-                    // In a sort of situation, some apps probably just don't want to move when call createEnoughWorkspaceAndMoveWindows() from `Meta.Display::window-created` signal.
-                    this._createEnoughWorkspace(desktop_number);
-                    const shellApp = this._windowTracker.get_window_app(metaWindow);
-                    const is_sticky = saved_window_session.window_state.is_sticky;
-                    if (is_sticky && metaWindow.is_on_all_workspaces()) {
-                        this._log.debug(`The window '${shellApp.get_name()} - ${metaWindow.get_title()}' is already sticky on workspace ${desktop_number}`);
-                    } else {
-                        this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
-                        this._changeWorkspace(metaWindow, desktop_number);
-                    }
-                    // The window state get lost during moving the window, and we need to restore window state again.
-                    this._restoreWindowState(metaWindow, saved_window_session);
-    
-                    saved_window_session.moved = true;
-                    return GLib.SOURCE_REMOVE;   
-                } catch (error) {
-                    this._log.error(error, metaWindow ? metaWindow.get_title() : 'This window may be destroyed.');
+            if (saved_window_session.moved) {
+                await this._restoreWindowStates(metaWindow, saved_window_session);
+            } else {
+                await this._restoreWindowStates(metaWindow, saved_window_session);
+                const desktop_number = saved_window_session.desktop_number;
+                // It's necessary to move window again to ensure an app goes to its own workspace.
+                // In a sort of situation, some apps probably just don't want to move when call createEnoughWorkspaceAndMoveWindows() from `Meta.Display::window-created` signal.
+                this._createEnoughWorkspace(desktop_number);
+                const shellApp = this._windowTracker.get_window_app(metaWindow);
+                const is_sticky = saved_window_session.window_state.is_sticky;
+                if (is_sticky && metaWindow.is_on_all_workspaces()) {
+                    this._log.debug(`The window '${shellApp.get_name()} - ${metaWindow.get_title()}' is already sticky on workspace ${desktop_number}`);
+                } else {
+                    this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
+                    this._changeWorkspace(metaWindow, desktop_number);
                 }
-            });
-            this._sourceIds.push(sourceId);
+                // The window state get lost during moving the window, and we need to restore window state again.
+                this._restoreWindowState(metaWindow, saved_window_session);
+
+                saved_window_session.moved = true;
+            }
+        } catch (error) {
+            this._log.error(error, metaWindow ? metaWindow.get_title() : 'This window may be destroyed.');
         }
     }
 
