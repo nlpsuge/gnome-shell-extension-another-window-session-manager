@@ -283,7 +283,7 @@ class AwsIndicator extends PanelMenu.Button {
         this._log.debug('List all sessions to add session items');
         
         let sessionFileInfos = [];
-        await FileUtils.listAllSessions(null, false, this._prefsUtils.isDebug(),(file, info) => {
+        await FileUtils.listAllSessions(null, false, (file, info) => {
             // We have an interest in regular and text files
 
             const file_type = info.get_file_type();

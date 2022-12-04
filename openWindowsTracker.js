@@ -4,11 +4,18 @@ const { Shell, Meta, Gio, GLib } = imports.gi;
 
 const ByteArray = imports.byteArray;
 
+const LoginManager = imports.misc.loginManager;
+
+const EndSessionDialog = imports.ui.endSessionDialog;
+
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const SaveSession = Me.imports.saveSession;
+const CloseSession = Me.imports.closeSession;
 const RestoreSession = Me.imports.restoreSession;
+
+const Autoclose = Me.imports.ui.autoclose;
 
 const Log = Me.imports.utils.log;
 const PrefsUtils = Me.imports.utils.prefsUtils;
@@ -21,16 +28,10 @@ const EndSessionDialogIface = ByteArray.toString(
     Me.dir.get_child('dbus-interfaces').get_child('org.gnome.SessionManager.EndSessionDialog.xml').load_contents(null)[1]);
 const EndSessionDialogProxy = Gio.DBusProxy.makeProxyWrapper(EndSessionDialogIface);
 
-const sessionName = 'currentSession';
-const sessionPath = `/tmp/another-window-session-manager/sessions/${sessionName}`;
 
 var OpenWindowsTracker = class {
 
     constructor() {
-        // Only track windows on X11
-        if (Meta.is_wayland_compositor()) {
-            return;
-        }
 
         // For Guake, too many annoying saving triggered while toggling to hide or show.
         this._blacklist = new Set([
@@ -60,8 +61,11 @@ var OpenWindowsTracker = class {
         this._settings = this._prefsUtils.getSettings();
 
         this._saveSession = new SaveSession.SaveSession();
+
         this._restoringSession = false;
         this._runningSaveCancelableMap = new Map();
+
+        this._windowUnmanagedIds = [];
 
         this._confirmedLogoutId = 0;
         this._confirmedRebootId = 0;
@@ -96,6 +100,26 @@ var OpenWindowsTracker = class {
             this._restoreOrSaveWindowSession(window);
         });
 
+        this._saveAllWindows();
+        this._settings.connect('changed::stash-and-restore-states', this._saveAllWindows.bind(this));
+
+        const windowTiledId = WindowTilingSupport.connect('window-tiled', (signals, w1, w2) => {
+            // w2 will be saved in another 'window-tiled'
+            this._saveSessionToTmpAsync(w1);
+        });
+        this._signals.push([windowTiledId, WindowTilingSupport]);
+
+        const windowUntiledId = WindowTilingSupport.connect('window-untiled', (signals, w1, w2) => {
+            this._saveSessionToTmpAsync(w1);
+            this._saveSessionToTmpAsync(w2);
+        });
+        this._signals.push([windowUntiledId, WindowTilingSupport]);
+        this._signals.push([windowCreatedId, this._display]);
+        this._signals.push([x11DisplayOpenedId, this._display]);
+
+    }
+
+    _saveAllWindows() {
         const runningApps = this._defaultAppSystem.get_running();
         // runningApps.length is 0 when display opening
         // runningApps.length is greater than 0 when this extension enabled
@@ -108,27 +132,12 @@ var OpenWindowsTracker = class {
                 }
             }
         }
-
-        const windowTiledId = WindowTilingSupport.connect('window-tiled', (signals, w1, w2) => {
-            // w2 will be saved in another 'window-tiled'
-            this._saveSessionToTmpAsync(w1);
-        });
-        this._signals.push([windowTiledId, WindowTilingSupport]);
-        
-        const windowUntiledId = WindowTilingSupport.connect('window-untiled', (signals, w1, w2) => {
-            this._saveSessionToTmpAsync(w1);
-            this._saveSessionToTmpAsync(w2);
-        });
-        this._signals.push([windowUntiledId, WindowTilingSupport]);
-        this._signals.push([windowCreatedId, this._display]);
-        this._signals.push([x11DisplayOpenedId, this._display]);
-
     }
 
     async _restoreOrSaveWindowSession(window) {
         try {
             this._restoreWindowState(window);
-            
+
             this._saveSessionToTmpAsync(window);
             this._connectWindowSignalsToSaveSession(window);
         } catch (e) {
@@ -150,10 +159,10 @@ var OpenWindowsTracker = class {
 
         if (!this._restoringSession) return;
 
-        const sessionFilePath = `${sessionPath}/${window.get_wm_class()}/${MetaWindowUtils.getStableWindowId(window)}.json`;
+        const sessionFilePath = `${FileUtils.current_session_path}/${window.get_wm_class()}/${MetaWindowUtils.getStableWindowId(window)}.json`;
         // Apps in the `this._blacklist` does not save a session
         if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
-            if (!this._blacklist.has(window.get_wm_class())) 
+            if (!this._blacklist.has(window.get_wm_class()))
                 this._log.warn(`${sessionFilePath} not found while restoring!`);
             return;
         }
@@ -166,7 +175,7 @@ var OpenWindowsTracker = class {
 
         const sessionContent = FileUtils.getJsonObj(contents);
         const app = this._windowTracker.get_app_from_pid(sessionContent.pid);
-        
+
         this._log.debug(`Restoring window session from ${sessionFilePath}`);
 
         if (app && app.get_name() == sessionContent.app_name) {
@@ -184,7 +193,7 @@ var OpenWindowsTracker = class {
     async _saveSessionToTmpAsync(window) {
         try {
             if (!this._settings.get_boolean('stash-and-restore-states')) return;
-            
+
             if (!window) return;
             const workspace = window.get_workspace();
             // workspace is nullish during gnome shell restarts
@@ -193,22 +202,45 @@ var OpenWindowsTracker = class {
 
             // Cancel running save operation
             this._cancelRunningSave(window);
-        
+
             const cancellable = new Gio.Cancellable();
             this._runningSaveCancelableMap.set(window, cancellable);
 
-            await this._saveSession.saveWindowSessionAsync(
+            const sessionName = `${MetaWindowUtils.getStableWindowId(window)}.json`;
+            const sessionDirectory = `${FileUtils.current_session_path}/${window.get_wm_class()}`;
+            const sessionSaved = await this._saveSession.saveWindowSessionAsync(
                 window,
-                `${MetaWindowUtils.getStableWindowId(window)}.json`,
-                `${sessionPath}/${window.get_wm_class()}`,
+                sessionName,
+                sessionDirectory,
                 cancellable
             );
+
+            if (sessionSaved) {
+                await this._cleanUpSessionFile(window, sessionDirectory, sessionName);
+            }
         } catch (error) {
             // Ignore cancelation errors
             if (!error?.cause?.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
                 this._log.error(error);
             }
         }
+    }
+
+    async _cleanUpSessionFile(window, sessionDirectory, sessionName) {
+        const unmanagedId = window.connect('unmanaged', () => {
+            if (Autoclose.closeSessionByUser) {
+                return;
+            }
+
+            const sessionFilePath = `${sessionDirectory}/${sessionName}`;
+            const app = this._windowTracker.get_window_app(window);
+            if (app) {
+                FileUtils.removeFileAndParent(sessionFilePath);
+            } else {
+                FileUtils.removeFile(sessionDirectory, true);
+            }
+        });
+        this._windowUnmanagedIds.push([window, unmanagedId]);
     }
 
     _onNameAppearedGnomeShell() {
@@ -247,8 +279,12 @@ var OpenWindowsTracker = class {
     }
 
     _onConfirmedLogout(proxy, sender) {
-        this._log.debug(`Resetting windows-mapping before logout.`);
-        this._settings.set_string('windows-mapping', '{}');
+        try {
+            this._log.debug(`Resetting windows-mapping before logout.`);
+            this._settings.set_string('windows-mapping', '{}');
+        } catch (error) {
+            this._log.error(error);
+        }
     }
 
     _onConfirmedReboot(proxy, sender) {
@@ -324,11 +360,17 @@ var OpenWindowsTracker = class {
         if (!this._runningSaveCancelableMap) {
             return;
         }
-        
+
         const cancellable = this._runningSaveCancelableMap.get(window);
         if (cancellable && !cancellable.is_cancelled()) {
             cancellable.cancel();
         }
+
+        this._windowUnmanagedIds.forEach(([window, unmanagedId]) => {
+            window.disconnect(unmanagedId);
+        });
+        this._windowUnmanagedIds = [];
+
     }
 
     _cancelAllRunningSave() {
@@ -341,7 +383,7 @@ var OpenWindowsTracker = class {
                 cancellable.cancel();
         }
         this._runningSaveCancelableMap.clear();
-    }    
+    }
 
     destroy() {
         this._cancelAllRunningSave();

@@ -173,6 +173,7 @@ var AutostartDialog = GObject.registerClass(
         }
 
         _confirm() {
+            Autoclose.closeSessionByUser = false;
             const _restoreSession = new RestoreSession.RestoreSession();
             _restoreSession.restoreSession(this._sessionName);
         }

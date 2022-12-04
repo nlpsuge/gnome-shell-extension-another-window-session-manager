@@ -21,6 +21,7 @@ const MoveSession = Me.imports.moveSession;
 const CloseSession = Me.imports.closeSession;
 
 const { Button } = Me.imports.ui.button;
+const Autoclose = Me.imports.ui.autoclose;
 
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const CommonError = Me.imports.utils.CommonError;
@@ -224,6 +225,7 @@ class SessionItemButtons extends GObject.Object {
     }
     
     _onClickRestore(button, event) {
+        Autoclose.closeSessionByUser = false;
         RestoreSession.restoringApps = new Map();
         // Using _restoredApps to hold restored apps so we create new instance every time for now
         const _restoreSession = new RestoreSession.RestoreSession();

@@ -68,7 +68,7 @@ var SaveSession = class {
             cancellable);
         if (!canContinue) return;
 
-        await this._saveSessionConfigAsync({
+        return await this._saveSessionConfigAsync({
             ...sessionConfigObject, 
             session_name: sessionName
         }, baseDir, cancellable);

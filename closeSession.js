@@ -37,31 +37,54 @@ var CloseSession = class {
     }
 
     async closeWindows() {
-        this._log.debug('Closing open windows');
+        try {
+            this._log.debug('Closing open windows');
 
-        let workspaceManager = global.workspace_manager;
-        for (let i = 0; i < workspaceManager.n_workspaces; i++) {
-            // Make workspaces non-persistent, so they can be removed if no windows in it
-            workspaceManager.get_workspace_by_index(i)._keepAliveId = false;
-        }
+            let workspaceManager = global.workspace_manager;
+            for (let i = 0; i < workspaceManager.n_workspaces; i++) {
+                // Make workspaces non-persistent, so they can be removed if no windows in it
+                workspaceManager.get_workspace_by_index(i)._keepAliveId = false;
+            }
 
-        let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
-        for(const app of running_apps_closing_by_rules) {
-            await this._tryCloseAppsByRules(app).catch(e => {
-                this._log.error(e);
-            });
-        }
-        
-        for (const app of new_running_apps) {
-            this._log.info(`Closing ${app.get_name()}`);
-            this._closeOneApp(app)
-                .then(([closed, reason]) => {
-                    if (closed) {
-                        this._log.info(`Closed ${app.get_name()}`);
-                    } else {
-                        this._log.warn(`Can not close ${app.get_name()} because ${reason}`);
-                    }
+            let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
+            for(const app of running_apps_closing_by_rules) {
+                await this._tryCloseAppsByRules(app).catch(e => {
+                    this._log.error(e);
                 });
+            }
+            
+            let promises = [];
+            let hasRunningApps = false;
+            for (const app of new_running_apps) {
+                const promise = new Promise((resolve, reject) => {
+                    this._log.info(`Closing ${app.get_name()}`);
+                    this._closeOneApp(app).then(([closed, reason]) => {
+                        try {
+                            if (closed) {
+                                this._log.info(`Closed ${app.get_name()}`);
+                            } else {
+                                this._log.warn(`Can not close ${app.get_name()} because ${reason}`);
+                                hasRunningApps = true;
+                            }
+                            resolve();   
+                        } catch (error) {
+                            this._log.error(error);
+                            reject();
+                        }
+                    });
+                });
+                promises.push(promise);
+            }
+
+            await Promise.all(promises).catch(error => {
+                this._log.error(error);
+            });
+
+            return {
+                hasRunningApps
+            };
+        } catch (error) {
+            this._log.error(error);
         }
     }
 

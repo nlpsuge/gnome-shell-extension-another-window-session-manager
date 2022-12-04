@@ -4,6 +4,8 @@ const { Gio, GLib } = imports.gi
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
+const Log = Me.imports.utils.log;
+
 var default_sessionName = 'defaultSession';
 const home_dir = GLib.get_home_dir();
 // This extension can restore `xsm`'s session file, 
@@ -22,12 +24,14 @@ var recently_closed_session_name = 'Recently Closed Session';
 var recently_closed_session_path = GLib.build_filenamev([sessions_path, recently_closed_session_name]);
 var recently_closed_session_file = Gio.File.new_for_path(recently_closed_session_path);
 
+var current_session_path = `${sessions_path}/currentSession`;
 
 var autostart_restore_desktop_file_path = GLib.build_filenamev([home_dir, '/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop']);
 
 var desktop_template_path_ydotool_uinput_rules = GLib.build_filenamev([Me.path, '/template/60-awsm-ydotool-uinput.rules']);
 var system_udev_rules_path_ydotool_uinput_rules = '/etc/udev/rules.d/60-awsm-ydotool-uinput.rules';
 
+const _log = new Log.Log();
 
 /**
  * Get the absolute session path which contains sessions, 
@@ -61,18 +65,51 @@ function getJsonObj(contents) {
     return session_config;
 }
 
-async function listAllSessions(sessionPath, recursion, debug, callback) {
+// async function cleanupSessionFilesByWindow(window) {
+//     const sessionDirectory = `${current_session_path}/${window.get_wm_class()}`;
+//     listAllSessions(sessionDirectory, false, (file, info) => {
+//         const filename = info.get_name();
+//         if (filename.startsWith('.goutputstream-')) {
+//             return;
+//         }
+
+//         // TODO
+//         if (!existingWindowIdSet.has(filename)) {
+//             const file_type = info.get_file_type();
+//             if (file_type !== Gio.FileType.DIRECTORY) {
+//                 file.delete(null);
+//                 removeFileAndParent(file);
+//                 _log.debug(`Removed ${file.get_path()}`);
+//             }
+//         }
+//     });
+// }
+
+// async function cleanupSessionFilesByApp(app) {
+//     const windows = app.get_window();
+//     const app = this._windowTracker.get_window_app(window);
+//     const existingWindowIdSet = new Set();
+//     log('app.get_windows() length ' + app.get_windows().length)
+//     app.get_windows().forEach(w => {
+//         existingWindowIdSet.add(`${MetaWindowUtils.getStableWindowId(w)}.json`);
+//     });
+
+//     windows.forEach(window => {
+//         cleanupSessionFilesByWindow(window);
+//     });
+// }
+
+async function listAllSessions(sessionPath, recursion, callback) {
     if (!sessionPath) {
         sessionPath = get_sessions_path();
     }
     if (!GLib.file_test(sessionPath, GLib.FileTest.EXISTS)) {
-        logError(new Error(`${sessionPath} not exist`));
+        _log.error(new Error(`${sessionPath} not exist`));
         return;
     }
 
-    if (debug) {
-        log(`[DEBUG  ][Another window session manager] Scanning ${sessionPath}`);
-    }
+    _log.debug(`Scanning ${sessionPath}`);
+
     const sessionPathFile = Gio.File.new_for_path(sessionPath);
     let fileEnumerator = await new Promise((resolve, reject) => {
         sessionPathFile.enumerate_children_async(
@@ -87,7 +124,7 @@ async function listAllSessions(sessionPath, recursion, debug, callback) {
                 try {
                     resolve(file.enumerate_children_finish(asyncResult));
                 } catch (e) {
-                    logError(e, `Failed to list directory ${sessionPath}`);
+                    _log.error(e, `Failed to list directory ${sessionPath}`);
                     reject(e);
                 }
             });
@@ -116,7 +153,7 @@ async function listAllSessions(sessionPath, recursion, debug, callback) {
         for (const info of infos) {
             const file = fileEnumerator.get_child(info);
             if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
-                listAllSessions(file.get_path(), recursion, debug, callback);
+                listAllSessions(file.get_path(), recursion, callback);
             }
 
             if (callback) {
@@ -137,6 +174,97 @@ function sessionExists(sessionName, baseDir = null) {
     return [false];
 }
 
+/**
+ * Remove files. And also remove its parent if it's empty.
+ * 
+ * @param {String} path         The path of a file or a directory
+ */
+ function removeFileAndParent(path) {
+    if (!GLib.file_test(path, GLib.FileTest.EXISTS)) {
+        throw new Error(`Cannot remove '${path}': No such file or directory`);
+    }
+
+    const file = Gio.File.new_for_path(path);
+    try {
+        const info = file.query_info(
+            [Gio.FILE_ATTRIBUTE_STANDARD_TYPE].join(','),
+            Gio.FileQueryInfoFlags.NONE,
+            null);
+
+        const fileType = info.get_file_type();
+        const isDir = fileType === Gio.FileType.DIRECTORY;
+        
+        file.delete(null);
+        _log.debug(`Removed ${isDir ? 'directory' : ''} ${path}`);
+
+        const parent = file.get_parent();
+        if (parent && isEmpty(parent)) {
+            parent.delete(null);
+            _log.debug(`Removed directory ${parent.get_path()}`);
+        }
+    
+    } catch (e) {
+        _log.error(e);
+    }
+}
+
+function isEmpty(directory) {
+    const fileEnumerator = directory.enumerate_children(
+        [Gio.FILE_ATTRIBUTE_STANDARD_NAME,
+        Gio.FILE_ATTRIBUTE_STANDARD_TYPE].join(','),
+        Gio.FileQueryInfoFlags.NONE, 
+        null);
+    return !fileEnumerator.next_file(null);
+}
+
+/**
+ * Remove files or directories
+ * 
+ * @param {String} path         The path of a file or a directory
+ * @param {Boolean} recursively true if remove all files or directories in `path`
+ */
+ function removeFile(path, recursively = false) {
+    if (!GLib.file_test(path, GLib.FileTest.EXISTS)) {
+        throw new Error(`Cannot remove '${path}': No such file or directory`);
+    }
+
+    const file = Gio.File.new_for_path(path);
+    try {
+        const info = file.query_info(
+            [Gio.FILE_ATTRIBUTE_STANDARD_TYPE].join(','),
+            Gio.FileQueryInfoFlags.NONE,
+            null);
+
+        const fileType = info.get_file_type();
+        if (fileType === Gio.FileType.DIRECTORY) {
+            if (!recursively) {
+                throw new Error(`Cannot remove '${path}': Is a directory`);
+            }
+            const fileEnumerator = file.enumerate_children(
+                [Gio.FILE_ATTRIBUTE_STANDARD_NAME,
+                Gio.FILE_ATTRIBUTE_STANDARD_TYPE].join(','),
+                Gio.FileQueryInfoFlags.NONE, 
+                null);
+            
+            let fileInfo = null;
+            while (fileInfo = fileEnumerator.next_file(null)) {
+                const childFile = fileEnumerator.get_child(fileInfo);
+                if (info.get_file_type() === Gio.FileType.DIRECTORY) {
+                    removeFile(childFile.get_path(), recursively);
+                }
+            }
+
+            file.delete(null);
+            _log.debug(`Removed directory ${path}`);
+        } else {
+            file.delete(null);
+            _log.debug(`Removed ${path}`);
+        }
+    } catch (e) {
+        _log.error(e);
+    }
+}
+
 function trashSession(sessionName) {
     const [exists, sessionFilePath] = sessionExists(sessionName);
     if (!exists) {
@@ -148,11 +276,11 @@ function trashSession(sessionName) {
         const sessionPathFile = Gio.File.new_for_path(sessionFilePath);
         trashed = sessionPathFile.trash(null);
         if (!trashed) {
-            logError(new Error(`Failed to trash file ${sessionFilePath}. Reason: Unknown.`));
+            _log.error(new Error(`Failed to trash file ${sessionFilePath}. Reason: Unknown.`));
         }
         return trashed;
     } catch (e) {
-        logError(e, `Failed to trash file ${sessionFilePath}`);
+        _log.error(e, `Failed to trash file ${sessionFilePath}`);
         return false;
     }
 }
