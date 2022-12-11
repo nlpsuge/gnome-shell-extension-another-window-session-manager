@@ -26,7 +26,6 @@ var closeSessionByUser = false;
 
 let __confirm = EndSessionDialog.EndSessionDialog.prototype._confirm;
 let __init = EndSessionDialog.EndSessionDialog.prototype._init;
-let _addButton = EndSessionDialog.EndSessionDialog.prototype.addButton;
 
 var State = {
     OPENED: 0,
@@ -38,34 +37,10 @@ var State = {
 var Autoclose = GObject.registerClass(
     class Autoclose extends GObject.Object {
         _init() {
-            this._runningApplicationListWindow = null;
+
             this._log = new Log.Log();
             const that = this;
-
-            EndSessionDialog.EndSessionDialog.prototype.addButton = function(buttonInfo) {
-                try {
-                    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/name#bound_function
-                    // Function.prototype.bind() produces a function whose name is "bound " plus the function name.
-                    if (buttonInfo.action.name !== `bound ${this.cancel.name}`) {
-                        buttonInfo.label = (`${buttonInfo.label}(via AWSM)`);
-
-                        // The button underlying uses `label` as an input param, so we cannot use Clutter.Text here
-                        // const label = new Clutter.Text();
-                        // label.set_markup(`${buttonInfo.label}(<b style='color:red'>via AWSM</b>)`);
-                        // buttonInfo.label = label;
-                    }
-                } catch (error) {
-                    that._log.error(error);
-                } finally {
-                    try {
-                        _addButton.call(this, buttonInfo);
-                    } catch (error) {
-                        that._log.error(error);
-                    }
-                }
-            }
-
-            EndSessionDialog.EndSessionDialog.prototype._confirm = function(signal) {
+            EndSessionDialog.EndSessionDialog.prototype._confirm = function (signal) {
                 try {
                     closeSessionByUser = true;
                     const closeSession = new CloseSession.CloseSession();
@@ -80,20 +55,9 @@ var Autoclose = GObject.registerClass(
                             this._stopTimer();
                             this._stopAltCapture();
                             // call gtkdialog via dbus
-                            if (!that._runningApplicationListWindow) {
-                                that._runningApplicationListWindow = new RunningApplicationListWindow(
-                                    this, 
-                                    signal,
-                                    () => this._dbusImpl.unexport(),
-                                    () => this._dbusImpl.export(Gio.DBus.session, '/org/gnome/SessionManager/EndSessionDialog')
-                                    );
-                            }
-                            
-                            
-                            that._runningApplicationListWindow.open();
+                            new RunningApplicationListWindow(this, signal).open();
                         } else {
                             // __confirm.call(this, signal);
-
                         }
                     } catch (error) {
                         that._log.error(error);
@@ -118,32 +82,22 @@ var Autoclose = GObject.registerClass(
                 EndSessionDialog.EndSessionDialog.prototype._init = __init;
                 __init = null;
             }
-
-            if (_addButton) {
-                EndSessionDialog.EndSessionDialog.prototype.addButton = _addButton;
-                _addButton = null;
-            }
         }
 
         destroy() {
-            log('des...')
             this._restoreEndSessionDialog();
-            if (this._runningApplicationListWindow) {
-                this._runningApplicationListWindow.destroyDialog()
-            }
-            
+
+
         }
 
 
     });
 
 
-var RunningApplicationListWindow = GObject.registerClass({
-        Signals: { 'opened': {}, 'closed': {} }
-    },
+var RunningApplicationListWindow = GObject.registerClass(
     class RunningApplicationListWindow extends St.BoxLayout {
 
-        _init(endSessionDialog, signal, onOpen, onComplete) {
+        _init(endSessionDialog, signal) {
             super._init({
                 // TODO
                 // style: 'width: 150em;',
@@ -159,13 +113,10 @@ var RunningApplicationListWindow = GObject.registerClass({
                 accessible_role: Atk.Role.DIALOG,
             });
 
-            this._signal = signal;
-            this._endSessionDialog = endSessionDialog;
-            this._onOpen = onOpen;
-            this._onComplete = onComplete;
+            this._dialog = new ModalDialog.ModalDialog();
 
-            this._delegate = this;
-            this._draggable = DND.makeDraggable(this, {
+            this._delegate = this._dialog;
+            this._draggable = DND.makeDraggable(this._dialog, {
                 restoreOnSuccess: false,
                 manualMode: false,
                 dragActorMaxSize: null,
@@ -176,19 +127,7 @@ var RunningApplicationListWindow = GObject.registerClass({
             this._draggable.connect('drag-end', this._onDragEnd.bind(this));
             this.inDrag = false;
 
-            this.connect('stage-views-changed', () => {
-                log('stage-views-changed...')
-            });
-            this.connectObject('notify::visible', (visible, p2) => {
-                log('visible 111 ' + visible + ' ' + p2)
-                log('this.visible ' + this.visible)
-                if (!this.visible 
-                    && (this.state === State.OPENING || this.state === State.OPENED)) {
-                    log('xxxxxxx')
-                }
 
-
-            });
             this.connect('hide', () => {
                 log('hiding ' + this.state)
             });
@@ -197,7 +136,7 @@ var RunningApplicationListWindow = GObject.registerClass({
             });
             this._draggable.actor.connect('event', (actor, event) => {
                 let [dropX, dropY] = event.get_coords();
-                let target = this._dragActor?.get_stage().get_actor_at_pos(Clutter.PickMode.ALL,
+                let target = this._dragActor.get_stage().get_actor_at_pos(Clutter.PickMode.ALL,
                                                                           dropX, dropY);
                 
                 const isr = this._draggable._eventIsRelease(event);
@@ -225,109 +164,75 @@ var RunningApplicationListWindow = GObject.registerClass({
             } else if (signal == 'ConfirmedReboot') {
                 label = 'Reboot anyway';
             }
+            this._signal = signal;
+            this._endSessionDialog = endSessionDialog;
 
             this._defaultAppSystem = Shell.AppSystem.get_default();
             this._settings = new PrefsUtils.PrefsUtils().getSettings();
 
-            this._removeFromLayoutIfNecessary(this);
+            // this._removeFromLayoutIfNecessary(this);
             // Main.layoutManager.modalDialogGroup.add_actor(this);
             // Main.layoutManager.uiGroup.add_actor(this);
-            Main.layoutManager.addChrome(this);
-
-            // let display = global.display;
-            // display.connect('restacked', (p1, p2) => {
-            //     log('ccc ' + this)
-            //     // const trackedActors = Main.layoutManager._trackedActors;
-            //     // trackedActors.forEach(actorData => {
-            //     //     log(actorData.actor + ' ' + actorData.actor.visible);
-            //     //     log(actorData.trackFullscreen)
-            //     // });
-            //     log('visible 1112 ' + p1 + ' ' + p2)
-            //     log('this.visible2 ' + this.visible)
-            //     if (!this.visible 
-            //         && (this.state === State.OPENING || this.state === State.OPENED)) {
-            //         log('xxxxxxx2')
-            //     }
-
-            //     // if (global.top_window_group)
-            //     //     Main.uiGroup.remove_child(global.top_window_group);
-            //     // Main.uiGroup.remove_child(this);
-
-            //     // GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, () => {
-            //     //     if (global.top_window_group)
-            //     //         Main.uiGroup.add_actor(global.top_window_group);
-            //     //     Main.uiGroup.add_actor(this);
-            //     //     return GLib.SOURCE_REMOVE;
-            //     // });
-
-
-            // });
-            // display.connect('in-fullscreen-changed', () => {
-            //     log('ccc in fullscreen')
-            //     const trackedActors = Main.layoutManager._trackedActors;
-            //     trackedActors.forEach(actorData => {
-            //         log(actorData.actor + ' ' + actorData.actor.visible);
-            //         log(actorData.trackFullscreen)
-            //     });
-            // });
+            // Main.layoutManager.addChrome(this);
 
             this._confirmDialogContent = new Dialog.MessageDialogContent();
             this._confirmDialogContent.title = `Running applications`;
 
-            this.backgroundStack = new St.Widget({
-                layout_manager: new Clutter.BinLayout(),
-                x_expand: true,
-                y_expand: true,
-            });
-            this._backgroundBin = new St.Bin({ child: this.backgroundStack });
-            this._monitorConstraint = new Layout.MonitorConstraint();
-            this._backgroundBin.add_constraint(this._monitorConstraint);
-            this.add_actor(this._backgroundBin);
+            // this.backgroundStack = new St.Widget({
+            //     layout_manager: new Clutter.BinLayout(),
+            //     x_expand: true,
+            //     y_expand: true,
+            // });
+            // this._backgroundBin = new St.Bin({ child: this.backgroundStack });
+            // this._monitorConstraint = new Layout.MonitorConstraint();
+            // this._backgroundBin.add_constraint(this._monitorConstraint);
+            // this.add_actor(this._backgroundBin);
 
-            this.backgroundStack.add_child(this);
+            // this.backgroundStack.add_child(this);
 
 
             // this.dialogLayout = new Dialog.Dialog(this.backgroundStack, null);
             // this.contentLayout = this.dialogLayout.contentLayout;
             // this.buttonLayout = this.dialogLayout.buttonLayout;
-            this.contentLayout = new St.BoxLayout({
-                vertical: true,
-                style_class: 'modal-dialog-content-box',
-                y_expand: true,
-                x_align: Clutter.ActorAlign.CENTER,
-                y_align: Clutter.ActorAlign.CENTER
-            });
+            // this.contentLayout = new St.BoxLayout({
+            //     vertical: true,
+            //     style_class: 'modal-dialog-content-box',
+            //     y_expand: true,
+            //     x_align: Clutter.ActorAlign.CENTER,
+            //     y_align: Clutter.ActorAlign.CENTER
+            // });
 
-            this.add_child(this.contentLayout);
+            // this.add_child(this.contentLayout);
 
-            this.buttonLayout = new St.Widget({
-                layout_manager: new Clutter.BoxLayout({ homogeneous: true }),
-            });
-            this.add_child(this.buttonLayout);
+            // this.buttonLayout = new St.Widget({
+            //     layout_manager: new Clutter.BoxLayout({ homogeneous: true }),
+            // });
+            // this.add_child(this.buttonLayout);
 
-            this.addButton({
+            this._dialog.addButton({
                 action: this._cancel.bind(this),
                 label: _('Cancel'),
                 key: Clutter.KEY_Escape,
             });
 
-            this._confirmButton = this.addButton({
+            this._confirmButton = this._dialog.addButton({
                 action: () => {
+                    this.close();
                     let signalId = this.connect('closed', () => {
                         this.disconnect(signalId);
                         this._confirm();
                     });
-                    this.close();
                 },
                 label: _(label),
             });
 
-            this.contentLayout.add_child(this._confirmDialogContent);
+            this._dialog.contentLayout.add_child(this._confirmDialogContent);
+            // this.contentLayout.add_child(this._confirmDialogContent);
 
             this._applicationSection = new Dialog.ListSection({
                 title: _('Please close running apps before proceeding'),
             });
-            this.contentLayout.add_child(this._applicationSection);
+            this._dialog.contentLayout.add_child(this._applicationSection);
 
             this._defaultAppSystem.connect('app-state-changed', this._appStateChanged.bind(this));
             this._showRunningApps(this._defaultAppSystem.get_running());
@@ -339,13 +244,11 @@ var RunningApplicationListWindow = GObject.registerClass({
 
                 this.hide();
             });
-            this._overViewHidingId = Main.overview.connect('hidden', () => {
+            this._overViewHidingId = Main.overview.connect('hiding', () => {
                 // Main.overview.disconnect(this._overViewHidingId);
-                if (this.state == State.CLOSED || this.state == State.CLOSING
-                    || this.state == State.OPENED || this.state == State.OPENING) 
+                if (this.state == State.CLOSED || this.state == State.CLOSING) 
                     return;
 
-                log('showing dialog ' + this.state)
                 this.show();
             });
 
@@ -370,7 +273,7 @@ var RunningApplicationListWindow = GObject.registerClass({
 
         _onDragBegin(_draggable, _time) {
             log('_onDragBegin')
-            this._removeFromLayoutIfNecessary();
+            // this._removeFromLayoutIfNecessary();
 
             this.inDrag = true;
             this._dragMonitor = {
@@ -420,7 +323,8 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         getDragActor() {
-            return this.get_actor();
+            // return this.get_actor();
+            return this._dialog;
         }
 
         acceptDrop() {
@@ -489,10 +393,10 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         open() {
-            if (this.state == State.OPENED || this.state == State.OPENING)
-                return true;
+            this._dialog.open()
+            // if (this.state == State.OPENED || this.state == State.OPENING)
+            //     return true;
 
-            this._updateState(State.CLOSING);
             const activeWorkspace = global.workspace_manager.get_active_workspace();
             const currentMonitorIndex = global.display.get_current_monitor();
             const workArea = activeWorkspace.get_work_area_for_monitor(currentMonitorIndex);
@@ -502,24 +406,23 @@ var RunningApplicationListWindow = GObject.registerClass({
             const y = workAreaHeight / 2 - this.height / 2;
             this.set_position(x, y);
 
-            this._monitorConstraint.index = global.display.get_current_monitor();
-            this.show();
-            this._updateState(State.OPENED);
-            if (this._onOpen)
-                this._onOpen();
-            this.emit('opened');
+            // this._monitorConstraint.index = global.display.get_current_monitor();
+            // this.show();
+            // this._state = State.OPENED;
             return true;
         }
 
-        close() {
-            if (this.state == State.CLOSED || this.state == State.CLOSING)
-                return;
+        destroy() {
+            log('destroying...')
+        }
 
-            this._updateState(State.CLOSING);
-            this.hide();
+        close() {
+            // if (this.state == State.CLOSED || this.state == State.CLOSING)
+            //     return;
+
+            // this.hide();
             // this.destroy();
-            this._updateState(State.CLOSED);
-            this.emit('closed');
+            this._dialog.close();
         }
 
         _appStateChanged(appSystem, app) {
@@ -547,37 +450,14 @@ var RunningApplicationListWindow = GObject.registerClass({
 
         _confirm() {
             // __confirm.call(this._endSessionDialog, this._signal);
-            log('this._onComplete _confirm ' + this._onComplete)
-            if(this._onComplete)
-                this._onComplete();
         }
 
         _cancel() {
-            log('this._onComplete canceled ' + this._onComplete)
             this.close();
-            if(this._onComplete)
-                this._onComplete();
-        }
-
-        _updateState(state) {
-            this.state = this.state
         }
 
         destroy() {
-            log('destroy override...')
-        }
 
-        destroyDialog() {
-            log('destroying dialog...')
-            super.destroy();
-            if (this._overViewShowingId) {
-                Main.overview.disconnect(this._overViewShowingId);
-                this._overViewShowingId = 0;
-            }
-            if (this._overViewHidingId) {
-                Main.overview.disconnect(this._overViewHidingId);
-                this._overViewHidingId = 0;
-            }
         }
 
 
