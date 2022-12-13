@@ -24,22 +24,49 @@ const PrefsUtils = Me.imports.utils.prefsUtils;
 
 var closeSessionByUser = false;
 
-let __confirm = EndSessionDialog.EndSessionDialog.prototype._confirm;
-let __init = EndSessionDialog.EndSessionDialog.prototype._init;
-let _addButton = EndSessionDialog.EndSessionDialog.prototype.addButton;
+let __confirm = null;
+let __init = null;
+let _addButton = null;
+
+const callFunc = function(thisObj, func, param) {
+    const log = new Log.Log();
+    try {
+        return func.call(thisObj, param);   
+    } catch (error) {
+        log.error(error);
+    }
+}
 
 var State = {
     OPENED: 0,
     CLOSED: 1,
     OPENING: 2,
     CLOSING: 3,
+    CANCELING: 4,
+    CANCELLED: 5,
+    CONFIRMING: 6,
+    CONFIRMED: 7
 };
 
 var Autoclose = GObject.registerClass(
     class Autoclose extends GObject.Object {
         _init() {
-            this._runningApplicationListWindow = null;
+
             this._log = new Log.Log();
+            
+            this._runningApplicationListWindow = null;
+            this._dbusImpl = null;
+            
+            this._overrideEndSessionDialog();
+        }
+
+        _overrideEndSessionDialog() {
+            __confirm = EndSessionDialog.EndSessionDialog.prototype._confirm;
+            __init = EndSessionDialog.EndSessionDialog.prototype._init;
+            _addButton = EndSessionDialog.EndSessionDialog.prototype.addButton;
+
+            this._log.debug('Override some functions in EndSessionDialog');
+            
             const that = this;
 
             EndSessionDialog.EndSessionDialog.prototype.addButton = function(buttonInfo) {
@@ -57,13 +84,9 @@ var Autoclose = GObject.registerClass(
                 } catch (error) {
                     that._log.error(error);
                 } finally {
-                    try {
-                        _addButton.call(this, buttonInfo);
-                    } catch (error) {
-                        that._log.error(error);
-                    }
+                    callFunc(this, _addButton, buttonInfo);
                 }
-            }
+            };
 
             EndSessionDialog.EndSessionDialog.prototype._confirm = function(signal) {
                 try {
@@ -82,18 +105,33 @@ var Autoclose = GObject.registerClass(
                             // call gtkdialog via dbus
                             if (!that._runningApplicationListWindow) {
                                 that._runningApplicationListWindow = new RunningApplicationListWindow(
-                                    this, 
+                                    this,
                                     signal,
-                                    () => this._dbusImpl.unexport(),
-                                    () => this._dbusImpl.export(Gio.DBus.session, '/org/gnome/SessionManager/EndSessionDialog')
-                                    );
+                                    () => {
+                                        try {
+                                            that._log.debug('Unexporting EndSessionDialog dbus service');
+                                            that._dbusImpl = this._dbusImpl;
+                                            //this._dbusImpl.flush();
+                                            this._dbusImpl.unexport();
+                                        } catch (error) {
+                                            that._log.error(error);
+                                        }
+                                    },
+                                    () => {
+                                        try {
+                                            that._log.debug('Restoring to export EndSessionDialog dbus service');
+                                            this._dbusImpl.export(Gio.DBus.session, '/org/gnome/SessionManager/EndSessionDialog');
+                                        } catch (error) {
+                                            that._log.error(error);
+                                        }
+                                    }
+                                );
                             }
-                            
-                            
+
+
                             that._runningApplicationListWindow.open();
                         } else {
                             // __confirm.call(this, signal);
-
                         }
                     } catch (error) {
                         that._log.error(error);
@@ -105,13 +143,19 @@ var Autoclose = GObject.registerClass(
                     that.error(error);
                 }
 
-            }
+            };
         }
 
         _restoreEndSessionDialog() {
             if (__confirm) {
                 EndSessionDialog.EndSessionDialog.prototype._confirm = __confirm;
                 __confirm = null;
+            }
+
+            if (this._dbusImpl) {
+                this._log.debug('Restoring to export EndSessionDialog dbus service');
+                this._dbusImpl.export(Gio.DBus.session, '/org/gnome/SessionManager/EndSessionDialog');
+                this._dbusImpl = null;
             }
 
             if (__init) {
@@ -193,7 +237,7 @@ var RunningApplicationListWindow = GObject.registerClass({
                 log('hiding ' + this.state)
             });
             this._draggable.actor.connect('destroy', () => {
-                log('destroyed')
+                log(`${RunningApplicationListWindow.name} _draggable destroyed`)
             });
             this._draggable.actor.connect('event', (actor, event) => {
                 let [dropX, dropY] = event.get_coords();
@@ -313,11 +357,7 @@ var RunningApplicationListWindow = GObject.registerClass({
 
             this._confirmButton = this.addButton({
                 action: () => {
-                    let signalId = this.connect('closed', () => {
-                        this.disconnect(signalId);
-                        this._confirm();
-                    });
-                    this.close();
+                    this._confirm();
                 },
                 label: _(label),
             });
@@ -334,19 +374,11 @@ var RunningApplicationListWindow = GObject.registerClass({
 
             this._overViewShowingId = Main.overview.connect('showing', () => {
                 // Main.overview.disconnect(this._overViewShowingId);
-                if (this.state == State.CLOSED || this.state == State.CLOSING)
-                    return;
-
-                this.hide();
+                this.close();
             });
             this._overViewHidingId = Main.overview.connect('hidden', () => {
                 // Main.overview.disconnect(this._overViewHidingId);
-                if (this.state == State.CLOSED || this.state == State.CLOSING
-                    || this.state == State.OPENED || this.state == State.OPENING) 
-                    return;
-
-                log('showing dialog ' + this.state)
-                this.show();
+                this.showAndUpdateState();
             });
 
         }
@@ -492,7 +524,7 @@ var RunningApplicationListWindow = GObject.registerClass({
             if (this.state == State.OPENED || this.state == State.OPENING)
                 return true;
 
-            this._updateState(State.CLOSING);
+            this._updateState(State.OPENING);
             const activeWorkspace = global.workspace_manager.get_active_workspace();
             const currentMonitorIndex = global.display.get_current_monitor();
             const workArea = activeWorkspace.get_work_area_for_monitor(currentMonitorIndex);
@@ -504,22 +536,34 @@ var RunningApplicationListWindow = GObject.registerClass({
 
             this._monitorConstraint.index = global.display.get_current_monitor();
             this.show();
-            this._updateState(State.OPENED);
             if (this._onOpen)
                 this._onOpen();
             this.emit('opened');
+            this._updateState(State.OPENED);
             return true;
         }
 
         close() {
-            if (this.state == State.CLOSED || this.state == State.CLOSING)
-                return;
+            log('hiding dialog ' + this.state)
+            if (this.state == State.OPENING || this.state == State.OPENED) {
+                this._updateState(State.CLOSING);
+                this.hide();
+    
+                // this.destroy();
+                this.emit('closed');
+                
+                this._updateState(State.CLOSED);   
+            }
+        }
 
-            this._updateState(State.CLOSING);
-            this.hide();
-            // this.destroy();
-            this._updateState(State.CLOSED);
-            this.emit('closed');
+        showAndUpdateState() {
+            const aboutToShow = this.state == State.CLOSING || this.state == State.CLOSED;
+            this._log.debug(`Showing ${RunningApplicationListWindow.name} with state ${this.state}: ${aboutToShow}`)
+            if (aboutToShow) {
+                this._updateState(State.OPENING);
+                this.show();
+                this._updateState(State.OPENED);
+            }
         }
 
         _appStateChanged(appSystem, app) {
@@ -546,21 +590,35 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         _confirm() {
+            log('this._onComplete _confirm ')
+            if (this.state == State.CONFIRMING || this.state == State.CONFIRMED)
+                return;
+
+            this._updateState(State.CONFIRMING);
             // __confirm.call(this._endSessionDialog, this._signal);
-            log('this._onComplete _confirm ' + this._onComplete)
+            this.hide();
             if(this._onComplete)
                 this._onComplete();
+                
+            this._updateState(State.CONFIRMED);
         }
 
         _cancel() {
-            log('this._onComplete canceled ' + this._onComplete)
-            this.close();
+            log('this._onComplete canceled ' + this.state);
+            if (this.state == State.CANCELING || this.state == State.CANCELLED)
+                return;
+            
+            this._updateState(State.CANCELING);
+            this.hide();
+
             if(this._onComplete)
                 this._onComplete();
+            
+            this._updateState(State.CANCELLED);
         }
 
         _updateState(state) {
-            this.state = this.state
+            this.state = state
         }
 
         destroy() {
@@ -569,6 +627,7 @@ var RunningApplicationListWindow = GObject.registerClass({
 
         destroyDialog() {
             log('destroying dialog...')
+            this.hide();
             super.destroy();
             if (this._overViewShowingId) {
                 Main.overview.disconnect(this._overViewShowingId);

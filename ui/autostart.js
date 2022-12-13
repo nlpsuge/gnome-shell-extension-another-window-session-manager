@@ -18,6 +18,8 @@ const CheckBox = imports.ui.checkBox;
 const Dialog = imports.ui.dialog;
 const ModalDialog = imports.ui.modalDialog;
 
+const Autoclose = Me.imports.ui.autoclose;
+
 const Log = Me.imports.utils.log;
 
 const RestoreSession = Me.imports.restoreSession;
