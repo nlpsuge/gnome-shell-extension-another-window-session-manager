@@ -81,7 +81,7 @@ var CloseSession = class {
             });
 
             return {
-                hasRunningApps
+                hasRunningApps: hasRunningApps || this._defaultAppSystem.get_running().length
             };
         } catch (error) {
             this._log.error(error);
