@@ -27,6 +27,7 @@ var closeSessionByUser = false;
 let __confirm = null;
 let __init = null;
 let _addButton = null;
+let _OpenAsync = null;
 
 
 const callFunc = function(thisObj, func, param) {
@@ -65,10 +66,20 @@ var Autoclose = GObject.registerClass(
             __confirm = EndSessionDialog.EndSessionDialog.prototype._confirm;
             __init = EndSessionDialog.EndSessionDialog.prototype._init;
             _addButton = EndSessionDialog.EndSessionDialog.prototype.addButton;
+            _OpenAsync = EndSessionDialog.EndSessionDialog.prototype.OpenAsync;
 
             this._log.debug('Override some functions in EndSessionDialog');
             
             const that = this;
+
+            // OpenAsync is promised and does not have a `try..catch...` surrounding the entire function, 
+            // so here we catch the error to avoid `Unhandled promise rejection`.
+            EndSessionDialog.EndSessionDialog.prototype.OpenAsync = function(parameters, invocation) {
+                _OpenAsync.call(this, parameters, invocation)
+                    .catch(e => {
+                        that._log.error(e);
+                    });
+            }
 
             EndSessionDialog.EndSessionDialog.prototype.addButton = function(buttonInfo) {
                 try {
@@ -85,7 +96,7 @@ var Autoclose = GObject.registerClass(
                 } catch (error) {
                     that._log.error(error);
                 } finally {
-                    callFunc(this, _addButton, buttonInfo);
+                    return callFunc(this, _addButton, buttonInfo);
                 }
             };
 
@@ -139,7 +150,7 @@ var Autoclose = GObject.registerClass(
 
                                                 if (opt === 'Confirm') {
                                                     // this.close();
-                                                    __confirm.call(this, signal);
+                                                    callFunc(this, __confirm, signal);
                                                 }
 
                                                 if (opt == 'Cancel') {
@@ -152,7 +163,7 @@ var Autoclose = GObject.registerClass(
 
                                     that._runningApplicationListWindow.open();
                                 } else {
-                                    __confirm.call(this, signal);
+                                    callFunc(this, __confirm, signal);
                                 }
                             } catch (error) {
                                 that._log.error(error);
@@ -187,6 +198,11 @@ var Autoclose = GObject.registerClass(
             if (_addButton) {
                 EndSessionDialog.EndSessionDialog.prototype.addButton = _addButton;
                 _addButton = null;
+            }
+
+            if (_OpenAsync) {
+                EndSessionDialog.EndSessionDialog.prototype.OpenAsync = _OpenAsync;
+                _OpenAsync = null;
             }
         }
 
