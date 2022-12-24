@@ -27,6 +27,62 @@
           <object class="GtkBox">
             <property name="orientation">vertical</property>
             <child>
+              <object class="GtkListBoxRow" id="auto_close_session_multi_row">
+                <property name="focusable">1</property>
+                <property name="child">
+                  <object class="GtkGrid" id="auto_close_session_multi_grid1">
+                    <property name="margin-top">12</property>
+                    <property name="margin-bottom">12</property>
+                    <property name="row-spacing">6</property>
+                    <property name="column-spacing">32</property>
+                    <child>
+                      <object class="GtkLabel" id="auto_close_session_multi_label">
+                        <property name="hexpand">1</property>
+                        <property name="label" translatable="yes">Auto close session</property>
+                        <property name="use-markup">1</property>
+                        <property name="xalign">0</property>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">0</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSwitch" id="auto_close_session_switch">
+                        <property name="focusable">1</property>
+                        <property name="halign">end</property>
+                        <property name="valign">center</property>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">0</property>
+                          <property name="row-span">2</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="auto_close_session_multi_label_description">
+                        <property name="hexpand">1</property>
+                        <property name="label" translatable="yes">Enable to close running apps and windows while Logout, Reboot and Shutdown via endSessionDialog.</property>
+                        <property name="wrap">True</property>
+                        <property name="use-markup">1</property>
+                        <property name="xalign">0</property>
+                        <style>
+                          <class name="dim-label"/>
+                        </style>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">1</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
               <object class="GtkListBoxRow" id="close_by_rules_multi_row">
                 <property name="focusable">1</property>
                 <property name="child">
@@ -191,7 +247,49 @@
             <property name="margin-top">30</property>
             <property name="orientation">vertical</property>
             <child>
+              <object class="GtkFrame" id="restore_previous_frame">
+                <property name="child">
+                  <object class="GtkListBoxRow" id="restore_previous_multi_row">
+                    <property name="focusable">1</property>
+                    <property name="child">
+                      <object class="GtkGrid" id="restore_previous_multi_grid">
+                        <property name="margin-top">12</property>
+                        <property name="margin-bottom">12</property>
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">32</property>
+                        <child>
+                          <object class="GtkLabel" id="restore_previous_multi_label">
+                            <property name="hexpand">1</property>
+                            <property name="label" translatable="yes">Restore previous apps and windows at startup</property>
+                            <property name="use-markup">1</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">0</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSwitch" id="restore_previous_switch">
+                            <property name="focusable">1</property>
+                            <property name="halign">end</property>
+                            <property name="valign">center</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">0</property>
+                              <property name="row-span">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
               <object class="GtkFrame" id="restore_window_frame">
+                <property name="margin-top">30</property>
                 <property name="child">
                   <object class="GtkListBoxRow" id="restore_at_startup_multi_row">
                     <property name="focusable">1</property>
@@ -226,7 +324,7 @@
                           </object>
                         </child>
                         <child>
-                        <object class="GtkLabel" id="restore_at_startup_multi_label_description">
+                          <object class="GtkLabel" id="restore_at_startup_multi_label_description">
                             <property name="hexpand">1</property>
                             <property name="label" translatable="yes">Install a .desktop to ~/.config/autostart if enabled</property>
                             <property name="wrap">True</property>
@@ -238,31 +336,6 @@
                             <layout>
                               <property name="column">0</property>
                               <property name="row">1</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkLabel" id="restore_session_interval_label">
-                            <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">Restore applications interval([0, 300000]ms)</property>
-                            <property name="use-markup">1</property>
-                            <property name="xalign">0</property>
-                            <layout>
-                              <property name="column">0</property>
-                              <property name="row">2</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkSpinButton" id="restore_session_interval_spinbutton">
-                            <property name="focusable">1</property>
-                            <property name="text" translatable="yes">10</property>
-                            <property name="adjustment">restore_session_interval_spinbutton_adjustment</property>
-                            <property name="numeric">1</property>
-                            <property name="value">0</property>
-                            <layout>
-                              <property name="column">1</property>
-                              <property name="row">2</property>
                             </layout>
                           </object>
                         </child>
@@ -344,7 +417,7 @@
                         <child>
                           <object class="GtkLabel" id="autostart_delay_multi_label_description">
                             <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">Update the above .desktop if changed</property>
+                            <property name="label" translatable="yes">Update the above .desktop if changed. 5 by default.</property>
                             <property name="wrap">True</property>
                             <property name="use-markup">1</property>
                             <property name="xalign">0</property>
@@ -370,6 +443,71 @@
                 <child type="label_item">
                   <placeholder/>
                 </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkFrame" id="restore_session_interval_frame">
+                <property name="margin-top">30</property>
+                <property name="child">
+                  <object class="GtkListBox">
+                    <child>
+                      <object class="GtkListBoxRow">
+                        <property name="focusable">1</property>
+                        <property name="child">
+                          <object class="GtkGrid">
+                            <property name="margin-top">12</property>
+                            <property name="margin-bottom">12</property>
+                            <property name="row-spacing">6</property>
+                            <property name="column-spacing">32</property>
+                            <child>
+                              <object class="GtkLabel" id="restore_session_interval_label">
+                                <property name="hexpand">1</property>
+                                <property name="label" translatable="yes">Restore applications interval([0, 300000]ms)</property>
+                                <property name="use-markup">1</property>
+                                <property name="xalign">0</property>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">0</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkSpinButton" id="restore_session_interval_spinbutton">
+                                <property name="focusable">1</property>
+                                <property name="text" translatable="yes">10</property>
+                                <property name="adjustment">restore_session_interval_spinbutton_adjustment</property>
+                                <property name="numeric">1</property>
+                                <property name="value">0</property>
+                                <property name="valign">center</property>
+                                <layout>
+                                  <property name="column">1</property>
+                                  <property name="row">0</property>
+                                  <property name="row-span">2</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="restore_session_interval_label_description">
+                                <property name="hexpand">1</property>
+                                <property name="label" translatable="yes">0 by default. There's no need to set this option normally, unless the process of restoring session is too fast to freeze the system, for example.</property>
+                                <property name="wrap">True</property>
+                                <property name="use-markup">1</property>
+                                <property name="xalign">0</property>
+                                <style>
+                                  <class name="dim-label"/>
+                                </style>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">1</property>
+                                </layout>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
+                  </object>
+                </property>
               </object>
             </child>
             <child>

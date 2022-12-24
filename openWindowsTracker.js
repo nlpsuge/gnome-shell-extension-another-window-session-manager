@@ -65,8 +65,6 @@ var OpenWindowsTracker = class {
         this._restoringSession = false;
         this._runningSaveCancelableMap = new Map();
 
-        this._windowUnmanagedIds = [];
-
         this._confirmedLogoutId = 0;
         this._confirmedRebootId = 0;
         this._confirmedShutdownId = 0;
@@ -216,7 +214,7 @@ var OpenWindowsTracker = class {
             );
 
             if (sessionSaved) {
-                await this._cleanUpSessionFile(window, sessionDirectory, sessionName);
+                this._connectSignalsToCleanUpSessionFile(window, sessionDirectory, sessionName);
             }
         } catch (error) {
             // Ignore cancelation errors
@@ -226,21 +224,55 @@ var OpenWindowsTracker = class {
         }
     }
 
-    async _cleanUpSessionFile(window, sessionDirectory, sessionName) {
-        const unmanagedId = window.connect('unmanaged', () => {
-            if (Autoclose.closeSessionByUser) {
-                return;
-            }
+    _connectSignalsToCleanUpSessionFile(window, sessionDirectory, sessionName) {
+        // Based on window
 
-            const sessionFilePath = `${sessionDirectory}/${sessionName}`;
-            const app = this._windowTracker.get_window_app(window);
-            if (app) {
-                FileUtils.removeFileAndParent(sessionFilePath);
-            } else {
-                FileUtils.removeFile(sessionDirectory, true);
-            }
+        let unmanagingId = window.connect('unmanaging', () => {
+            window.disconnect(unmanagingId);
+            unmanagingId = 0;
+            this._cleanUpSessionFileByWindow(window, sessionDirectory, sessionName);
         });
-        this._windowUnmanagedIds.push([window, unmanagedId]);
+        this._signals.push([unmanagingId, window]);
+
+        // Based on app, just in case the session file cannot be cleanup while the last window is closed.
+
+        const app = this._windowTracker.get_window_app(window);
+        if (app) {
+            const appName = app.get_name();
+            let appId = app.connect('notify::state', app => {
+                if (app.state === Shell.AppState.STOPPED) {
+                    app.disconnect(appId);
+                    appId = 0;
+                    this._cleanUpSessionFileByApp(app, appName, sessionDirectory);
+                }
+            });
+            this._signals.push([appId, app]);
+        }
+    }
+
+    _cleanUpSessionFileByWindow(window, sessionDirectory, sessionName) {
+        if (!window || Autoclose.closeSessionByUser) return;
+
+        const sessionFilePath = `${sessionDirectory}/${sessionName}`;
+        if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) return;
+
+        const app = this._windowTracker.get_window_app(window);
+
+        this._log.debug(`${window.get_title()}(${app?.get_name()}) was closed. Cleaning up its saved session files.`);
+
+        FileUtils.removeFileAndParent(sessionFilePath);
+    }
+
+    _cleanUpSessionFileByApp(app, appName, sessionDirectory) {
+        if (!app || Autoclose.closeSessionByUser) return;
+
+        if (!GLib.file_test(sessionDirectory, GLib.FileTest.EXISTS)) return;
+
+        // If this app is window-backed, app.get_name() will cause gnome-shell to bail out, so we get 
+        // the app name outside this function. (See: shell-app.c -> shell_app_get_name -> window_backed_app_get_window: g_assert (app->running_state->windows))
+        this._log.debug(`${appName} was closed. Cleaning up its saved session files.`);
+
+        FileUtils.removeFile(sessionDirectory, true);
     }
 
     _onNameAppearedGnomeShell() {
@@ -365,11 +397,6 @@ var OpenWindowsTracker = class {
         if (cancellable && !cancellable.is_cancelled()) {
             cancellable.cancel();
         }
-
-        this._windowUnmanagedIds.forEach(([window, unmanagedId]) => {
-            window.disconnect(unmanagedId);
-        });
-        this._windowUnmanagedIds = [];
 
     }
 

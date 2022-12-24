@@ -35,20 +35,23 @@ var SaveSession = class {
     }
 
     async saveSessionAsync(sessionName, baseDir = null, backup = true) {
-        this._log.debug(`Generating session ${sessionName}`);
+        try {
+            this._log.debug(`Generating session ${sessionName}`);
 
-        const sessionConfig = await this._buildSession(sessionName);
-
-        sessionConfig.x_session_config_objects = sessionConfig.sort();
-        
-        if (backup) {
-            await this.backupExistingSessionIfNecessary(sessionName, baseDir);
+            const sessionConfig = await this._buildSession(sessionName);
+    
+            sessionConfig.x_session_config_objects = sessionConfig.sort();
+            
+            if (backup) {
+                await this.backupExistingSessionIfNecessary(sessionName, baseDir);
+            }
+    
+            await this._saveSessionConfigAsync(sessionConfig, baseDir);
+    
+            // TODO saved Notification   
+        } catch (error) {
+            this._log.error(error);
         }
-
-        await this._saveSessionConfigAsync(sessionConfig, baseDir);
-
-        // TODO saved Notification
-
     }
 
     async saveWindowSessionAsync(metaWindow, sessionName, baseDir, cancellable = null) {

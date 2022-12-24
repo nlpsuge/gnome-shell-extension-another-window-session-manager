@@ -20,6 +20,7 @@ const Prefs = GObject.registerClass(
         _init() {
             Gtk.init()
             
+            // gsettings
             this._settings = ExtensionUtils.getSettings(
                 'org.gnome.shell.extensions.another-window-session-manager');
 
@@ -52,6 +53,13 @@ const Prefs = GObject.registerClass(
             this._settings.bind(
                 'enable-autorestore-sessions',
                 this.restore_at_startup_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+            
+            this._settings.bind(
+                'enable-restore-previous-session',
+                this.restore_previous_switch,
                 'active',
                 Gio.SettingsBindFlags.DEFAULT
             );
@@ -106,6 +114,13 @@ const Prefs = GObject.registerClass(
             );
 
             this._settings.bind(
+                'enable-autoclose-session',
+                this.auto_close_session_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
                 'enable-close-by-rules',
                 this.close_by_rules_switch,
                 'active',
@@ -142,9 +157,22 @@ const Prefs = GObject.registerClass(
             this.timer_on_the_autostart_dialog_spinbutton = this._builder.get_object('timer_on_the_autostart_dialog_spinbutton');
             this.autostart_delay_spinbutton = this._builder.get_object('autostart_delay_spinbutton');
             this.restore_window_tiling_switch = this._builder.get_object('restore_window_tiling_switch');
+            this.restore_window_tiling_switch.connect('notify::active', (widget) => {
+                const active = widget.active;
+                this.raise_windows_together_switch.set_sensitive(active);
+            });
             this.raise_windows_together_switch = this._builder.get_object('raise_windows_together_switch');
             this.stash_and_restore_states_switch = this._builder.get_object('stash_and_restore_states_switch');
 
+            this.restore_previous_switch = this._builder.get_object('restore_previous_switch');
+            this.restore_previous_switch.connect('notify::active', (widget) => {
+                const active = widget.active;
+                const activeOfRestoreAtStartup = this.restore_at_startup_switch.get_active();
+                if (activeOfRestoreAtStartup) {
+                    this.restore_at_startup_switch.set_active(!active);
+                }
+            });
+            
             this.restore_at_startup_switch = this._builder.get_object('restore_at_startup_switch');
             this.restore_at_startup_switch.connect('notify::active', (widget) => {
                 const active = widget.active;
@@ -157,7 +185,10 @@ const Prefs = GObject.registerClass(
                 }
                 
                 this.autostart_delay_spinbutton.set_sensitive(active);
-                
+                const activeOfRestorePrevious = this.restore_previous_switch.get_active();
+                if (activeOfRestorePrevious) {
+                    this.restore_previous_switch.set_active(!active);
+                }
             });
 
             this.restore_at_startup_without_asking_switch = this._builder.get_object('restore_at_startup_without_asking_switch');
@@ -167,6 +198,7 @@ const Prefs = GObject.registerClass(
             });
 
             this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
+            this.auto_close_session_switch = this._builder.get_object('auto_close_session_switch');
 
         }
 

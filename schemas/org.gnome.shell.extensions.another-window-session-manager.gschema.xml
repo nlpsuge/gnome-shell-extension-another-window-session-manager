@@ -36,6 +36,21 @@
       <description>
       </description>
     </key>
+    <key name='enable-autoclose-session' type="b">
+      <default>true</default>
+      <summary>
+      Enable to close running apps and windows while Logout, Reboot and Shutdown
+      via endSessionDialog.
+      </summary>
+      <description>
+      </description>
+    </key>
+    <key name='enable-restore-previous-session' type="b">
+      <default>false</default>
+      <summary>Enable to Restore previous apps and windows at startup</summary>
+      <description>
+      </description>
+    </key>
     <key name='enable-autorestore-sessions' type="b">
       <default>false</default>
       <summary>Enable to restore session(s) on startup</summary>

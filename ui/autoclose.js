@@ -55,7 +55,8 @@ var Autoclose = GObject.registerClass(
         _init() {
 
             this._log = new Log.Log();
-            
+            this._settings = new PrefsUtils.PrefsUtils().getSettings();
+
             this._runningApplicationListWindow = null;
             this._dbusImpl = null;
             
@@ -68,12 +69,12 @@ var Autoclose = GObject.registerClass(
             _addButton = EndSessionDialog.EndSessionDialog.prototype.addButton;
             _OpenAsync = EndSessionDialog.EndSessionDialog.prototype.OpenAsync;
 
-            this._log.debug('Override some functions in EndSessionDialog');
+            this._log.debug('Overriding some functions in EndSessionDialog');
             
             const that = this;
 
             // OpenAsync is promised and does not have a `try..catch...` surrounding the entire function, 
-            // so here we catch the error to avoid `Unhandled promise rejection`.
+            // so here we catch the error to avoid `Unhandled promise rejection` possibly caused by this extension.
             EndSessionDialog.EndSessionDialog.prototype.OpenAsync = function(parameters, invocation) {
                 _OpenAsync.call(this, parameters, invocation)
                     .catch(e => {
@@ -102,6 +103,12 @@ var Autoclose = GObject.registerClass(
 
             EndSessionDialog.EndSessionDialog.prototype._confirm = function(signal) {
                 try {
+                    const enableAutocloseSession = that._settings.get_boolean('enable-autoclose-session');
+                    if (!enableAutocloseSession) {
+                        callFunc(this, __confirm, signal);
+                        return;
+                    }
+                    
                     closeSessionByUser = true;
                     const closeSession = new CloseSession.CloseSession();
                     closeSession.closeWindows()
@@ -172,7 +179,7 @@ var Autoclose = GObject.registerClass(
                             that._log.error(error);
                         });
                 } catch (error) {
-                    that.error(error);
+                    that._log.error(error);
                 }
 
             };
@@ -593,12 +600,47 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         _appStateChanged(appSystem, app) {
-            if (app.get_state() === Shell.AppState.STARTING) {
-                return;
-            }
+            // if (app.get_state() !== Shell.AppState.STOPPED) {
+            //     this._desync();
+            // }
 
-            this._showRunningApps(this._defaultAppSystem.get_running());
+            const runningApps = this._defaultAppSystem.get_running();
+            this._showRunningApps(runningApps);
+            // this._sync();
         }
+
+        // _startTimer() {
+        //     let startTime = GLib.get_monotonic_time();
+        //     this._secondsLeft = this._totalSecondsToStayOpen;
+    
+        //     this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
+        //         let currentTime = GLib.get_monotonic_time();
+        //         let secondsElapsed = (currentTime - startTime) / 1000000;
+    
+        //         this._secondsLeft = this._totalSecondsToStayOpen - secondsElapsed;
+        //         if (this._secondsLeft > 0) {
+        //             this._sync();
+        //             return GLib.SOURCE_CONTINUE;
+        //         }
+    
+        //         this._confirm();
+        //         this.close();
+        //         this._timerId = 0;
+    
+        //         return GLib.SOURCE_REMOVE;
+        //     });
+        //     GLib.Source.set_name_by_id(this._timerId, '[gnome-shell-extension-another-window-session-manager] this._confirm');
+        // }
+
+        // _sync() {
+        //     const displayTime = EndSessionDialog._roundSecondsToInterval(this._totalSecondsToStayOpen,
+        //                                                                  this._secondsLeft,
+        //                                                                  1);
+        //     const desc = Gettext.ngettext('\'' + this._sessionName + '\' will be restored in %d second',
+        //         '\'' + this._sessionName + '\' will be restored in %d seconds', displayTime).format(displayTime);
+        //     this._confirmDialogContent.description = desc;
+
+        // }
 
         _showRunningApps(apps) {
             const nChildren = this._applicationSection.list.get_n_children();
