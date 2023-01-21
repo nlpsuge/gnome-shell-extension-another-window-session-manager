@@ -88,7 +88,7 @@ sudo chmod 644 /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
 
 # 3. Autostart the ydotoold service under the normal user
 sudo cp /usr/lib/systemd/system/ydotool.service /usr/lib/systemd/user
-sudo systemctl --user enable ydotool.service
+systemctl --user enable ydotool.service
 ```
 
 And then reboot the system to take effect. Relogin maybe work too.

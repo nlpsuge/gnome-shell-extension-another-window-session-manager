@@ -12,6 +12,8 @@ const Autostart = Me.imports.ui.autostart;
 const Autoclose = Me.imports.ui.autoclose;
 const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
 
+Me.imports.utils.string;
+
 let _indicator;
 let _autostartServiceProvider;
 let _openWindowsTracker;

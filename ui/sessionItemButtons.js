@@ -245,8 +245,6 @@ class SessionItemButtons extends GObject.Object {
 
     _onClickClose(button, event) {
         // TODO Close specified windows in the session?
-        this._closeSession.closeWindows().catch(e => {
-            this._log.error(e)
-        });
+        this._closeSession.closeWindows();
     }
 });

@@ -78,6 +78,8 @@ var SessionConfigObject = class {
     window_tiling; // WindowTiling
 
     is_focused; // boolean, whether is the currently active window
+
+    display_server; // string. X11, Wayland
 }
 
 var SessionConfig = class {

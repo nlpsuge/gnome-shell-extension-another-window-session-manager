@@ -48,13 +48,10 @@ var CloseSession = class {
 
             let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
             for(const app of running_apps_closing_by_rules) {
-                await this._tryCloseAppsByRules(app).catch(e => {
-                    this._log.error(e);
-                });
+                await this._tryCloseAppsByRules(app);
             }
             
             let promises = [];
-            let hasRunningApps = false;
             for (const app of new_running_apps) {
                 const promise = new Promise((resolve, reject) => {
                     this._log.info(`Closing ${app.get_name()}`);
@@ -64,7 +61,7 @@ var CloseSession = class {
                                 this._log.info(`Closed ${app.get_name()}`);
                             } else {
                                 this._log.warn(`Can not close ${app.get_name()} because ${reason}`);
-                                hasRunningApps = true;
+                                app._cannot_close_reason = reason;
                             }
                             resolve();   
                         } catch (error) {
@@ -81,7 +78,7 @@ var CloseSession = class {
             });
 
             return {
-                hasRunningApps: hasRunningApps || this._defaultAppSystem.get_running().length
+                hasRunningApps: this._defaultAppSystem.get_running().length
             };
         } catch (error) {
             this._log.error(error);
@@ -99,9 +96,10 @@ var CloseSession = class {
      * @returns true if this `app` is closed, otherwise return false which means it still has unclosed windows
      */
     async _closeOneApp(app) {
+        app._is_closing = true;
+        let closed = true;
+        let reason;
         try {
-            let closed = true;
-            let reason;
             if (app.get_n_windows() > 1) {
                 const appInWhitelist = this.whitelist.includes(app.get_id());
                 let windows = this._sortWindows(app);
@@ -139,12 +137,15 @@ var CloseSession = class {
                     }
                 }
             }
-            
-            return [closed, reason];
         } catch (e) {
+            closed = false;
+            reason = `Error raised while closing app: ${e.message}`;
             this._log.error(e);
-            return [false, `Error raised while closing app: ${e.message}`];
+        } finally {
+            app._is_closing = false;
         }
+
+        return [closed, reason];
     }
 
     _awaitDeleteWindow(app, metaWindow) {
@@ -160,46 +161,54 @@ var CloseSession = class {
     }
 
     async _tryCloseAppsByRules(app) {
-        // Help close dialogs.
-        // Or even might help close the app without sending keys further, for example if the apps
-        // has one normal window and some attached dialogs. 
-        this._log.info(`Closing ${app.get_name()}`);
-        const [closed, reason] = await this._closeOneApp(app)
-        if (closed) {
-            this._log.warn(`${app.get_name()} has been closed`);
-            return;
-        }
-
-        const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
-        const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
-        const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
-
-        if (rules?.type === 'shortcut') {
-            let keycodesSegments = [];
-            let shortcutsOriginal = [];
-            for (const order in rules.value) {
-                const rule = rules.value[order];
-                let shortcut = rule.shortcut;
-                const linuxKeycodes = this._convertToLinuxKeycodes(rule);
-                const translatedLinuxKeycodes = linuxKeycodes.slice()
-                            // Press keys
-                            .map(k => k + ':1')
-                            .concat(linuxKeycodes.slice()
-                                // Release keys
-                                .reverse().map(k => k + ':0'))
-                keycodesSegments.push(translatedLinuxKeycodes);
-                shortcutsOriginal.push(shortcut);
+        // TODO emit is-closing?
+        app._is_closing = true;
+        try {
+            // Help close dialogs.
+            // Or even might help close the app without sending keys further, for example if the apps
+            // has one normal window and some attached dialogs. 
+            this._log.info(`Closing ${app.get_name()}`);
+            const [closed, reason] = await this._closeOneApp(app)
+            if (closed) {
+                this._log.warn(`${app.get_name()} has been closed`);
+                return;
             }
 
-            // Leave the overview first, so the keys can be sent to the activated windows
-            if (Main.overview.visible) {
-                this._log.debug('Leaving Overview before applying rules to close windows');
-                await this._leaveOverview();
+            const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
+            const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
+            const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
+
+            if (rules?.type === 'shortcut') {
+                let keycodesSegments = [];
+                let shortcutsOriginal = [];
+                for (const order in rules.value) {
+                    const rule = rules.value[order];
+                    let shortcut = rule.shortcut;
+                    const linuxKeycodes = this._convertToLinuxKeycodes(rule);
+                    const translatedLinuxKeycodes = linuxKeycodes.slice()
+                                // Press keys
+                                .map(k => k + ':1')
+                                .concat(linuxKeycodes.slice()
+                                    // Release keys
+                                    .reverse().map(k => k + ':0'))
+                    keycodesSegments.push(translatedLinuxKeycodes);
+                    shortcutsOriginal.push(shortcut);
+                }
+
+                // Leave the overview first, so the keys can be sent to the activated windows
+                if (Main.overview.visible) {
+                    this._log.debug('Leaving Overview before applying rules to close windows');
+                    await this._leaveOverview();
+                }
+                
+                for (const linuxKeyCodes of keycodesSegments) {
+                    await this._activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal);
+                }
             }
-            
-            for (const linuxKeyCodes of keycodesSegments) {
-                await this._activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal);
-            }
+        } catch (e) {
+            this._log.error(e);
+        } finally {
+            app._is_closing = false;
         }
     }
 
@@ -275,7 +284,7 @@ var CloseSession = class {
                 }, (output) => {
                     const msg = `Failed to send keys to close ${app.get_name()} via ydotool`;
                     this._log.error(new Error(`${msg}. output: ${output}`));
-                    global.notify_error(`${msg}`, `Reason: ${output}.`);
+                    global.notify_error(`${msg}`, `${output}.`);
                 }
             );
         } catch (e) {

@@ -16,6 +16,7 @@ const CloseSession = Me.imports.closeSession;
 const RestoreSession = Me.imports.restoreSession;
 
 const Autoclose = Me.imports.ui.autoclose;
+const UiHelper = Me.imports.ui.uiHelper;
 
 const Log = Me.imports.utils.log;
 const PrefsUtils = Me.imports.utils.prefsUtils;
@@ -64,6 +65,8 @@ var OpenWindowsTracker = class {
 
         this._restoringSession = false;
         this._runningSaveCancelableMap = new Map();
+        this._windowsAboutToSaveSet = new Set();
+        this._saveWindowSessionPeriodically();
 
         this._confirmedLogoutId = 0;
         this._confirmedRebootId = 0;
@@ -103,13 +106,13 @@ var OpenWindowsTracker = class {
 
         const windowTiledId = WindowTilingSupport.connect('window-tiled', (signals, w1, w2) => {
             // w2 will be saved in another 'window-tiled'
-            this._saveSessionToTmpAsync(w1);
+            this._prepareToSaveWindowSession(w1);
         });
         this._signals.push([windowTiledId, WindowTilingSupport]);
 
         const windowUntiledId = WindowTilingSupport.connect('window-untiled', (signals, w1, w2) => {
-            this._saveSessionToTmpAsync(w1);
-            this._saveSessionToTmpAsync(w2);
+            this._prepareToSaveWindowSession(w1);
+            this._prepareToSaveWindowSession(w2);
         });
         this._signals.push([windowUntiledId, WindowTilingSupport]);
         this._signals.push([windowCreatedId, this._display]);
@@ -125,7 +128,7 @@ var OpenWindowsTracker = class {
             for (const app of runningApps) {
                 const windows = app.get_windows();
                 for (const window of windows) {
-                    this._saveSessionToTmpAsync(window);
+                    this._prepareToSaveWindowSession(window);
                     this._connectWindowSignalsToSaveSession(window);
                 }
             }
@@ -136,7 +139,7 @@ var OpenWindowsTracker = class {
         try {
             this._restoreWindowState(window);
 
-            this._saveSessionToTmpAsync(window);
+            this._prepareToSaveWindowSession(window);
             this._connectWindowSignalsToSaveSession(window);
         } catch (e) {
             this._log.error(e);
@@ -146,7 +149,7 @@ var OpenWindowsTracker = class {
     _connectWindowSignalsToSaveSession(window) {
         this._windowInterestingSignalsWhileSave.forEach(signal => {
             const windowSignalId = window.connect(signal, () => {
-                this._saveSessionToTmpAsync(window);
+                this._prepareToSaveWindowSession(window);
             });
             this._signals.push([windowSignalId, window]);
         })
@@ -188,7 +191,7 @@ var OpenWindowsTracker = class {
         }
     }
 
-    async _saveSessionToTmpAsync(window) {
+    async _prepareToSaveWindowSession(window) {
         try {
             if (!this._settings.get_boolean('stash-and-restore-states')) return;
 
@@ -198,55 +201,76 @@ var OpenWindowsTracker = class {
             if (!workspace) return;
             if (this._blacklist.has(window.get_wm_class())) return;
 
-            // Cancel running save operation
-            this._cancelRunningSave(window);
-
-            const cancellable = new Gio.Cancellable();
-            this._runningSaveCancelableMap.set(window, cancellable);
-
-            const sessionName = `${MetaWindowUtils.getStableWindowId(window)}.json`;
-            const sessionDirectory = `${FileUtils.current_session_path}/${window.get_wm_class()}`;
-            const sessionSaved = await this._saveSession.saveWindowSessionAsync(
-                window,
-                sessionName,
-                sessionDirectory,
-                cancellable
-            );
-
-            if (sessionSaved) {
-                this._connectSignalsToCleanUpSessionFile(window, sessionDirectory, sessionName);
-            }
+            // this._log.debug(`Adding window ${window.get_title()} to queue (current size: ${this._windowsAboutToSaveSet.size}) to prepare to save window session`);
+            this._windowsAboutToSaveSet.add(window);
         } catch (error) {
-            // Ignore cancelation errors
-            if (!error?.cause?.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
-                this._log.error(error);
-            }
+            this._log.error(error);
         }
     }
 
-    _connectSignalsToCleanUpSessionFile(window, sessionDirectory, sessionName) {
-        // Based on window
+    _saveWindowSessionPeriodically() {
+        this._saveSessionByBatchTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
+            if (this._windowsAboutToSaveSet.size) {
+                const windows = [...this._windowsAboutToSaveSet];
 
-        let unmanagingId = window.connect('unmanaging', () => {
-            window.disconnect(unmanagingId);
-            unmanagingId = 0;
-            this._cleanUpSessionFileByWindow(window, sessionDirectory, sessionName);
+                windows.forEach(window => {
+                    this._windowsAboutToSaveSet.delete(window);
+
+                    // Cancel running save operation
+                    // this._cancelRunningSave(window);
+
+                    // const cancellable = new Gio.Cancellable();
+                    // this._runningSaveCancelableMap.set(window, cancellable);
+                });
+                
+                this._saveSession.saveWindowsSessionAsync(
+                    windows,
+                    null
+                ).then(sessionSaved => {
+                    try {
+                        if (sessionSaved) {
+                            for (const [success, metaWindow, baseDir, sessionName] of sessionSaved) {
+                                if (success) {
+                                    this._connectSignalsToCleanUpSessionFile(metaWindow, baseDir, sessionName);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        this._log.error(e);
+                    }
+                });
+            }
+            return GLib.SOURCE_CONTINUE;
         });
-        this._signals.push([unmanagingId, window]);
+    }
 
-        // Based on app, just in case the session file cannot be cleanup while the last window is closed.
+    _connectSignalsToCleanUpSessionFile(window, sessionDirectory, sessionName) {
+        try {
+            // Clean up while window is closing
 
-        const app = this._windowTracker.get_window_app(window);
-        if (app) {
-            const appName = app.get_name();
-            let appId = app.connect('notify::state', app => {
-                if (app.state === Shell.AppState.STOPPED) {
-                    app.disconnect(appId);
-                    appId = 0;
-                    this._cleanUpSessionFileByApp(app, appName, sessionDirectory);
-                }
+            let unmanagingId = window.connect('unmanaging', () => {
+                window.disconnect(unmanagingId);
+                unmanagingId = 0;
+                this._cleanUpSessionFileByWindow(window, sessionDirectory, sessionName);
             });
-            this._signals.push([appId, app]);
+            this._signals.push([unmanagingId, window]);
+
+            // Clean up while the app state becomes STOPPED, just in case the session file cannot be cleanup while the last window is closed.
+
+            const app = this._windowTracker.get_window_app(window);
+            if (app) {
+                const appName = app.get_name();
+                let appId = app.connect('notify::state', app => {
+                    if (app.state === Shell.AppState.STOPPED) {
+                        app.disconnect(appId);
+                        appId = 0;
+                        this._cleanUpSessionFileByApp(app, appName, window, sessionDirectory);
+                    }
+                });
+                this._signals.push([appId, app]);
+            }
+        } catch (e) {
+            this._log.error(e);
         }
     }
 
@@ -260,10 +284,37 @@ var OpenWindowsTracker = class {
 
         this._log.debug(`${window.get_title()}(${app?.get_name()}) was closed. Cleaning up its saved session files.`);
 
-        FileUtils.removeFileAndParent(sessionFilePath);
+        FileUtils.removeFile(sessionFilePath);
+        this._removeOrphanSessionConfigs(app, sessionDirectory);
     }
 
-    _cleanUpSessionFileByApp(app, appName, sessionDirectory) {
+    _removeOrphanSessionConfigs(app, sessionDirectory) {
+        try {
+            if (!app) return;
+            if (!GLib.file_test(sessionDirectory, GLib.FileTest.EXISTS)) return;
+
+            this._log.debug(`Checking if ${app.get_name()} has orphan session configs`);
+
+            const sessionNames = new Set();
+            const windows = app.get_windows();
+            for (const metaWindow of windows) {
+                if (UiHelper.ignoreWindows(metaWindow)) continue;
+                sessionNames.add(`${MetaWindowUtils.getStableWindowId(metaWindow)}.json`);
+            }
+
+            FileUtils.listAllSessions(sessionDirectory, false, (file, info) => {
+                const filename = info.get_name();
+                const path = file.get_path();
+                if (!sessionNames.has(filename) && path && GLib.file_test(path, GLib.FileTest.EXISTS)) {
+                    FileUtils.removeFile(path);
+                }
+            });
+        } catch (e) {
+            this._log.error(e);
+        }
+    }
+
+    _cleanUpSessionFileByApp(app, appName, window, sessionDirectory) {
         if (!app || Autoclose.closeSessionByUser) return;
 
         if (!GLib.file_test(sessionDirectory, GLib.FileTest.EXISTS)) return;
@@ -273,6 +324,12 @@ var OpenWindowsTracker = class {
         this._log.debug(`${appName} was closed. Cleaning up its saved session files.`);
 
         FileUtils.removeFile(sessionDirectory, true);
+
+        const possibleOrphanFolder = `${FileUtils.current_session_path}/${window.get_wm_class_instance()}`;
+        if (GLib.file_test(possibleOrphanFolder, GLib.FileTest.EXISTS)) {
+            this._log.debug(`Removing orphan session folder ${possibleOrphanFolder}`)
+            FileUtils.removeFile(possibleOrphanFolder, true);
+        }
     }
 
     _onNameAppearedGnomeShell() {
@@ -448,6 +505,10 @@ var OpenWindowsTracker = class {
         if (this._canceledId) {
             this._endSessionProxy?.disconnectSignal(this._canceledId);
             this._canceledId = 0;
+        }
+        if (this._saveSessionByBatchTimeoutId) {
+            GLib.Source.remove(this._saveSessionByBatchTimeoutId);
+            this._saveSessionByBatchTimeoutId = 0;
         }
     }
 

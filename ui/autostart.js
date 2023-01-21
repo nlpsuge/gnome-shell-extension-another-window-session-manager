@@ -27,6 +27,10 @@ const RestoreSession = Me.imports.restoreSession;
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const FileUtils = Me.imports.utils.fileUtils;
 
+const OpenWindowsTracker = Me.imports.openWindowsTracker;
+
+let _requiredToRestorePrevious = false;
+
 
 var AutostartServiceProvider = GObject.registerClass(
     class AutostartServiceProvider extends GObject.Object {
@@ -97,6 +101,7 @@ var AutostartService = GObject.registerClass(
 
             this._log = new Log.Log();
             this._autostartDialog = null;
+            this._restorePreviousSourceId = 0;
 
             this._settings = new PrefsUtils.PrefsUtils().getSettings();
             this._sessionName = this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
@@ -122,10 +127,56 @@ var AutostartService = GObject.registerClass(
 
         }
 
+        // Call this method asynchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession` 
+        RestorePreviousSession() {
+            const enableRestorePreviousSession = this._settings.get_boolean('enable-restore-previous-session');
+            if (!enableRestorePreviousSession) {
+                return "ERROR: This function is disabled, please enable it through 'Preferences -> Restore sessions -> Restore previous apps and windows at startup'";
+            }
+
+            if (!Main.layoutManager._startingUp) {
+                const msg = 'Restoring the previous apps and windows';
+                this._log.info(`${msg}, gnome shell layoutManager has been started up.`);
+                Main.notify('Another Window Session Manager', msg);
+                
+                const restoreSession = new RestoreSession.RestoreSession();
+                restoreSession.restorePreviousSession();
+
+                // this._restorePreviousSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 5000, 
+                //     () => {
+                //         const restoreSession = new RestoreSession.RestoreSession();
+                //         restoreSession.restorePreviousSession();
+                //         return GLib.SOURCE_REMOVE;
+                //     });
+                return msg;
+            } else {
+                if (_requiredToRestorePrevious) return;
+
+                _requiredToRestorePrevious = true;
+                const msg = 'Required to restore the previous apps and windows';
+                Main.notify('Another Window Session Manager', msg);
+                Main.layoutManager.connect('startup-complete', this._onLayoutManagerStartupComplete.bind(this));
+                return msg;
+            }
+
+        }
+
+        _onLayoutManagerStartupComplete() {
+            const msg = 'Restoring the previous apps and windows';
+            this._log.info(`${msg} after startup-complete`);
+            Main.notify('Another Window Session Manager', msg);
+            const restoreSession = new RestoreSession.RestoreSession();
+            restoreSession.restorePreviousSession();
+        }
+
         _disable() {
             if (this._autostartDialog) {
                 this._autostartDialog.destroy();
                 this._autostartDialog = null;
+            }
+            if (this._restorePreviousSourceId) {
+                GLib.Source.remove(this._restorePreviousSourceId);
+                this._restorePreviousSourceId = null;
             }
         }
 

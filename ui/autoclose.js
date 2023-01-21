@@ -1,7 +1,7 @@
 
 'use strict';
 
-const { Clutter, Gio, GLib, GObject, Meta, Shell, St, Atk } = imports.gi;
+const { Clutter, Gio, GLib, GObject, Meta, Shell, St, Atk, Pango } = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -21,6 +21,10 @@ const Main = imports.ui.main;
 const Log = Me.imports.utils.log;
 
 const PrefsUtils = Me.imports.utils.prefsUtils;
+const FileUtils = Me.imports.utils.fileUtils;
+
+const UiHelper = Me.imports.ui.uiHelper;
+
 
 var closeSessionByUser = false;
 
@@ -30,10 +34,10 @@ let _addButton = null;
 let _OpenAsync = null;
 
 
-const callFunc = function(thisObj, func, param) {
+const callFunc = function (thisObj, func, param) {
     const log = new Log.Log();
     try {
-        return func.call(thisObj, param);   
+        return func.call(thisObj, param);
     } catch (error) {
         log.error(error);
     }
@@ -56,10 +60,13 @@ var Autoclose = GObject.registerClass(
 
             this._log = new Log.Log();
             this._settings = new PrefsUtils.PrefsUtils().getSettings();
+            this._defaultAppSystem = Shell.AppSystem.get_default();
+
+            // this._alwaysRemoveOrphanSessions = false;
 
             this._runningApplicationListWindow = null;
             this._dbusImpl = null;
-            
+
             this._overrideEndSessionDialog();
         }
 
@@ -70,19 +77,19 @@ var Autoclose = GObject.registerClass(
             _OpenAsync = EndSessionDialog.EndSessionDialog.prototype.OpenAsync;
 
             this._log.debug('Overriding some functions in EndSessionDialog');
-            
+
             const that = this;
 
             // OpenAsync is promised and does not have a `try..catch...` surrounding the entire function, 
             // so here we catch the error to avoid `Unhandled promise rejection` possibly caused by this extension.
-            EndSessionDialog.EndSessionDialog.prototype.OpenAsync = function(parameters, invocation) {
+            EndSessionDialog.EndSessionDialog.prototype.OpenAsync = function (parameters, invocation) {
                 _OpenAsync.call(this, parameters, invocation)
                     .catch(e => {
                         that._log.error(e);
                     });
             }
 
-            EndSessionDialog.EndSessionDialog.prototype.addButton = function(buttonInfo) {
+            EndSessionDialog.EndSessionDialog.prototype.addButton = function (buttonInfo) {
                 try {
                     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/name#bound_function
                     // Function.prototype.bind() produces a function whose name is "bound " plus the function name.
@@ -101,74 +108,69 @@ var Autoclose = GObject.registerClass(
                 }
             };
 
-            EndSessionDialog.EndSessionDialog.prototype._confirm = function(signal) {
+            EndSessionDialog.EndSessionDialog.prototype._confirm = async function (signal) {
                 try {
                     const enableAutocloseSession = that._settings.get_boolean('enable-autoclose-session');
                     if (!enableAutocloseSession) {
                         callFunc(this, __confirm, signal);
                         return;
                     }
-                    
+
                     closeSessionByUser = true;
+
+                    if (!that._runningApplicationListWindow) {
+                        let label = 'Continue anyway';
+                        if (signal === 'ConfirmedLogout') {
+                            label = 'Logout anyway';
+                        } else if (signal === 'ConfirmedShutdown') {
+                            label = 'Shutdown anyway';
+                        } else if (signal == 'ConfirmedReboot') {
+                            label = 'Reboot anyway';
+                        }
+
+                        that._runningApplicationListWindow = new RunningApplicationListWindow(
+                            label,
+                            () => {
+                                try {
+                                    that._log.debug('Unexporting EndSessionDialog dbus service');
+                                    that._dbusImpl = this._dbusImpl;
+                                    //this._dbusImpl.flush();
+                                    this._dbusImpl.unexport();
+                                } catch (error) {
+                                    that._log.error(error);
+                                }
+                            },
+                            (opt) => {
+                                try {
+                                    that._log.debug('Restoring to export EndSessionDialog dbus service');
+                                    this._dbusImpl.export(Gio.DBus.session, '/org/gnome/SessionManager/EndSessionDialog');
+                                } catch (error) {
+                                    that._log.error(error);
+                                }
+
+                                if (opt === 'Confirm') {
+                                    // this.close();
+                                    callFunc(this, __confirm, signal);
+                                }
+
+                                if (opt == 'Cancel') {
+                                    this.cancel();
+                                }
+                            }
+                        );
+                    }
+
+                    // Remove orphan session folders before closing all windows
+                    // await that._removeOrphanSessions();
+
                     const closeSession = new CloseSession.CloseSession();
                     closeSession.closeWindows()
                         .then((result) => {
                             try {
-                                const {hasRunningApps} = result;
+                                const { hasRunningApps } = result;
                                 if (hasRunningApps) {
                                     that._log.debug('One or more apps cannot be closed, please close them manually.');
-                                    // Close the EndSessionDialog. Underlying, `this.close()` emits a `Closed` 
-                                    // dbus signal to gnome-session, so this should prevent the installation of inhibitions
-                                    // when users play videos via players or copy files in Nautilus. In this case, 
-                                    // once an inhibition is installed, an EndSessionDialog opens.
-                                    this.close();
-
-                                    this._stopTimer();
-                                    this._stopAltCapture();
-                                    if (!that._runningApplicationListWindow) {
-                                        let label = 'Continue anyway';
-                                        if (signal === 'ConfirmedLogout') {
-                                            label = 'Logout anyway';
-                                        } else if (signal === 'ConfirmedShutdown') {
-                                            label = 'Shutdown anyway';
-                                        } else if (signal == 'ConfirmedReboot') {
-                                            label = 'Reboot anyway';
-                                        }
-                                        
-                                        that._runningApplicationListWindow = new RunningApplicationListWindow(
-                                            label,
-                                            () => {
-                                                try {
-                                                    that._log.debug('Unexporting EndSessionDialog dbus service');
-                                                    that._dbusImpl = this._dbusImpl;
-                                                    //this._dbusImpl.flush();
-                                                    this._dbusImpl.unexport();
-                                                } catch (error) {
-                                                    that._log.error(error);
-                                                }
-                                            },
-                                            (opt) => {
-                                                try {
-                                                    that._log.debug('Restoring to export EndSessionDialog dbus service');
-                                                    this._dbusImpl.export(Gio.DBus.session, '/org/gnome/SessionManager/EndSessionDialog');
-                                                } catch (error) {
-                                                    that._log.error(error);
-                                                }
-
-                                                if (opt === 'Confirm') {
-                                                    // this.close();
-                                                    callFunc(this, __confirm, signal);
-                                                }
-
-                                                if (opt == 'Cancel') {
-                                                    this.cancel();
-                                                }
-                                            }
-                                        );
-                                    }
-
-
-                                    that._runningApplicationListWindow.open();
+                                    that._runningApplicationListWindow.showRunningApps();
                                 } else {
                                     callFunc(this, __confirm, signal);
                                 }
@@ -178,12 +180,51 @@ var Autoclose = GObject.registerClass(
                         }).catch(error => {
                             that._log.error(error);
                         });
+
+                    // Close the EndSessionDialog. Underlying, `this.close()` emits a `Closed` 
+                    // dbus signal to gnome-session, so this should prevent the installation of inhibitions
+                    // when users play videos via players or copy files in Nautilus. In this case, 
+                    // once an inhibition is installed, an EndSessionDialog opens.
+                    this.close();
+
+                    this._stopTimer();
+                    this._stopAltCapture();
+
+                    that._runningApplicationListWindow.open();
                 } catch (error) {
                     that._log.error(error);
                 }
 
             };
         }
+
+        // TODO Unused and untested...
+        // async _removeOrphanSessions() {
+        //     try {
+        //         if (!this._alwaysRemoveOrphanSessions) return;
+                
+        //         const folderNames = new Set();
+        //         const apps = this._defaultAppSystem.get_running();
+        //         for (const app of apps) {
+        //             const windows = app.get_windows();
+        //             for (const metaWindow of windows) {
+        //                 if (UiHelper.ignoreWindows(metaWindow)) continue;
+        //                 folderNames.add(metaWindow.get_wm_class());
+        //             }
+        //         }
+
+        //         await FileUtils.listAllSessions(FileUtils.current_session_path, false, (file, info) => {
+        //             const filename = info.get_name();
+        //             const path = file.get_path();
+        //             if (!folderNames.has(filename) && path) {
+        //                 this._log.debug(`Removing orphan session folder ${path}`);
+        //                 FileUtils.removeFile(path, true);
+        //             }
+        //         });
+        //     } catch (e) {
+        //         this._log.error(e);
+        //     }
+        // }
 
         _restoreEndSessionDialog() {
             if (__confirm) {
@@ -227,8 +268,8 @@ var Autoclose = GObject.registerClass(
 
 
 var RunningApplicationListWindow = GObject.registerClass({
-        Signals: { 'opened': {}, 'closed': {} }
-    },
+    Signals: { 'opened': {}, 'closed': {} }
+},
     class RunningApplicationListWindow extends St.BoxLayout {
 
         _init(confirmButtonLabel, onOpen, onComplete) {
@@ -255,7 +296,7 @@ var RunningApplicationListWindow = GObject.registerClass({
                 restoreOnSuccess: false,
                 manualMode: false,
                 dragActorMaxSize: null,
-                dragActorOpacity: 128 
+                dragActorOpacity: 128
             });
             this._draggable.connect('drag-begin', this._onDragBegin.bind(this));
             this._draggable.connect('drag-cancelled', this._onDragCancelled.bind(this));
@@ -268,7 +309,7 @@ var RunningApplicationListWindow = GObject.registerClass({
             this.connectObject('notify::visible', (visible, p2) => {
                 log('visible 111 ' + visible + ' ' + p2)
                 log('this.visible ' + this.visible)
-                if (!this.visible 
+                if (!this.visible
                     && (this.state === State.OPENING || this.state === State.OPENED)) {
                     log('xxxxxxx')
                 }
@@ -284,8 +325,8 @@ var RunningApplicationListWindow = GObject.registerClass({
             this._draggable.actor.connect('event', (actor, event) => {
                 let [dropX, dropY] = event.get_coords();
                 let target = this._dragActor?.get_stage().get_actor_at_pos(Clutter.PickMode.ALL,
-                                                                          dropX, dropY);
-                
+                    dropX, dropY);
+
                 const isr = this._draggable._eventIsRelease(event);
                 // log('isr ' + isr + ' event.type() ' + event.type())
                 if (isr) {
@@ -397,13 +438,14 @@ var RunningApplicationListWindow = GObject.registerClass({
 
             this.contentLayout.add_child(this._confirmDialogContent);
 
+            // TODO The color is not $warning_color
             this._applicationSection = new Dialog.ListSection({
                 title: _('Please close running apps before proceeding'),
             });
             this.contentLayout.add_child(this._applicationSection);
 
             this._defaultAppSystem.connect('app-state-changed', this._appStateChanged.bind(this));
-            this._showRunningApps(this._defaultAppSystem.get_running());
+            this.showRunningApps();
 
             this._overViewShowingId = Main.overview.connect('showing', () => {
                 // Main.overview.disconnect(this._overViewShowingId);
@@ -419,8 +461,8 @@ var RunningApplicationListWindow = GObject.registerClass({
         _eventIsRelease(event) {
             if (event.type() == Clutter.EventType.BUTTON_RELEASE) {
                 let buttonMask = Clutter.ModifierType.BUTTON1_MASK |
-                                  Clutter.ModifierType.BUTTON2_MASK |
-                                  Clutter.ModifierType.BUTTON3_MASK;
+                    Clutter.ModifierType.BUTTON2_MASK |
+                    Clutter.ModifierType.BUTTON3_MASK;
                 /* We only obey the last button release from the device,
                  * other buttons may get pressed/released during the DnD op.
                  */
@@ -429,7 +471,7 @@ var RunningApplicationListWindow = GObject.registerClass({
                 /* For touch, we only obey the pointer emulating sequence */
                 return global.display.is_pointer_emulating_sequence(event.get_event_sequence());
             }
-    
+
             return false;
         }
 
@@ -455,7 +497,7 @@ var RunningApplicationListWindow = GObject.registerClass({
             log('_onDragDrop this._dropTarget._delegate ' + this._dropTarget._delegate)
             return DND.DragMotionResult.SUCCESS;
         }
-        
+
         _removeFromLayoutIfNecessary() {
             if (Main.uiGroup.contains(this)) {
                 log('removing ')
@@ -469,7 +511,7 @@ var RunningApplicationListWindow = GObject.registerClass({
             log('_dragState ' + this._draggable._dragState)
             this._inDrag = true;
             // this._dragActor = dropEvent.dragActor;
-            this.set_position(dropEvent.dragActor.x, dropEvent.dragActor.y); 
+            this.set_position(dropEvent.dragActor.x, dropEvent.dragActor.y);
             this._dragToXY = [dropEvent.dragActor.x, dropEvent.dragActor.y];
             // this.x = dropEvent.dragActor.x;
             // this.y = dropEvent.dragActor.y;
@@ -491,7 +533,7 @@ var RunningApplicationListWindow = GObject.registerClass({
         acceptDrop() {
             return true;
         }
-    
+
         _onDragEnd(_draggable, _time, _snapback) {
             log('_dragState ' + this._draggable._dragState)
             this._inDrag = false;
@@ -581,11 +623,11 @@ var RunningApplicationListWindow = GObject.registerClass({
             if (this.state == State.OPENING || this.state == State.OPENED) {
                 this._updateState(State.CLOSING);
                 this.hide();
-    
+
                 // this.destroy();
                 this.emit('closed');
-                
-                this._updateState(State.CLOSED);   
+
+                this._updateState(State.CLOSED);
             }
         }
 
@@ -599,34 +641,37 @@ var RunningApplicationListWindow = GObject.registerClass({
             }
         }
 
-        _appStateChanged(appSystem, app) {
+        _appStateChanged(appSystem, stateChangedApp) {
+            if (stateChangedApp.get_state() === Shell.AppState.STARTING) {
+                return;
+            }
+
             // if (app.get_state() !== Shell.AppState.STOPPED) {
             //     this._desync();
             // }
 
-            const runningApps = this._defaultAppSystem.get_running();
-            this._showRunningApps(runningApps);
+            this.showRunningApps();
             // this._sync();
         }
 
         // _startTimer() {
         //     let startTime = GLib.get_monotonic_time();
         //     this._secondsLeft = this._totalSecondsToStayOpen;
-    
+
         //     this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
         //         let currentTime = GLib.get_monotonic_time();
         //         let secondsElapsed = (currentTime - startTime) / 1000000;
-    
+
         //         this._secondsLeft = this._totalSecondsToStayOpen - secondsElapsed;
         //         if (this._secondsLeft > 0) {
         //             this._sync();
         //             return GLib.SOURCE_CONTINUE;
         //         }
-    
+
         //         this._confirm();
         //         this.close();
         //         this._timerId = 0;
-    
+
         //         return GLib.SOURCE_REMOVE;
         //     });
         //     GLib.Source.set_name_by_id(this._timerId, '[gnome-shell-extension-another-window-session-manager] this._confirm');
@@ -642,7 +687,8 @@ var RunningApplicationListWindow = GObject.registerClass({
 
         // }
 
-        _showRunningApps(apps) {
+        showRunningApps() {
+            const apps = this._defaultAppSystem.get_running();
             const nChildren = this._applicationSection.list.get_n_children();
             if (nChildren) {
                 this._applicationSection.list.remove_all_children();
@@ -651,8 +697,13 @@ var RunningApplicationListWindow = GObject.registerClass({
                 let listItem = new Dialog.ListSectionItem({
                     icon_actor: app.create_icon_texture(64),
                     title: app.get_name(),
-                    description: '',
+                    description: app._cannot_close_reason
+                        ? app._cannot_close_reason[0].toUpperCase() + app._cannot_close_reason.substring(1)
+                        : (app._is_closing ? 'Closing' : 'It might have multiple windows'),
                 });
+                // Set both line_wrap and ellipsize to wrap the description
+                listItem._description.clutter_text.line_wrap = true;
+                listItem._description.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
                 this._applicationSection.list.add_child(listItem);
             });
         }
@@ -664,9 +715,9 @@ var RunningApplicationListWindow = GObject.registerClass({
 
             this._updateState(State.CONFIRMING);
             this.hide();
-            if(this._onComplete)
+            if (this._onComplete)
                 this._onComplete('Confirm');
-                
+
             this._updateState(State.CONFIRMED);
         }
 
@@ -674,10 +725,10 @@ var RunningApplicationListWindow = GObject.registerClass({
             log('this._onComplete canceled ' + this.state);
             if (this.state == State.CANCELING || this.state == State.CANCELLED)
                 return;
-            
+
             this._updateState(State.CANCELING);
             this.hide();
-            if(this._onComplete)
+            if (this._onComplete)
                 this._onComplete('Cancel');
 
             this._updateState(State.CANCELLED);

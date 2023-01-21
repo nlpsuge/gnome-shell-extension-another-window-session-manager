@@ -18,6 +18,9 @@ const sessions_backup_path = GLib.build_filenamev([sessions_path, sessions_backu
 
 var desktop_template_path = GLib.build_filenamev([Me.path, '/template/template.desktop']);
 var desktop_template_path_restore_at_autostart = GLib.build_filenamev([Me.path, '/template/_gnome-shell-extension-another-window-session-manager.desktop']);
+var desktop_template_path_restore_previous_at_autostart = GLib.build_filenamev([Me.path, '/template/_awsm-restore-previous-session.desktop']);
+var desktop_template_launch_app_shell_script = GLib.build_filenamev([Me.path, '/template/launch-app.sh']);
+
 var desktop_file_store_path_base = '~/.local/share/applications';
 var desktop_file_store_path = `${desktop_file_store_path_base}/__another-window-session-manager`;
 
@@ -28,6 +31,7 @@ var recently_closed_session_file = Gio.File.new_for_path(recently_closed_session
 var current_session_path = `${sessions_path}/currentSession`;
 
 var autostart_restore_desktop_file_path = GLib.build_filenamev([home_dir, '/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop']);
+var autostart_restore_previous_desktop_file_path = GLib.build_filenamev([home_dir, '/.config/autostart/_awsm-restore-previous-session.desktop']);
 
 var desktop_template_path_ydotool_uinput_rules = GLib.build_filenamev([Me.path, '/template/60-awsm-ydotool-uinput.rules']);
 var system_udev_rules_path_ydotool_uinput_rules = '/etc/udev/rules.d/60-awsm-ydotool-uinput.rules';
@@ -101,68 +105,73 @@ function getJsonObj(contents) {
 // }
 
 async function listAllSessions(sessionPath, recursion, callback) {
-    if (!sessionPath) {
-        sessionPath = get_sessions_path();
-    }
-    if (!GLib.file_test(sessionPath, GLib.FileTest.EXISTS)) {
-        _log.error(new Error(`${sessionPath} not exist`));
-        return;
-    }
-
-    _log.debug(`Scanning ${sessionPath}`);
-
-    const sessionPathFile = Gio.File.new_for_path(sessionPath);
-    let fileEnumerator = await new Promise((resolve, reject) => {
-        sessionPathFile.enumerate_children_async(
-            [Gio.FILE_ATTRIBUTE_STANDARD_NAME,
-            Gio.FILE_ATTRIBUTE_STANDARD_TYPE,
-            Gio.FILE_ATTRIBUTE_TIME_MODIFIED,
-            Gio.FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE].join(','),
-            Gio.FileQueryInfoFlags.NONE,
-            GLib.PRIORITY_DEFAULT,
-            null,
-            (file, asyncResult) => {
-                try {
-                    resolve(file.enumerate_children_finish(asyncResult));
-                } catch (e) {
-                    _log.error(e, `Failed to list directory ${sessionPath}`);
-                    reject(e);
-                }
-            });
-    });
-
-    const nextFilesFunc = async () => {
-        return new Promise((resolve, reject) => {
-            fileEnumerator.next_files_async(
-                // num_files. Just set a random value, because I don't know which value is better yet
-                10,
+    try {
+        if (!sessionPath) {
+            sessionPath = get_sessions_path();
+        }
+        if (!GLib.file_test(sessionPath, GLib.FileTest.EXISTS)) {
+            _log.warn(`${sessionPath} not exist`);
+            return;
+        }
+    
+        _log.debug(`Scanning ${sessionPath}`);
+    
+        const sessionPathFile = Gio.File.new_for_path(sessionPath);
+        let fileEnumerator = await new Promise((resolve, reject) => {
+            sessionPathFile.enumerate_children_async(
+                [Gio.FILE_ATTRIBUTE_STANDARD_NAME,
+                Gio.FILE_ATTRIBUTE_STANDARD_TYPE,
+                Gio.FILE_ATTRIBUTE_TIME_MODIFIED,
+                Gio.FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE].join(','),
+                Gio.FileQueryInfoFlags.NONE,
                 GLib.PRIORITY_DEFAULT,
                 null,
-                (iter, asyncResult) => {
+                (file, asyncResult) => {
                     try {
-                        resolve(iter.next_files_finish(asyncResult));
+                        resolve(file.enumerate_children_finish(asyncResult));
                     } catch (e) {
+                        _log.error(e, `Failed to list directory ${sessionPath}`);
                         reject(e);
                     }
-                }
-            );
+                });
         });
-    };
 
-    let infos = await nextFilesFunc();
-    while (infos && infos.length > 0) {
-        for (const info of infos) {
-            const file = fileEnumerator.get_child(info);
-            if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
-                listAllSessions(file.get_path(), recursion, callback);
+        const nextFilesFunc = async () => {
+            return new Promise((resolve, reject) => {
+                fileEnumerator.next_files_async(
+                    // num_files. Just set a random value, because I don't know which value is better yet
+                    10,
+                    GLib.PRIORITY_DEFAULT,
+                    null,
+                    (iter, asyncResult) => {
+                        try {
+                            resolve(iter.next_files_finish(asyncResult));
+                        } catch (e) {
+                            reject(e);
+                        }
+                    }
+                );
+            });
+        };
+
+        let infos = await nextFilesFunc();
+        while (infos && infos.length) {
+            for (const info of infos) {
+                const file = fileEnumerator.get_child(info);
+                if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
+                    listAllSessions(file.get_path(), recursion, callback);
+                }
+
+                if (callback) {
+                    callback(file, info);
+                }
             }
 
-            if (callback) {
-                callback(file, info);
-            }
+            infos = await nextFilesFunc();
         }
-
-        infos = await nextFilesFunc();
+    } catch (e) {
+        _log.error(e);
+        return Promise.reject(e);
     }
 }
 

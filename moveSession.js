@@ -408,16 +408,14 @@ var MoveSession = class {
             return [];
         }
 
-        const app_id = shellApp.get_id();
-
         let autoMoveInterestingWindows = [];
         const open_windows = shellApp.get_windows();
         saved_window_sessions.forEach(saved_window_session => {
-            if (app_id !== saved_window_session.desktop_file_id) {
-                return;
-            }
-
             open_windows.forEach(open_window => {
+                if (open_window.get_wm_class() != saved_window_session.wm_class) {
+                    return;
+                }
+
                 const title = open_window.get_title();
                 const windows_count = saved_window_session.windows_count;
                 const open_window_workspace_index = open_window.get_workspace().index();

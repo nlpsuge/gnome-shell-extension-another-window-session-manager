@@ -129,7 +129,15 @@ const Prefs = GObject.registerClass(
 
             this._settings.connect('changed::enable-autorestore-sessions', (settings) => {
                 if (this._settings.get_boolean('enable-autorestore-sessions')) {
-                    this._installAutostartDesktopFile();
+                    this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
+                        FileUtils.autostart_restore_desktop_file_path);
+                }
+            });
+
+            this._settings.connect('changed::enable-restore-previous-session', (settings) => {
+                if (this._settings.get_boolean('enable-restore-previous-session')) {
+                    this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_previous_at_autostart,
+                        FileUtils.autostart_restore_previous_desktop_file_path);
                 }
             });
 
@@ -140,7 +148,8 @@ const Prefs = GObject.registerClass(
             });
 
             this._settings.connect('changed::autostart-delay', (settings) => {
-                this._installAutostartDesktopFile();
+                this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
+                    FileUtils.autostart_restore_desktop_file_path);
             });
 
         }
@@ -202,16 +211,20 @@ const Prefs = GObject.registerClass(
 
         }
 
-        _installAutostartDesktopFile() {
+        _installAutostartDesktopFile(desktopFileTemplate, targetDesktopFile) {
             const argument = {
                 autostartDelay: this._settings.get_int('autostart-delay'),
             };
-            const autostartDesktopContents = FileUtils.loadAutostartDesktopTemplate().fill(argument);
-            const autostart_restore_desktop_file = Gio.File.new_for_path(FileUtils.autostart_restore_desktop_file_path);
+            const desktopFileContent = FileUtils.loadTemplate(desktopFileTemplate).fill(argument);
+            this._installDesktopFileToAutostartDir(targetDesktopFile, desktopFileContent);
+        }
+
+        _installDesktopFileToAutostartDir(desktopFilePath, desktopFileContents) {
+            const autostart_restore_desktop_file = Gio.File.new_for_path(desktopFilePath);
             const autostart_restore_desktop_file_path_parent = autostart_restore_desktop_file.get_parent().get_path();
             if (GLib.mkdir_with_parents(autostart_restore_desktop_file_path_parent, 0o744) === 0) {
                 let [success, tag] = autostart_restore_desktop_file.replace_contents(
-                    autostartDesktopContents,
+                    desktopFileContents,
                     null,
                     false,
                     Gio.FileCreateFlags.REPLACE_DESTINATION,
@@ -219,15 +232,14 @@ const Prefs = GObject.registerClass(
                 );
     
                 if (success) {
-                    this._log.info(`Installed the autostart desktop file: ${FileUtils.autostart_restore_desktop_file_path}!`);
+                    this._log.info(`Installed the autostart desktop file: ${desktopFilePath}!`);
                 } else {
-                    this._log.error(new Error(`Failed to install the autostart desktop file: ${FileUtils.autostart_restore_desktop_file_path}`))
+                    this._log.error(new Error(`Failed to install the autostart desktop file: ${desktopFilePath}`))
                 }
             } else {
                 this._log.error(new Error(`Failed to create folder: ${autostart_restore_desktop_file_path_parent}`));
             }
-        }
-        
+        }        
     }
 );
 
