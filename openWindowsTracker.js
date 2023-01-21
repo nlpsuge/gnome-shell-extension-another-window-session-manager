@@ -193,7 +193,9 @@ var OpenWindowsTracker = class {
 
     async _prepareToSaveWindowSession(window) {
         try {
-            if (!this._settings.get_boolean('stash-and-restore-states')) return;
+            if (!this._settings.get_boolean('stash-and-restore-states') 
+                && !this._settings.get_boolean('enable-restore-previous-session')) 
+                return;
 
             if (!window) return;
             const workspace = window.get_workspace();

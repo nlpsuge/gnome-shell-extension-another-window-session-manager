@@ -138,16 +138,8 @@ var AutostartService = GObject.registerClass(
                 const msg = 'Restoring the previous apps and windows';
                 this._log.info(`${msg}, gnome shell layoutManager has been started up.`);
                 Main.notify('Another Window Session Manager', msg);
-                
-                const restoreSession = new RestoreSession.RestoreSession();
-                restoreSession.restorePreviousSession();
 
-                // this._restorePreviousSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 5000, 
-                //     () => {
-                //         const restoreSession = new RestoreSession.RestoreSession();
-                //         restoreSession.restorePreviousSession();
-                //         return GLib.SOURCE_REMOVE;
-                //     });
+                this._restorePreviousWithDelay();
                 return msg;
             } else {
                 if (_requiredToRestorePrevious) return;
@@ -161,12 +153,21 @@ var AutostartService = GObject.registerClass(
 
         }
 
+        _restorePreviousWithDelay() {
+            const restorePreviousDelay = this._settings.get_int('restore-previous-delay');
+            this._restorePreviousSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, restorePreviousDelay,
+                () => {
+                    const restoreSession = new RestoreSession.RestoreSession();
+                    restoreSession.restorePreviousSession();
+                    return GLib.SOURCE_REMOVE;
+                });
+        }
+
         _onLayoutManagerStartupComplete() {
             const msg = 'Restoring the previous apps and windows';
             this._log.info(`${msg} after startup-complete`);
             Main.notify('Another Window Session Manager', msg);
-            const restoreSession = new RestoreSession.RestoreSession();
-            restoreSession.restorePreviousSession();
+            this._restorePreviousWithDelay();
         }
 
         _disable() {

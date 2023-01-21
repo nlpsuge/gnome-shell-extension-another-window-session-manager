@@ -1,10 +1,9 @@
 'use strict';
 
-const { Gtk, GObject, Gio, GLib } = imports.gi;
+const { Gtk, GObject, Gio, GLib, Gdk, GdkWayland } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const SubprocessUtils = Me.imports.utils.subprocessUtils;
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 
@@ -31,15 +30,24 @@ const Prefs = GObject.registerClass(
             this._bindSettings();
             
             // Set sensitive AFTER this._bindSettings() to make it work
-            
+            this._setSensitive();
+        }
+
+        _setSensitive() {
             const restore_at_startup_switch_state = this._settings.get_boolean('enable-autorestore-sessions');
             this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(restore_at_startup_switch_state);
-            this.autostart_delay_spinbutton.set_sensitive(restore_at_startup_switch_state);
 
             this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(
-                !this._settings.get_boolean('restore-at-startup-without-asking')
+                restore_at_startup_switch_state && !this._settings.get_boolean('restore-at-startup-without-asking')
             );
-            
+
+            const activeOfRestorePrevious = this.restore_previous_switch.get_active();
+            this.restore_previous_delay_spinbutton.set_sensitive(activeOfRestorePrevious);
+
+            const display = Gdk.Display.get_default();
+            if (display instanceof GdkWayland.WaylandDisplay) {
+                this.stash_and_restore_states_switch.set_sensitive(false);
+            }
         }
 
         _bindSettings() {
@@ -74,6 +82,13 @@ const Prefs = GObject.registerClass(
             this._settings.bind(
                 'autorestore-sessions-timer',
                 this.timer_on_the_autostart_dialog_spinbutton,
+                'value',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
+                'restore-previous-delay',
+                this.restore_previous_delay_spinbutton,
                 'value',
                 Gio.SettingsBindFlags.DEFAULT
             );
@@ -173,6 +188,7 @@ const Prefs = GObject.registerClass(
             this.raise_windows_together_switch = this._builder.get_object('raise_windows_together_switch');
             this.stash_and_restore_states_switch = this._builder.get_object('stash_and_restore_states_switch');
 
+            this.restore_previous_delay_spinbutton = this._builder.get_object('restore_previous_delay_spinbutton');
             this.restore_previous_switch = this._builder.get_object('restore_previous_switch');
             this.restore_previous_switch.connect('notify::active', (widget) => {
                 const active = widget.active;
@@ -180,6 +196,7 @@ const Prefs = GObject.registerClass(
                 if (activeOfRestoreAtStartup) {
                     this.restore_at_startup_switch.set_active(!active);
                 }
+                this.restore_previous_delay_spinbutton.set_sensitive(active);
             });
             
             this.restore_at_startup_switch = this._builder.get_object('restore_at_startup_switch');
@@ -203,7 +220,7 @@ const Prefs = GObject.registerClass(
             this.restore_at_startup_without_asking_switch = this._builder.get_object('restore_at_startup_without_asking_switch');
             this.restore_at_startup_without_asking_switch.connect('notify::active', (widget) => {
                 const active = widget.active;
-                this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(!active);           
+                this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(!active);        
             });
 
             this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
