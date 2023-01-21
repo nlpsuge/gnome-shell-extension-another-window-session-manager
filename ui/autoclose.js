@@ -91,9 +91,10 @@ var Autoclose = GObject.registerClass(
 
             EndSessionDialog.EndSessionDialog.prototype.addButton = function (buttonInfo) {
                 try {
+                    const enableAutocloseSession = that._settings.get_boolean('enable-autoclose-session');
                     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/name#bound_function
                     // Function.prototype.bind() produces a function whose name is "bound " plus the function name.
-                    if (buttonInfo.action.name !== `bound ${this.cancel.name}`) {
+                    if (buttonInfo.action.name !== `bound ${this.cancel.name}` && enableAutocloseSession) {
                         buttonInfo.label = (`${buttonInfo.label}(via AWSM)`);
 
                         // The button underlying uses `label` as an input param, so we cannot use Clutter.Text here
@@ -110,13 +111,19 @@ var Autoclose = GObject.registerClass(
 
             EndSessionDialog.EndSessionDialog.prototype._confirm = async function (signal) {
                 try {
+                    closeSessionByUser = true;
+
                     const enableAutocloseSession = that._settings.get_boolean('enable-autoclose-session');
                     if (!enableAutocloseSession) {
                         callFunc(this, __confirm, signal);
                         return;
                     }
-
-                    closeSessionByUser = true;
+                    
+                    const runningApps = that._defaultAppSystem.get_running();
+                    if (!runningApps.length) {
+                        callFunc(this, __confirm, signal);
+                        return;
+                    }
 
                     if (!that._runningApplicationListWindow) {
                         let label = 'Continue anyway';
@@ -170,6 +177,7 @@ var Autoclose = GObject.registerClass(
                                 const { hasRunningApps } = result;
                                 if (hasRunningApps) {
                                     that._log.debug('One or more apps cannot be closed, please close them manually.');
+                                    that._runningApplicationListWindow._applicationSection.title = `Those apps can't be closed, please close them manually`;
                                     that._runningApplicationListWindow.showRunningApps();
                                 } else {
                                     callFunc(this, __confirm, signal);
@@ -260,7 +268,7 @@ var Autoclose = GObject.registerClass(
             if (this._runningApplicationListWindow) {
                 this._runningApplicationListWindow.destroyDialog()
             }
-            
+
         }
 
 
@@ -440,7 +448,7 @@ var RunningApplicationListWindow = GObject.registerClass({
 
             // TODO The color is not $warning_color
             this._applicationSection = new Dialog.ListSection({
-                title: _('Please close running apps before proceeding'),
+                title: _('Closing running apps, please wait a moment'),
             });
             this.contentLayout.add_child(this._applicationSection);
 
@@ -600,14 +608,7 @@ var RunningApplicationListWindow = GObject.registerClass({
                 return true;
 
             this._updateState(State.OPENING);
-            const activeWorkspace = global.workspace_manager.get_active_workspace();
-            const currentMonitorIndex = global.display.get_current_monitor();
-            const workArea = activeWorkspace.get_work_area_for_monitor(currentMonitorIndex);
-            const workAreaWidth = workArea.width;
-            const workAreaHeight = workArea.height;
-            const x = workAreaWidth / 2 - this.width / 2;
-            const y = workAreaHeight / 2 - this.height / 2;
-            this.set_position(x, y);
+            this._updatePosition();
 
             this._monitorConstraint.index = global.display.get_current_monitor();
             this.show();
@@ -616,6 +617,17 @@ var RunningApplicationListWindow = GObject.registerClass({
             this.emit('opened');
             this._updateState(State.OPENED);
             return true;
+        }
+
+        _updatePosition() {
+            const activeWorkspace = global.workspace_manager.get_active_workspace();
+            const currentMonitorIndex = global.display.get_current_monitor();
+            const workArea = activeWorkspace.get_work_area_for_monitor(currentMonitorIndex);
+            const workAreaWidth = workArea.width;
+            const workAreaHeight = workArea.height;
+            const x = workAreaWidth / 2 - this.width / 2;
+            const y = workAreaHeight / 2 - this.height / 2;
+            this.set_position(x, y);
         }
 
         close() {
@@ -650,7 +662,13 @@ var RunningApplicationListWindow = GObject.registerClass({
             //     this._desync();
             // }
 
-            this.showRunningApps();
+            const apps = this._defaultAppSystem.get_running();
+            if (!apps.length) {
+                if (this._onComplete)
+                    this._onComplete('Confirm');
+            } else {
+                this.showRunningApps();
+            }
             // this._sync();
         }
 

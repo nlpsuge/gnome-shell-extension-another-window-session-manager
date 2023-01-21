@@ -184,7 +184,8 @@ var RestoreSession = class {
                     resolve([launched, running]);
                 } else {
                     // https://gjs-docs.gnome.org/gio20~2.0/gio.subprocesslauncher#method-set_environ
-    
+                    // TODO Support snap apps
+                    
                     const cmd = session_config_object.cmd;
                     if (cmd && cmd.length) {
                         const cmdString = cmd.join(' ');

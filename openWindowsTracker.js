@@ -209,7 +209,8 @@ var OpenWindowsTracker = class {
     }
 
     _saveWindowSessionPeriodically() {
-        this._saveSessionByBatchTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
+        // TODO Add an option: save session config delay
+        this._saveSessionByBatchTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
             if (this._windowsAboutToSaveSet.size) {
                 const windows = [...this._windowsAboutToSaveSet];
 

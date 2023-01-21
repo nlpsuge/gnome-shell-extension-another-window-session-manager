@@ -117,7 +117,7 @@ var CloseSession = class {
                     {
                         closed = await this._awaitDeleteWindow(app, window);
                         if (!closed) {
-                            reason = 'it has at least one window still open';
+                            reason = 'it has at least one window still opening';
                         }
                     } else {
                         closed = false;
@@ -133,7 +133,7 @@ var CloseSession = class {
                 if (window?.can_close()) {
                     closed = await this._awaitDeleteWindow(app, window);
                     if (!closed) {
-                        reason = 'it has at least one window still open, maybe it is not closable or still closing';
+                        reason = 'it has at least one window still opening, maybe it is not closable or still closing';
                     }
                 }
             }
