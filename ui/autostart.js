@@ -127,6 +127,7 @@ var AutostartService = GObject.registerClass(
 
         }
 
+        // TODO Press some hotkey (like Ctrl) so this time will not restore the previous session?
         // Call this method asynchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession` 
         RestorePreviousSession() {
             const enableRestorePreviousSession = this._settings.get_boolean('enable-restore-previous-session');
@@ -227,7 +228,7 @@ var AutostartDialog = GObject.registerClass(
         }
 
         _confirm() {
-            Autoclose.closeSessionByUser = false;
+            Autoclose.sessionClosedByUser = false;
             const _restoreSession = new RestoreSession.RestoreSession();
             _restoreSession.restoreSession(this._sessionName);
         }

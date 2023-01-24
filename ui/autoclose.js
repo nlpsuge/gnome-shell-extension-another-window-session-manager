@@ -26,7 +26,7 @@ const FileUtils = Me.imports.utils.fileUtils;
 const UiHelper = Me.imports.ui.uiHelper;
 
 
-var closeSessionByUser = false;
+var sessionClosedByUser = false;
 
 let __confirm = null;
 let __init = null;
@@ -111,14 +111,14 @@ var Autoclose = GObject.registerClass(
 
             EndSessionDialog.EndSessionDialog.prototype._confirm = async function (signal) {
                 try {
-                    closeSessionByUser = true;
+                    sessionClosedByUser = true;
 
                     const enableAutocloseSession = that._settings.get_boolean('enable-autoclose-session');
                     if (!enableAutocloseSession) {
                         callFunc(this, __confirm, signal);
                         return;
                     }
-                    
+
                     const runningApps = that._defaultAppSystem.get_running();
                     if (!runningApps.length) {
                         callFunc(this, __confirm, signal);
@@ -126,17 +126,17 @@ var Autoclose = GObject.registerClass(
                     }
 
                     if (!that._runningApplicationListWindow) {
-                        let label = 'Continue anyway';
+                        let confirmButtOnLabel = 'Continue';
                         if (signal === 'ConfirmedLogout') {
-                            label = 'Logout anyway';
+                            confirmButtOnLabel = 'Logout';
                         } else if (signal === 'ConfirmedShutdown') {
-                            label = 'Shutdown anyway';
+                            confirmButtOnLabel = 'Shutdown';
                         } else if (signal == 'ConfirmedReboot') {
-                            label = 'Reboot anyway';
+                            confirmButtOnLabel = 'Reboot';
                         }
 
                         that._runningApplicationListWindow = new RunningApplicationListWindow(
-                            label,
+                            confirmButtOnLabel,
                             () => {
                                 try {
                                     that._log.debug('Unexporting EndSessionDialog dbus service');
@@ -210,7 +210,7 @@ var Autoclose = GObject.registerClass(
         // async _removeOrphanSessions() {
         //     try {
         //         if (!this._alwaysRemoveOrphanSessions) return;
-                
+
         //         const folderNames = new Set();
         //         const apps = this._defaultAppSystem.get_running();
         //         for (const app of apps) {
@@ -280,7 +280,7 @@ var RunningApplicationListWindow = GObject.registerClass({
 },
     class RunningApplicationListWindow extends St.BoxLayout {
 
-        _init(confirmButtonLabel, onOpen, onComplete) {
+        _init(confirmButtOnLabel, onOpen, onComplete) {
             super._init({
                 // TODO
                 // style: 'width: 150em;',
@@ -296,6 +296,7 @@ var RunningApplicationListWindow = GObject.registerClass({
                 accessible_role: Atk.Role.DIALOG,
             });
 
+            this._confirmButtOnLabel = confirmButtOnLabel;
             this._onOpen = onOpen;
             this._onComplete = onComplete;
 
@@ -441,14 +442,14 @@ var RunningApplicationListWindow = GObject.registerClass({
                 action: () => {
                     this._confirm();
                 },
-                label: _(confirmButtonLabel),
+                label: _(`${this._confirmButtOnLabel} anyway`),
             });
 
             this.contentLayout.add_child(this._confirmDialogContent);
 
             // TODO The color is not $warning_color
             this._applicationSection = new Dialog.ListSection({
-                title: _('Closing running apps, please wait a moment'),
+                title: _('Closing running apps, please wait a moment…'),
             });
             this.contentLayout.add_child(this._applicationSection);
 
@@ -664,8 +665,14 @@ var RunningApplicationListWindow = GObject.registerClass({
 
             const apps = this._defaultAppSystem.get_running();
             if (!apps.length) {
-                if (this._onComplete)
+                if (this._onComplete) {
+                    const nChildren = this._applicationSection.list.get_n_children();
+                    if (nChildren) {
+                        this._applicationSection.list.remove_all_children();
+                    }
+                    this._applicationSection.title = `${this._confirmButtOnLabel} now…`
                     this._onComplete('Confirm');
+                }
             } else {
                 this.showRunningApps();
             }

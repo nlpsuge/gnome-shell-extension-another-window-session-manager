@@ -21,7 +21,7 @@ var desktop_template_path_restore_at_autostart = GLib.build_filenamev([Me.path, 
 var desktop_template_path_restore_previous_at_autostart = GLib.build_filenamev([Me.path, '/template/_awsm-restore-previous-session.desktop']);
 var desktop_template_launch_app_shell_script = GLib.build_filenamev([Me.path, '/template/launch-app.sh']);
 
-var desktop_file_store_path_base = '~/.local/share/applications';
+var desktop_file_store_path_base = GLib.build_filenamev([home_dir, '/.local/share/applications']);
 var desktop_file_store_path = `${desktop_file_store_path_base}/__another-window-session-manager`;
 
 var recently_closed_session_name = 'Recently Closed Session';

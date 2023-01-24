@@ -34,15 +34,15 @@ const Prefs = GObject.registerClass(
         }
 
         _setSensitive() {
-            const restore_at_startup_switch_state = this._settings.get_boolean('enable-autorestore-sessions');
-            this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(restore_at_startup_switch_state);
-
-            this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(
-                restore_at_startup_switch_state && !this._settings.get_boolean('restore-at-startup-without-asking')
-            );
-
             const activeOfRestorePrevious = this.restore_previous_switch.get_active();
             this.restore_previous_delay_spinbutton.set_sensitive(activeOfRestorePrevious);
+
+            const restore_at_startup_switch_state = this.restore_at_startup_switch.get_active();
+            this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(restore_at_startup_switch_state);
+            this.restore_at_startup_without_asking_switch.set_sensitive(restore_at_startup_switch_state);
+            this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(
+                restore_at_startup_switch_state && !this.restore_at_startup_without_asking_switch.get_active()
+            );
 
             const display = Gdk.Display.get_default();
             if (display instanceof GdkWayland.WaylandDisplay) {
@@ -165,6 +165,8 @@ const Prefs = GObject.registerClass(
             this._settings.connect('changed::autostart-delay', (settings) => {
                 this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
                     FileUtils.autostart_restore_desktop_file_path);
+                this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_previous_at_autostart,
+                    FileUtils.autostart_restore_previous_desktop_file_path);
             });
 
         }
@@ -210,7 +212,6 @@ const Prefs = GObject.registerClass(
                     this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(false);
                 }
                 
-                this.autostart_delay_spinbutton.set_sensitive(active);
                 const activeOfRestorePrevious = this.restore_previous_switch.get_active();
                 if (activeOfRestorePrevious) {
                     this.restore_previous_switch.set_active(!active);
@@ -228,12 +229,12 @@ const Prefs = GObject.registerClass(
 
         }
 
-        _installAutostartDesktopFile(desktopFileTemplate, targetDesktopFile) {
+        _installAutostartDesktopFile(desktopFileTemplate, targetDesktopFilePath) {
             const argument = {
                 autostartDelay: this._settings.get_int('autostart-delay'),
             };
             const desktopFileContent = FileUtils.loadTemplate(desktopFileTemplate).fill(argument);
-            this._installDesktopFileToAutostartDir(targetDesktopFile, desktopFileContent);
+            this._installDesktopFileToAutostartDir(targetDesktopFilePath, desktopFileContent);
         }
 
         _installDesktopFileToAutostartDir(desktopFilePath, desktopFileContents) {

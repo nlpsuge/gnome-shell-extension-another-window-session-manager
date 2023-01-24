@@ -5,6 +5,7 @@ const { Shell, Meta, Gio, GLib } = imports.gi;
 const ByteArray = imports.byteArray;
 
 const LoginManager = imports.misc.loginManager;
+const SystemActions = imports.misc.systemActions;
 
 const EndSessionDialog = imports.ui.endSessionDialog;
 
@@ -22,6 +23,7 @@ const Log = Me.imports.utils.log;
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const FileUtils = Me.imports.utils.fileUtils;
 const MetaWindowUtils = Me.imports.utils.metaWindowUtils;
+const Function = Me.imports.utils.function;
 
 const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
 
@@ -30,11 +32,17 @@ const EndSessionDialogIface = ByteArray.toString(
 const EndSessionDialogProxy = Gio.DBusProxy.makeProxyWrapper(EndSessionDialogIface);
 
 
+let _meta_restart = null;
+
 var OpenWindowsTracker = class {
 
     constructor() {
 
-        // For Guake, too many annoying saving triggered while toggling to hide or show.
+        // TODO Add an (or maybe two: one for save, another for restore) option to Preferences.
+        // Those apps (its wm_class) in the blacklist will not be saved, 
+        // and will not be restored ether.
+        // For Guake, too many unnecessary 'Guake saved to xxx' logs 
+        // while it is toggled hidden or shown.
         this._blacklist = new Set([
             'Guake',
         ]);
@@ -101,8 +109,20 @@ var OpenWindowsTracker = class {
             this._restoreOrSaveWindowSession(window);
         });
 
+        this._meta_is_restarting = false;
+        this._overrideMetaRestart();
+
         this._saveAllWindows();
-        this._settings.connect('changed::stash-and-restore-states', this._saveAllWindows.bind(this));
+        const settingsChangedToSaveAllWindows = [
+            'stash-and-restore-states',
+            'enable-restore-previous-session'
+        ];
+        settingsChangedToSaveAllWindows.forEach((setting) => {
+            this._settings.connect(`changed::${setting}`, () => {
+                if (this._settings.get_boolean(`${setting}`))
+                    this._saveAllWindows();
+            });
+        });
 
         const windowTiledId = WindowTilingSupport.connect('window-tiled', (signals, w1, w2) => {
             // w2 will be saved in another 'window-tiled'
@@ -118,6 +138,46 @@ var OpenWindowsTracker = class {
         this._signals.push([windowCreatedId, this._display]);
         this._signals.push([x11DisplayOpenedId, this._display]);
 
+        // TODO Users can click the cancel button of EndSessionDialog, and autoclose.js could also call EndSessionDialog.cancel() function，
+        // I don't know how to distinguish them, therefor set `Autoclose.sessionClosedByUser` to false in cancelled signal will not work.
+        // this._overrideSystemActionsPrototypeMap = new Map();
+        // this._overrideSystemActions();
+    }
+
+    /**
+     * For some apps, like Beyond Compare, if users click the Log Out / Restart / Power Off button,
+     * they will be closed and their session configs that is used to restore its states at startup
+     * will also be removed.
+     *
+     * We prevent that happening here by overriding some functions to set the flag `Autoclose.sessionClosedByUser`
+     * to `true`, just before continuing to operate via DBus provided by gnome-session.
+     * 
+     * `Autoclose.sessionClosedByUser` will be set to false while users close or cancel the EndSessionDialog.
+     * 
+     * see: https://bugzilla.gnome.org/show_bug.cgi?id=782786
+     */
+    _overrideSystemActions() {
+        // We call SystemActions.SystemActions once, otherwise SystemActions.SystemActions will be undefined.
+        // A second, SystemActions.SystemActions has value, which is too weird to understand. This issue might be gjs related.
+        SystemActions.SystemActions;
+        let overrideFunctions = ['activateLogout', 'activateRestart', 'activatePowerOff'];
+        overrideFunctions.forEach(funcName => {
+            const originalFunc = SystemActions.SystemActions.prototype[funcName];
+            this._overrideSystemActionsPrototypeMap.set(funcName, originalFunc);
+            SystemActions.SystemActions.prototype[funcName] = function () {
+                Autoclose.sessionClosedByUser = true;
+                Function.callFunc(this, originalFunc);
+            }
+        });
+    }
+
+    _overrideMetaRestart() {
+        const that = this;
+        _meta_restart = Meta.restart;
+        Meta.restart = function (message, context) {
+            that._meta_is_restarting = true;
+            _meta_restart(message, context);
+        }
     }
 
     _saveAllWindows() {
@@ -278,7 +338,7 @@ var OpenWindowsTracker = class {
     }
 
     _cleanUpSessionFileByWindow(window, sessionDirectory, sessionName) {
-        if (!window || Autoclose.closeSessionByUser) return;
+        if (!window || Autoclose.sessionClosedByUser || this._meta_is_restarting) return;
 
         const sessionFilePath = `${sessionDirectory}/${sessionName}`;
         if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) return;
@@ -318,7 +378,7 @@ var OpenWindowsTracker = class {
     }
 
     _cleanUpSessionFileByApp(app, appName, window, sessionDirectory) {
-        if (!app || Autoclose.closeSessionByUser) return;
+        if (!app || Autoclose.sessionClosedByUser || this._meta_is_restarting) return;
 
         if (!GLib.file_test(sessionDirectory, GLib.FileTest.EXISTS)) return;
 
@@ -387,6 +447,8 @@ var OpenWindowsTracker = class {
     _onConfirmedShutdown(proxy, sender) {
         this._log.debug(`Resetting windows-mapping before shutdown.`);
         this._settings.set_string('windows-mapping', '{}');
+
+        // TODO Move currentSession to recentlyClosed (recent closed session / recent closed app) with three tabs?
     }
 
     _onWindowCreatedSaveOrUpdateWindowsMapping(display, metaWindow, userData) {
@@ -512,6 +574,19 @@ var OpenWindowsTracker = class {
         if (this._saveSessionByBatchTimeoutId) {
             GLib.Source.remove(this._saveSessionByBatchTimeoutId);
             this._saveSessionByBatchTimeoutId = 0;
+        }
+
+        if (_meta_restart) {
+            Meta.restart = _meta_restart;
+            _meta_restart = null;
+        }
+
+        if (this._overrideSystemActionsPrototypeMap.size) {
+            this._overrideSystemActionsPrototypeMap.forEach((originalFunc, funcName) => {
+                SystemActions.SystemActions.prototype[funcName] = originalFunc;
+            });
+            this._overrideSystemActionsPrototypeMap.clear();
+            this._overrideSystemActionsPrototypeMap = null;
         }
     }
 
