@@ -70,40 +70,6 @@ function getJsonObj(contents) {
     return session_config;
 }
 
-// async function cleanupSessionFilesByWindow(window) {
-//     const sessionDirectory = `${current_session_path}/${window.get_wm_class()}`;
-//     listAllSessions(sessionDirectory, false, (file, info) => {
-//         const filename = info.get_name();
-//         if (filename.startsWith('.goutputstream-')) {
-//             return;
-//         }
-
-//         // TODO
-//         if (!existingWindowIdSet.has(filename)) {
-//             const file_type = info.get_file_type();
-//             if (file_type !== Gio.FileType.DIRECTORY) {
-//                 file.delete(null);
-//                 removeFileAndParent(file);
-//                 _log.debug(`Removed ${file.get_path()}`);
-//             }
-//         }
-//     });
-// }
-
-// async function cleanupSessionFilesByApp(app) {
-//     const windows = app.get_window();
-//     const app = this._windowTracker.get_window_app(window);
-//     const existingWindowIdSet = new Set();
-//     log('app.get_windows() length ' + app.get_windows().length)
-//     app.get_windows().forEach(w => {
-//         existingWindowIdSet.add(`${MetaWindowUtils.getStableWindowId(w)}.json`);
-//     });
-
-//     windows.forEach(window => {
-//         cleanupSessionFilesByWindow(window);
-//     });
-// }
-
 async function listAllSessions(sessionPath, recursion, callback) {
     try {
         if (!sessionPath) {

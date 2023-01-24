@@ -94,6 +94,11 @@ function readOutput(stream, lineBuffer) {
     });
 }
 
+/**
+ * We can get the pid after `proc.wait_finish(res)`, but note that the 
+ * subprocess might exit later with failure.
+ * 
+ */
 var trySpawnCmdstr = function(commandLineString, callBackOnSuccess, callBackOnFailure) {
     let success_, argv;
 
@@ -139,9 +144,12 @@ var trySpawnCmdstr = function(commandLineString, callBackOnSuccess, callBackOnFa
 }
 
 /**
- * Deprecated. Use trySpawnCmdstr0
+ * Deprecated. Use `trySpawnCmdstr()` instead.
  * 
- *  proc.communicate_utf8_async will block until
+ * Since `proc.communicate_utf8_finish(res)` only returns value
+ * after the subprocess (created by `commandLineString`)
+ * exits, we cannot get the pid right after the subprocess launches. 
+ * So there will be some kind of blocking here. 
  */
 var trySpawnCmdstrWithBlocking = function(commandLineString, callBackOnSuccess, callBackOnFailure) {
     let success_, argv;

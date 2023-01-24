@@ -62,8 +62,6 @@ var Autoclose = GObject.registerClass(
             this._settings = new PrefsUtils.PrefsUtils().getSettings();
             this._defaultAppSystem = Shell.AppSystem.get_default();
 
-            // this._alwaysRemoveOrphanSessions = false;
-
             this._runningApplicationListWindow = null;
             this._dbusImpl = null;
 
@@ -167,9 +165,6 @@ var Autoclose = GObject.registerClass(
                         );
                     }
 
-                    // Remove orphan session folders before closing all windows
-                    // await that._removeOrphanSessions();
-
                     const closeSession = new CloseSession.CloseSession();
                     closeSession.closeWindows()
                         .then((result) => {
@@ -206,34 +201,6 @@ var Autoclose = GObject.registerClass(
             };
         }
 
-        // TODO Unused and untested...
-        // async _removeOrphanSessions() {
-        //     try {
-        //         if (!this._alwaysRemoveOrphanSessions) return;
-
-        //         const folderNames = new Set();
-        //         const apps = this._defaultAppSystem.get_running();
-        //         for (const app of apps) {
-        //             const windows = app.get_windows();
-        //             for (const metaWindow of windows) {
-        //                 if (UiHelper.ignoreWindows(metaWindow)) continue;
-        //                 folderNames.add(metaWindow.get_wm_class());
-        //             }
-        //         }
-
-        //         await FileUtils.listAllSessions(FileUtils.current_session_path, false, (file, info) => {
-        //             const filename = info.get_name();
-        //             const path = file.get_path();
-        //             if (!folderNames.has(filename) && path) {
-        //                 this._log.debug(`Removing orphan session folder ${path}`);
-        //                 FileUtils.removeFile(path, true);
-        //             }
-        //         });
-        //     } catch (e) {
-        //         this._log.error(e);
-        //     }
-        // }
-
         _restoreEndSessionDialog() {
             if (__confirm) {
                 EndSessionDialog.EndSessionDialog.prototype._confirm = __confirm;
@@ -263,14 +230,12 @@ var Autoclose = GObject.registerClass(
         }
 
         destroy() {
-            log('des...')
             this._restoreEndSessionDialog();
             if (this._runningApplicationListWindow) {
                 this._runningApplicationListWindow.destroyDialog()
             }
 
         }
-
 
     });
 
@@ -312,44 +277,9 @@ var RunningApplicationListWindow = GObject.registerClass({
             this._draggable.connect('drag-end', this._onDragEnd.bind(this));
             this.inDrag = false;
 
-            this.connect('stage-views-changed', () => {
-                log('stage-views-changed...')
-            });
-            this.connectObject('notify::visible', (visible, p2) => {
-                log('visible 111 ' + visible + ' ' + p2)
-                log('this.visible ' + this.visible)
-                if (!this.visible
-                    && (this.state === State.OPENING || this.state === State.OPENED)) {
-                    log('xxxxxxx')
-                }
-
-
-            });
-            this.connect('hide', () => {
-                log('hiding ' + this.state)
-            });
-            this._draggable.actor.connect('destroy', () => {
-                log(`${RunningApplicationListWindow.name} _draggable destroyed`)
-            });
-            this._draggable.actor.connect('event', (actor, event) => {
-                let [dropX, dropY] = event.get_coords();
-                let target = this._dragActor?.get_stage().get_actor_at_pos(Clutter.PickMode.ALL,
-                    dropX, dropY);
-
-                const isr = this._draggable._eventIsRelease(event);
-                // log('isr ' + isr + ' event.type() ' + event.type())
-                if (isr) {
-                    log(this._draggable._dragState)
-                    log(target)
-                    log('target._delegate && target._delegate.acceptDrop ' + target._delegate && target._delegate.acceptDrop);
-                }
-            });
-
             this._positionInitialed = false;
 
             this._initialKeyFocus = null;
-
-            // super._hasModal = true;
 
             this._log = new Log.Log();
 
@@ -360,43 +290,6 @@ var RunningApplicationListWindow = GObject.registerClass({
             // Main.layoutManager.modalDialogGroup.add_actor(this);
             // Main.layoutManager.uiGroup.add_actor(this);
             Main.layoutManager.addChrome(this);
-
-            // let display = global.display;
-            // display.connect('restacked', (p1, p2) => {
-            //     log('ccc ' + this)
-            //     // const trackedActors = Main.layoutManager._trackedActors;
-            //     // trackedActors.forEach(actorData => {
-            //     //     log(actorData.actor + ' ' + actorData.actor.visible);
-            //     //     log(actorData.trackFullscreen)
-            //     // });
-            //     log('visible 1112 ' + p1 + ' ' + p2)
-            //     log('this.visible2 ' + this.visible)
-            //     if (!this.visible 
-            //         && (this.state === State.OPENING || this.state === State.OPENED)) {
-            //         log('xxxxxxx2')
-            //     }
-
-            //     // if (global.top_window_group)
-            //     //     Main.uiGroup.remove_child(global.top_window_group);
-            //     // Main.uiGroup.remove_child(this);
-
-            //     // GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, () => {
-            //     //     if (global.top_window_group)
-            //     //         Main.uiGroup.add_actor(global.top_window_group);
-            //     //     Main.uiGroup.add_actor(this);
-            //     //     return GLib.SOURCE_REMOVE;
-            //     // });
-
-
-            // });
-            // display.connect('in-fullscreen-changed', () => {
-            //     log('ccc in fullscreen')
-            //     const trackedActors = Main.layoutManager._trackedActors;
-            //     trackedActors.forEach(actorData => {
-            //         log(actorData.actor + ' ' + actorData.actor.visible);
-            //         log(actorData.trackFullscreen)
-            //     });
-            // });
 
             this._confirmDialogContent = new Dialog.MessageDialogContent();
             this._confirmDialogContent.title = `Running applications`;
@@ -457,11 +350,9 @@ var RunningApplicationListWindow = GObject.registerClass({
             this.showRunningApps();
 
             this._overViewShowingId = Main.overview.connect('showing', () => {
-                // Main.overview.disconnect(this._overViewShowingId);
                 this.close();
             });
             this._overViewHidingId = Main.overview.connect('hidden', () => {
-                // Main.overview.disconnect(this._overViewHidingId);
                 this.showAndUpdateState();
             });
 
@@ -485,7 +376,6 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         _onDragBegin(_draggable, _time) {
-            log('_onDragBegin')
             this._removeFromLayoutIfNecessary();
 
             this.inDrag = true;
@@ -497,19 +387,13 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         _onDragDrop(dropEvent) {
-            // this._dragToXY = [this._dragActor.x, this._dragActor.y];
-            log('_dragState ' + this._draggable._dragState)
             this._draggable._dragState = DND.DragState.DRAGGING;
-            log('_onDragDrop dropEvent.clutterEvent.type() ' + dropEvent.clutterEvent.type())
             this._dropTarget = dropEvent.targetActor;
-            log('_onDragDrop this._dropTarget ' + this._dropTarget)
-            log('_onDragDrop this._dropTarget._delegate ' + this._dropTarget._delegate)
             return DND.DragMotionResult.SUCCESS;
         }
 
         _removeFromLayoutIfNecessary() {
             if (Main.uiGroup.contains(this)) {
-                log('removing ')
                 // Fix clutter_actor_add_child: assertion 'child->priv->parent == NULL' failed
                 // complained by dnd.startDrag() https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/7ea0230a86dbee935b256171b07f2f8302917433/js/ui/dnd.js#L347
                 Main.uiGroup.remove_child(this);
@@ -517,22 +401,15 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         _onDragMotion(dropEvent) {
-            log('_dragState ' + this._draggable._dragState)
             this._inDrag = true;
-            // this._dragActor = dropEvent.dragActor;
             this.set_position(dropEvent.dragActor.x, dropEvent.dragActor.y);
             this._dragToXY = [dropEvent.dragActor.x, dropEvent.dragActor.y];
-            // this.x = dropEvent.dragActor.x;
-            // this.y = dropEvent.dragActor.y;
             this._dragActor = dropEvent.dragActor;
-            log(dropEvent.dragActor.x)
-            log(dropEvent.dragActor.y)
             return DND.DragMotionResult.CONTINUE;
         }
 
         _onDragCancelled(_draggable, _time) {
             this._inDrag = false;
-            log('_onDragCancelled')
         }
 
         getDragActor() {
@@ -544,15 +421,7 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         _onDragEnd(_draggable, _time, _snapback) {
-            log('_dragState ' + this._draggable._dragState)
             this._inDrag = false;
-            log('_onDragEnd')
-            // if (this._dragToXY) {
-            //     const [toX, toY] = this._dragToXY;
-            //     log(toX)
-            //     log(toY)
-            //     this.set_position(toX, toY);
-            // }
             DND.removeDragMonitor(this._dragMonitor);
         }
 
@@ -586,9 +455,6 @@ var RunningApplicationListWindow = GObject.registerClass({
 
             if (this._initialKeyFocus == null || isDefault)
                 this._setInitialKeyFocus(button);
-
-            // for (let i in keys)
-            //     this._buttonKeys[keys[i]] = buttonInfo;
 
             this.buttonLayout.add_actor(button);
 
@@ -632,7 +498,6 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         close() {
-            log('hiding dialog ' + this.state)
             if (this.state == State.OPENING || this.state == State.OPENED) {
                 this._updateState(State.CLOSING);
                 this.hide();
@@ -659,10 +524,6 @@ var RunningApplicationListWindow = GObject.registerClass({
                 return;
             }
 
-            // if (app.get_state() !== Shell.AppState.STOPPED) {
-            //     this._desync();
-            // }
-
             const apps = this._defaultAppSystem.get_running();
             if (!apps.length) {
                 if (this._onComplete) {
@@ -676,41 +537,7 @@ var RunningApplicationListWindow = GObject.registerClass({
             } else {
                 this.showRunningApps();
             }
-            // this._sync();
         }
-
-        // _startTimer() {
-        //     let startTime = GLib.get_monotonic_time();
-        //     this._secondsLeft = this._totalSecondsToStayOpen;
-
-        //     this._timerId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
-        //         let currentTime = GLib.get_monotonic_time();
-        //         let secondsElapsed = (currentTime - startTime) / 1000000;
-
-        //         this._secondsLeft = this._totalSecondsToStayOpen - secondsElapsed;
-        //         if (this._secondsLeft > 0) {
-        //             this._sync();
-        //             return GLib.SOURCE_CONTINUE;
-        //         }
-
-        //         this._confirm();
-        //         this.close();
-        //         this._timerId = 0;
-
-        //         return GLib.SOURCE_REMOVE;
-        //     });
-        //     GLib.Source.set_name_by_id(this._timerId, '[gnome-shell-extension-another-window-session-manager] this._confirm');
-        // }
-
-        // _sync() {
-        //     const displayTime = EndSessionDialog._roundSecondsToInterval(this._totalSecondsToStayOpen,
-        //                                                                  this._secondsLeft,
-        //                                                                  1);
-        //     const desc = Gettext.ngettext('\'' + this._sessionName + '\' will be restored in %d second',
-        //         '\'' + this._sessionName + '\' will be restored in %d seconds', displayTime).format(displayTime);
-        //     this._confirmDialogContent.description = desc;
-
-        // }
 
         showRunningApps() {
             const apps = this._defaultAppSystem.get_running();
@@ -734,7 +561,6 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         _confirm() {
-            log('this._onComplete _confirm ')
             if (this.state == State.CONFIRMING || this.state == State.CONFIRMED)
                 return;
 
@@ -747,7 +573,6 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         _cancel() {
-            log('this._onComplete canceled ' + this.state);
             if (this.state == State.CANCELING || this.state == State.CANCELLED)
                 return;
 
@@ -764,11 +589,10 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         destroy() {
-            log('destroy override...')
+            
         }
 
         destroyDialog() {
-            log('destroying dialog...')
             this.hide();
             super.destroy();
             if (this._overViewShowingId) {

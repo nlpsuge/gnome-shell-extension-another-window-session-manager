@@ -202,37 +202,10 @@ var RestoreSession = class {
                                 });
                             }
                         }
-    
-                        // https://gjs.guide/guides/gio/subprocesses.html#communicating-with-processes TODO
-                        // https://lazka.github.io/pgi-docs/Gio-2.0/classes/Subprocess.html#Gio.Subprocess.get_exit_status
-                        // https://gjs-docs.gnome.org/glib20~2.0/glib.spawn_sync
+
                         const launchAppTemplate = FileUtils.desktop_template_launch_app_shell_script;
                         const launchAppShellScript = FileUtils.loadTemplate(launchAppTemplate).fill({cmdString});
                         this._log.info(`Launching ${app_name} via command line ${cmdString}!`);
-                        
-                        // const launchContext = global.create_app_launch_context(0, session_config_object.desktop_number);
-                        // const appInfo = Gio.AppInfo.create_from_commandline(
-                        //     // `bash -c '${launchAppShellScript}'`, 
-                        //     cmdString,
-                        //     session_config_object.app_name, null);
-                        // launchContext.connect('launch-failed', (startup_notify_id) => {
-                        //     log('launched failed ' + app_name); 
-                        // });
-                        // launchContext.connect('launched', (context, appInfo, platform_data) => {
-                        //     launched = true;
-                        //     const data = platform_data.deepUnpack();
-                        //     const pid = data.pid.unpack();
-                        //     const app = this._windowTracker.get_app_from_pid(pid);
-                        //     log('launched ' + app_name + ' ' + pid + ' ' + app?.get_state() + ' ' + app?.get_name());
-                        // });
-                        // // appInfo.launch([], launchContext);
-                        // appInfo.launch_uris_as_manager_with_fds(
-                        //     [], 
-                        //     launchContext,
-                        //     GLib.SpawnFlags.DEFAULT,
-                        //     -1, -1, -1
-                        //     );
-    
                         SubprocessUtils.trySpawnCmdstr(`bash -c '${launchAppShellScript}'`).then(
                             ([success, status, stdoutInputStream, stderrInputStream]) => {
                                 if (success) {
