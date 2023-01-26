@@ -5,10 +5,11 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
 var default_sessionName = 'defaultSession';
-const home_dir = GLib.get_home_dir();
+var home_dir = GLib.get_home_dir();
+var user_config = GLib.build_filenamev([home_dir, '.config']);
 // This extension can restore `xsm`'s session file, 
 // but desktop_file_id is missing in that file, so can't move them. Will be fixed in the future.
-const config_path_base = GLib.build_filenamev([home_dir, '.config', 'another-window-session-manager']);
+var config_path_base = GLib.build_filenamev([user_config, 'another-window-session-manager']);
 var sessions_path = GLib.build_filenamev([config_path_base, 'sessions']);
 var sessions_backup_folder_name = 'backups';
 const sessions_backup_path = GLib.build_filenamev([sessions_path, sessions_backup_folder_name]);

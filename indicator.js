@@ -542,6 +542,9 @@ class AwsIndicator extends PanelMenu.Button {
         let parent = sessionPathFile.get_parent();
         // If parent is null, then it represents the root directory of the file system
         while (parent) {
+            if (parent.get_path() === `${FileUtils.user_config}`) {
+                break;
+            }
             this._monitor_directory(parent);
             parent = parent.get_parent();
         }
