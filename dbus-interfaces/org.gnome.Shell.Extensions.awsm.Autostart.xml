@@ -6,5 +6,8 @@
         <method name="RestoreSession">
             <arg type="s" name="message" direction="out"/>
         </method>
+        <method name="RestorePreviousSession">
+            <arg type="s" name="message" direction="out"/>
+        </method>
     </interface>
 </node>

@@ -1,10 +1,9 @@
 'use strict';
 
-const { Gtk, GObject, Gio, GLib } = imports.gi;
+const { Gtk, GObject, Gio, GLib, Gdk, GdkWayland } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const SubprocessUtils = Me.imports.utils.subprocessUtils;
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 
@@ -22,6 +21,7 @@ const Prefs = GObject.registerClass(
             
             this._window_width_change_scale_range = [30, 40, 50, 60, 70, 80, 90, 100];
 
+            // gsettings
             this._settings = ExtensionUtils.getSettings(
                 'org.gnome.shell.extensions.another-window-session-manager');
 
@@ -32,14 +32,24 @@ const Prefs = GObject.registerClass(
             this._bindSettings();
             
             // Set sensitive AFTER this._bindSettings() to make it work
-            
-            const restore_at_startup_switch_state = this._settings.get_boolean('enable-autorestore-sessions');
-            this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(restore_at_startup_switch_state);
-            this.autostart_delay_spinbutton.set_sensitive(restore_at_startup_switch_state);
+            this._setSensitive();
+        }
 
+        _setSensitive() {
+            const activeOfRestorePrevious = this.restore_previous_switch.get_active();
+            this.restore_previous_delay_spinbutton.set_sensitive(activeOfRestorePrevious);
+
+            const restore_at_startup_switch_state = this.restore_at_startup_switch.get_active();
+            this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(restore_at_startup_switch_state);
+            this.restore_at_startup_without_asking_switch.set_sensitive(restore_at_startup_switch_state);
             this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(
-                !this._settings.get_boolean('restore-at-startup-without-asking')
-            );            
+                restore_at_startup_switch_state && !this.restore_at_startup_without_asking_switch.get_active()
+            );
+
+            const display = Gdk.Display.get_default();
+            if (display instanceof GdkWayland.WaylandDisplay) {
+                this.stash_and_restore_states_switch.set_sensitive(false);
+            }
         }
 
         _bindSettings() {
@@ -58,6 +68,13 @@ const Prefs = GObject.registerClass(
             );
 
             this._settings.bind(
+                'enable-restore-previous-session',
+                this.restore_previous_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
                 'restore-at-startup-without-asking',
                 this.restore_at_startup_without_asking_switch,
                 'active',
@@ -67,6 +84,13 @@ const Prefs = GObject.registerClass(
             this._settings.bind(
                 'autorestore-sessions-timer',
                 this.timer_on_the_autostart_dialog_spinbutton,
+                'value',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
+                'restore-previous-delay',
+                this.restore_previous_delay_spinbutton,
                 'value',
                 Gio.SettingsBindFlags.DEFAULT
             );
@@ -107,6 +131,13 @@ const Prefs = GObject.registerClass(
             );
 
             this._settings.bind(
+                'enable-autoclose-session',
+                this.auto_close_session_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
                 'enable-close-by-rules',
                 this.close_by_rules_switch,
                 'active',
@@ -122,7 +153,15 @@ const Prefs = GObject.registerClass(
 
             this._settings.connect('changed::enable-autorestore-sessions', (settings) => {
                 if (this._settings.get_boolean('enable-autorestore-sessions')) {
-                    this._installAutostartDesktopFile();
+                    this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
+                        FileUtils.autostart_restore_desktop_file_path);
+                }
+            });
+
+            this._settings.connect('changed::enable-restore-previous-session', (settings) => {
+                if (this._settings.get_boolean('enable-restore-previous-session')) {
+                    this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_previous_at_autostart,
+                        FileUtils.autostart_restore_previous_desktop_file_path);
                 }
             });
 
@@ -133,7 +172,10 @@ const Prefs = GObject.registerClass(
             });
 
             this._settings.connect('changed::autostart-delay', (settings) => {
-                this._installAutostartDesktopFile();
+                this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
+                    FileUtils.autostart_restore_desktop_file_path);
+                this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_previous_at_autostart,
+                    FileUtils.autostart_restore_previous_desktop_file_path);
             });
 
         }
@@ -150,8 +192,23 @@ const Prefs = GObject.registerClass(
             this.timer_on_the_autostart_dialog_spinbutton = this._builder.get_object('timer_on_the_autostart_dialog_spinbutton');
             this.autostart_delay_spinbutton = this._builder.get_object('autostart_delay_spinbutton');
             this.restore_window_tiling_switch = this._builder.get_object('restore_window_tiling_switch');
+            this.restore_window_tiling_switch.connect('notify::active', (widget) => {
+                const active = widget.active;
+                this.raise_windows_together_switch.set_sensitive(active);
+            });
             this.raise_windows_together_switch = this._builder.get_object('raise_windows_together_switch');
             this.stash_and_restore_states_switch = this._builder.get_object('stash_and_restore_states_switch');
+
+            this.restore_previous_delay_spinbutton = this._builder.get_object('restore_previous_delay_spinbutton');
+            this.restore_previous_switch = this._builder.get_object('restore_previous_switch');
+            this.restore_previous_switch.connect('notify::active', (widget) => {
+                const active = widget.active;
+                const activeOfRestoreAtStartup = this.restore_at_startup_switch.get_active();
+                if (activeOfRestoreAtStartup) {
+                    this.restore_at_startup_switch.set_active(!active);
+                }
+                this.restore_previous_delay_spinbutton.set_sensitive(active);
+            });
 
             this.restore_at_startup_switch = this._builder.get_object('restore_at_startup_switch');
             this.restore_at_startup_switch.connect('notify::active', (widget) => {
@@ -164,17 +221,20 @@ const Prefs = GObject.registerClass(
                     this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(false);
                 }
                 
-                this.autostart_delay_spinbutton.set_sensitive(active);
-                
+                const activeOfRestorePrevious = this.restore_previous_switch.get_active();
+                if (activeOfRestorePrevious) {
+                    this.restore_previous_switch.set_active(!active);
+                }
             });
 
             this.restore_at_startup_without_asking_switch = this._builder.get_object('restore_at_startup_without_asking_switch');
             this.restore_at_startup_without_asking_switch.connect('notify::active', (widget) => {
                 const active = widget.active;
-                this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(!active);           
+                this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(!active);
             });
 
             this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
+            this.auto_close_session_switch = this._builder.get_object('auto_close_session_switch');
 
 
             this.window_width_change_scale = this._builder.get_object('window_width_change_scale');
@@ -209,16 +269,20 @@ const Prefs = GObject.registerClass(
             }
         }
 
-        _installAutostartDesktopFile() {
+        _installAutostartDesktopFile(desktopFileTemplate, targetDesktopFilePath) {
             const argument = {
                 autostartDelay: this._settings.get_int('autostart-delay'),
             };
-            const autostartDesktopContents = FileUtils.loadAutostartDesktopTemplate().fill(argument);
-            const autostart_restore_desktop_file = Gio.File.new_for_path(FileUtils.autostart_restore_desktop_file_path);
+            const desktopFileContent = FileUtils.loadTemplate(desktopFileTemplate).fill(argument);
+            this._installDesktopFileToAutostartDir(targetDesktopFilePath, desktopFileContent);
+        }
+
+        _installDesktopFileToAutostartDir(desktopFilePath, desktopFileContents) {
+            const autostart_restore_desktop_file = Gio.File.new_for_path(desktopFilePath);
             const autostart_restore_desktop_file_path_parent = autostart_restore_desktop_file.get_parent().get_path();
             if (GLib.mkdir_with_parents(autostart_restore_desktop_file_path_parent, 0o744) === 0) {
                 let [success, tag] = autostart_restore_desktop_file.replace_contents(
-                    autostartDesktopContents,
+                    desktopFileContents,
                     null,
                     false,
                     Gio.FileCreateFlags.REPLACE_DESTINATION,
@@ -226,15 +290,14 @@ const Prefs = GObject.registerClass(
                 );
     
                 if (success) {
-                    this._log.info(`Installed the autostart desktop file: ${FileUtils.autostart_restore_desktop_file_path}!`);
+                    this._log.info(`Installed the autostart desktop file: ${desktopFilePath}!`);
                 } else {
-                    this._log.error(new Error(`Failed to install the autostart desktop file: ${FileUtils.autostart_restore_desktop_file_path}`))
+                    this._log.error(new Error(`Failed to install the autostart desktop file: ${desktopFilePath}`))
                 }
             } else {
                 this._log.error(new Error(`Failed to create folder: ${autostart_restore_desktop_file_path_parent}`));
             }
         }
-        
     }
 );
 

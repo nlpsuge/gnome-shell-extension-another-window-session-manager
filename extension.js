@@ -9,11 +9,15 @@ const OpenWindowsTracker = Me.imports.openWindowsTracker;
 
 const Indicator = Me.imports.indicator;
 const Autostart = Me.imports.ui.autostart;
+const Autoclose = Me.imports.ui.autoclose;
 const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
+
+Me.imports.utils.string;
 
 let _indicator;
 let _autostartServiceProvider;
 let _openWindowsTracker;
+let _autoclose;
 
 function enable() {
     _indicator = new Indicator.AwsIndicator();
@@ -24,6 +28,7 @@ function enable() {
     WindowTilingSupport.initialize();
 
     _openWindowsTracker = new OpenWindowsTracker.OpenWindowsTracker();
+    _autoclose = new Autoclose.Autoclose();
 }
 
 function disable() {
@@ -44,6 +49,10 @@ function disable() {
 
     WindowTilingSupport.destroy();
     
+    if (_autoclose) {
+        _autoclose.destroy();
+        _autoclose = null;
+    }
 }
 
 function init() {

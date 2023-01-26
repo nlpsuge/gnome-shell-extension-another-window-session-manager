@@ -102,31 +102,32 @@ class AwsIndicator extends PanelMenu.Button {
             // Install https://extensions.gnome.org/extension/4679/burn-my-windows/ to watch this process.
 
             const shellApp = this._windowTracker.get_window_app(metaWindow);
-            if (shellApp) {
-            
-                const shellAppData = RestoreSession.restoringApps.get(shellApp);
-                if (shellAppData) {
-                    const saved_window_sessions = shellAppData.saved_window_sessions;
+            let shellAppData = RestoreSession.restoringApps.get(shellApp);
+            if (!shellAppData) {
+                shellAppData = RestoreSession.restoringApps.get(metaWindow.get_pid());
+            }
 
-                    // On X11, we have to create enough workspace and move windows before receive the first-frame signal.
-                    // If not, all windows will be shown in current workspace when stay in Overview, which is not pretty.
-                    let matchedSavedWindowSession = await this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
-                    
-                    if (matchedSavedWindowSession) {
-                        // We try to restore window state here if necessary.
-                        // Below are possible reasons:
-                        // 1) In current implement there is no guarantee that the first-frame and shown signals can be triggered immediately. You have to click a window to trigger them.
-                        // 2) The restored window state could be lost
-                        this._log.debug(`Restoring window state of ${shellApp.get_name()} - ${metaWindow.get_title()} if necessary`);
-                        this._moveSession._restoreWindowState(metaWindow, matchedSavedWindowSession);
+            if (shellAppData) {
+                const saved_window_sessions = shellAppData.saved_window_sessions;
+
+                // On X11, we have to create enough workspace and move windows before receive the first-frame signal.
+                // If not, all windows will be shown in current workspace when stay in Overview, which is not pretty.
+                let matchedSavedWindowSession = await this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
+                
+                if (matchedSavedWindowSession) {
+                    // We try to restore window state here if necessary.
+                    // Below are possible reasons:
+                    // 1) In current implement there is no guarantee that the first-frame and shown signals can be triggered immediately. You have to click a window to trigger them.
+                    // 2) The restored window state could be lost
+                    this._log.debug(`Restoring window state of ${shellApp.get_name()} - ${metaWindow.get_title()} if necessary`);
+                    this._moveSession._restoreWindowState(metaWindow, matchedSavedWindowSession);
 
 
-                        // Fix window geometry later on in first-frame signal
-                        // TODO The side-effect is when a window is already in the current workspace there will be two same logs (The window 'Clocks' is already on workspace 0 for Clocks) in the journalctl, which is not pretty.
-                        // TODO Maybe it's better to use another state to indicator whether a window has been restored geometry.
-                        matchedSavedWindowSession.moved = false;
-                    }
-                }             
+                    // Fix window geometry later on in first-frame signal
+                    // TODO The side-effect is when a window is already in the current workspace there will be two same logs (The window 'Clocks' is already on workspace 0 for Clocks) in the journalctl, which is not pretty.
+                    // TODO Maybe it's better to use another state to indicator whether a window has been restored geometry.
+                    matchedSavedWindowSession.moved = false;
+                }
             }
         }
         
@@ -157,7 +158,10 @@ class AwsIndicator extends PanelMenu.Button {
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> first-frame: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
-            const shellAppData = RestoreSession.restoringApps.get(shellApp);
+            let shellAppData = RestoreSession.restoringApps.get(shellApp);
+            if (!shellAppData) {
+                shellAppData = RestoreSession.restoringApps.get(metaWindow.get_pid());
+            }
             if (!shellAppData) {
                 return;
             }
@@ -194,7 +198,10 @@ class AwsIndicator extends PanelMenu.Button {
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> shown: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
-            const shellAppData = RestoreSession.restoringApps.get(shellApp);
+            let shellAppData = RestoreSession.restoringApps.get(shellApp);
+            if (!shellAppData) {
+                shellAppData = RestoreSession.restoringApps.get(metaWindow.get_pid());
+            }
             if (!shellAppData) {
                 return;
             }
@@ -451,7 +458,7 @@ class AwsIndicator extends PanelMenu.Button {
         this._log.debug('List all sessions to add session items');
         
         let sessionFileInfos = [];
-        await FileUtils.listAllSessions(null, false, this._prefsUtils.isDebug(),(file, info) => {
+        await FileUtils.listAllSessions(null, false, (file, info) => {
             // We have an interest in regular and text files
 
             const file_type = info.get_file_type();
@@ -480,7 +487,7 @@ class AwsIndicator extends PanelMenu.Button {
             this._log.error(e, 'Error listing all sessions')
         });
 
-        // Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator
+        // Sort by modification time: https://gjs-docs.gnome.org/gio20~2.0/gio.fileenumerator
         // The latest on the top, if a file has no modification time put it on the bottom
         sessionFileInfos.sort((sessionFileInfo1, sessionFileInfo2) => {
             const info1 = sessionFileInfo1.info;
