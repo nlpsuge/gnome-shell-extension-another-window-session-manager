@@ -350,7 +350,7 @@ var CloseSession = class {
 
     _sortWindowsOnX11(app) {
         const savedWindowsMappingJsonStr = this._settings.get_string('windows-mapping');
-        const savedWindowsMapping = new Map(JSON.parse(savedWindowsMappingJsonStr));
+        const savedWindowsMapping = savedWindowsMappingJsonStr === '{}' ? new Map() : new Map(JSON.parse(savedWindowsMappingJsonStr));
 
         const app_info = app.get_app_info();
         const key = app_info ? app_info.get_filename() : app.get_name();

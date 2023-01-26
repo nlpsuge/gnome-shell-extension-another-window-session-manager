@@ -102,6 +102,7 @@ var AutostartService = GObject.registerClass(
             this._log = new Log.Log();
             this._autostartDialog = null;
             this._restorePreviousSourceId = 0;
+            this._idleIdOpenRestoreSessionDialog = 0;
 
             this._settings = new PrefsUtils.PrefsUtils().getSettings();
             this._sessionName = this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
@@ -109,18 +110,36 @@ var AutostartService = GObject.registerClass(
 
         // Call this method asynchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession` 
         RestoreSession() {
-
-            if (!this._settings.get_boolean('enable-autorestore-sessions')) {
-                return "ERROR: This function is disabled, please enable it through 'Preferences -> Restore sessions -> Restore at startup'";
+            const enableRestoreSelectedSession = this._settings.get_boolean('enable-autorestore-sessions');
+            if (!enableRestoreSelectedSession) {
+                const enableRestorePreviousSession = this._settings.get_boolean('enable-restore-previous-session');
+                if (enableRestorePreviousSession) {
+                    return "Ignoring this operation. RestoreSession is disabled, but RestorePreviousSession is enabled";
+                } 
+                const disabledFeatureMsg = "ERROR: RestoreSession is disabled, please enable it through 'Preferences -> Restore sessions -> Restore selected session at startup'";
+                Main.notify('Another Window Session Manager', disabledFeatureMsg);
+                return disabledFeatureMsg;
             }
 
-            this._log.info(`Opening dialog to restore session '${this._sessionName}'`);
+            const restoringMsg = `Restoring selected session '${this._sessionName}'`;
+            this._log.info(restoringMsg);
+            Main.notify('Another Window Session Manager', restoringMsg);
             
             this._autostartDialog = new AutostartDialog();
             if (this._settings.get_boolean('restore-at-startup-without-asking')) {
                 this._autostartDialog._confirm();
                 return `Restore session '${this._sessionName}' without asking ...`;
             } else {
+                // Since this._autostartDialog.open() is idempotent (it will check the dialog state),
+                // it's ok to call it twice.
+                // Before the startup-complete emits, `Main.pushModal(this, params).get_seat_state()`
+                // returns CLUTTER_GRAB_STATE_NONE (0), which causes the dialog can't open. See: modalDialog.open() -> modalDialog.pushModal()
+                Main.layoutManager.connect('startup-complete', () => {
+                    this._idleIdOpenRestoreSessionDialog =GLib.idle_add(GLib.PRIORITY_LOW, () => {
+                        this._autostartDialog.open();
+                        return GLib.SOURCE_REMOVE;
+                    });
+                });
                 this._autostartDialog.open();
                 return 'Opening dialog to restore ...';
             }
@@ -132,7 +151,13 @@ var AutostartService = GObject.registerClass(
         RestorePreviousSession() {
             const enableRestorePreviousSession = this._settings.get_boolean('enable-restore-previous-session');
             if (!enableRestorePreviousSession) {
-                return "ERROR: This function is disabled, please enable it through 'Preferences -> Restore sessions -> Restore previous apps and windows at startup'";
+                const enableRestoreSelectedSession = this._settings.get_boolean('enable-autorestore-sessions');
+                if (enableRestoreSelectedSession) {
+                    return "Ignoring this operation. RestorePreviousSession is disabled, but RestoreSession is enabled";
+                }
+                const disabledFeatureMsg = "ERROR: RestorePreviousSession is disabled, please enable it through 'Preferences -> Restore sessions -> Restore previous apps and windows at startup'";
+                Main.notify('Another Window Session Manager', disabledFeatureMsg);
+                return disabledFeatureMsg;
             }
 
             if (!Main.layoutManager._startingUp) {
@@ -156,7 +181,7 @@ var AutostartService = GObject.registerClass(
 
         _restorePreviousWithDelay() {
             const restorePreviousDelay = this._settings.get_int('restore-previous-delay');
-            this._restorePreviousSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, restorePreviousDelay,
+            this._restorePreviousSourceId = GLib.timeout_add(GLib.PRIORITY_LOW, restorePreviousDelay,
                 () => {
                     const restoreSession = new RestoreSession.RestoreSession();
                     restoreSession.restorePreviousSession();
@@ -179,6 +204,10 @@ var AutostartService = GObject.registerClass(
             if (this._restorePreviousSourceId) {
                 GLib.Source.remove(this._restorePreviousSourceId);
                 this._restorePreviousSourceId = null;
+            }
+            if (this._idleIdOpenRestoreSessionDialog) {
+                GLib.Source.remove(this._idleIdOpenRestoreSessionDialog);
+                this._idleIdOpenRestoreSessionDialog = null;
             }
         }
 
@@ -253,7 +282,7 @@ var AutostartDialog = GObject.registerClass(
                     this._confirmButton.set_reactive(false);
                 }
             } else {
-                this._confirmDialogContent.description = "ERROR: You don't active any session to restore";
+                this._confirmDialogContent.description = "ERROR: You don't select any session to restore";
                 this._confirmDialogContent._description.set_style('color:red;');
                 this._confirmButton.set_reactive(false);
             }

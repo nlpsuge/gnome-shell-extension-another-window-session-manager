@@ -319,7 +319,7 @@ class AwsIndicator extends PanelMenu.Button {
             this._log.error(e, 'Error listing all sessions')
         });
 
-        // Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator
+        // Sort by modification time: https://gjs-docs.gnome.org/gio20~2.0/gio.fileenumerator
         // The latest on the top, if a file has no modification time put it on the bottom
         sessionFileInfos.sort((sessionFileInfo1, sessionFileInfo2) => {
             const info1 = sessionFileInfo1.info;

@@ -117,22 +117,16 @@ var Autoclose = GObject.registerClass(
                         return;
                     }
 
-                    const runningApps = that._defaultAppSystem.get_running();
-                    if (!runningApps.length) {
-                        callFunc(this, __confirm, signal);
-                        return;
+                    let confirmButtOnLabel = 'Continue';
+                    if (signal === 'ConfirmedLogout') {
+                        confirmButtOnLabel = 'Log out';
+                    } else if (signal === 'ConfirmedShutdown') {
+                        confirmButtOnLabel = 'Power off';
+                    } else if (signal == 'ConfirmedReboot') {
+                        confirmButtOnLabel = 'Restart';
                     }
 
                     if (!that._runningApplicationListWindow) {
-                        let confirmButtOnLabel = 'Continue';
-                        if (signal === 'ConfirmedLogout') {
-                            confirmButtOnLabel = 'Logout';
-                        } else if (signal === 'ConfirmedShutdown') {
-                            confirmButtOnLabel = 'Shutdown';
-                        } else if (signal == 'ConfirmedReboot') {
-                            confirmButtOnLabel = 'Reboot';
-                        }
-
                         that._runningApplicationListWindow = new RunningApplicationListWindow(
                             confirmButtOnLabel,
                             () => {
@@ -147,8 +141,10 @@ var Autoclose = GObject.registerClass(
                             },
                             (opt) => {
                                 try {
-                                    that._log.debug('Restoring to export EndSessionDialog dbus service');
-                                    this._dbusImpl.export(Gio.DBus.session, '/org/gnome/SessionManager/EndSessionDialog');
+                                    if (!this._dbusImpl.get_object_path()) {
+                                        that._log.debug('Restoring to export EndSessionDialog dbus service');
+                                        this._dbusImpl.export(Gio.DBus.session, '/org/gnome/SessionManager/EndSessionDialog');
+                                    }
                                 } catch (error) {
                                     that._log.error(error);
                                 }
@@ -161,28 +157,13 @@ var Autoclose = GObject.registerClass(
                                 if (opt == 'Cancel') {
                                     this.cancel();
                                 }
+                            },
+                            () => {
+                                const closeSession = new CloseSession.CloseSession();
+                                closeSession.closeWindows();
                             }
                         );
                     }
-
-                    const closeSession = new CloseSession.CloseSession();
-                    closeSession.closeWindows()
-                        .then((result) => {
-                            try {
-                                const { hasRunningApps } = result;
-                                if (hasRunningApps) {
-                                    that._log.debug('One or more apps cannot be closed, please close them manually.');
-                                    that._runningApplicationListWindow._applicationSection.title = `Those apps can't be closed, please close them manually`;
-                                    that._runningApplicationListWindow.showRunningApps();
-                                } else {
-                                    callFunc(this, __confirm, signal);
-                                }
-                            } catch (error) {
-                                that._log.error(error);
-                            }
-                        }).catch(error => {
-                            that._log.error(error);
-                        });
 
                     // Close the EndSessionDialog. Underlying, `this.close()` emits a `Closed` 
                     // dbus signal to gnome-session, so this should prevent the installation of inhibitions
@@ -194,6 +175,27 @@ var Autoclose = GObject.registerClass(
                     this._stopAltCapture();
 
                     that._runningApplicationListWindow.open();
+
+                    const closeSession = new CloseSession.CloseSession();
+                    closeSession.closeWindows()
+                        .then((result) => {
+                            try {
+                                const { hasRunningApps } = result;
+                                if (hasRunningApps) {
+                                    that._log.debug('One or more apps cannot be closed, please close them manually.');
+                                    that._runningApplicationListWindow._applicationSection.title = `Those apps can't be closed, please close them manually`;
+                                    that._runningApplicationListWindow.showRunningApps();
+                                    that._runningApplicationListWindow._retryButton.reactive = true;
+                                } else {
+                                    that._runningApplicationListWindow._applicationSection.title = `${confirmButtOnLabel} now, this may take a while, please wait…`;
+                                    that._runningApplicationListWindow._confirm(false);
+                                }
+                            } catch (error) {
+                                that._log.error(error);
+                            }
+                        }).catch(error => {
+                            that._log.error(error);
+                        });
                 } catch (error) {
                     that._log.error(error);
                 }
@@ -207,7 +209,7 @@ var Autoclose = GObject.registerClass(
                 __confirm = null;
             }
 
-            if (this._dbusImpl) {
+            if (this._dbusImpl && !this._dbusImpl.get_object_path()) {
                 this._log.debug('Restoring to export EndSessionDialog dbus service');
                 this._dbusImpl.export(Gio.DBus.session, '/org/gnome/SessionManager/EndSessionDialog');
                 this._dbusImpl = null;
@@ -240,12 +242,13 @@ var Autoclose = GObject.registerClass(
     });
 
 
+// Based on dialog.js of gnome-shell
 var RunningApplicationListWindow = GObject.registerClass({
     Signals: { 'opened': {}, 'closed': {} }
 },
     class RunningApplicationListWindow extends St.BoxLayout {
 
-        _init(confirmButtOnLabel, onOpen, onComplete) {
+        _init(confirmButtOnLabel, onOpen, onComplete, onRetry) {
             super._init({
                 // TODO
                 // style: 'width: 150em;',
@@ -264,6 +267,7 @@ var RunningApplicationListWindow = GObject.registerClass({
             this._confirmButtOnLabel = confirmButtOnLabel;
             this._onOpen = onOpen;
             this._onComplete = onComplete;
+            this._onRetry = onRetry;
 
             this._delegate = this;
             this._draggable = DND.makeDraggable(this, {
@@ -284,7 +288,6 @@ var RunningApplicationListWindow = GObject.registerClass({
             this._log = new Log.Log();
 
             this._defaultAppSystem = Shell.AppSystem.get_default();
-            this._settings = new PrefsUtils.PrefsUtils().getSettings();
 
             this._removeFromLayoutIfNecessary(this);
             // Main.layoutManager.modalDialogGroup.add_actor(this);
@@ -325,17 +328,25 @@ var RunningApplicationListWindow = GObject.registerClass({
             });
             this.add_child(this.buttonLayout);
 
-            this.addButton({
+            this._cancelButton = this.addButton({
                 action: this._cancel.bind(this),
                 label: _('Cancel'),
-                key: Clutter.KEY_Escape,
+                key: Clutter.KEY_Escape, // TODO not working
+            });
+
+            this._retryButton = this.addButton({
+                action: () => {
+                    this._onRetry()
+                },
+                label: _('Retry'),
+                reactive: false
             });
 
             this._confirmButton = this.addButton({
                 action: () => {
-                    this._confirm();
+                    this._confirm(true);
                 },
-                label: _(`${this._confirmButtOnLabel} anyway`),
+                label: _(`${this._confirmButtOnLabel} now`),
             });
 
             this.contentLayout.add_child(this._confirmDialogContent);
@@ -356,23 +367,6 @@ var RunningApplicationListWindow = GObject.registerClass({
                 this.showAndUpdateState();
             });
 
-        }
-
-        _eventIsRelease(event) {
-            if (event.type() == Clutter.EventType.BUTTON_RELEASE) {
-                let buttonMask = Clutter.ModifierType.BUTTON1_MASK |
-                    Clutter.ModifierType.BUTTON2_MASK |
-                    Clutter.ModifierType.BUTTON3_MASK;
-                /* We only obey the last button release from the device,
-                 * other buttons may get pressed/released during the DnD op.
-                 */
-                return (event.get_state() & buttonMask) == 0;
-            } else if (event.type() == Clutter.EventType.TOUCH_END) {
-                /* For touch, we only obey the pointer emulating sequence */
-                return global.display.is_pointer_emulating_sequence(event.get_event_sequence());
-            }
-
-            return false;
         }
 
         _onDragBegin(_draggable, _time) {
@@ -426,7 +420,7 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         addButton(buttonInfo) {
-            let { label, action, key } = buttonInfo;
+            let { label, action, key, reactive } = buttonInfo;
             let isDefault = buttonInfo['default'];
             let keys;
 
@@ -440,7 +434,7 @@ var RunningApplicationListWindow = GObject.registerClass({
             let button = new St.Button({
                 style_class: 'modal-dialog-linked-button',
                 button_mask: St.ButtonMask.ONE | St.ButtonMask.THREE,
-                reactive: true,
+                reactive: reactive === undefined ? true: reactive,
                 can_focus: true,
                 x_expand: true,
                 y_expand: true,
@@ -511,7 +505,7 @@ var RunningApplicationListWindow = GObject.registerClass({
 
         showAndUpdateState() {
             const aboutToShow = this.state == State.CLOSING || this.state == State.CLOSED;
-            this._log.debug(`Showing ${RunningApplicationListWindow.name} with state ${this.state}: ${aboutToShow}`)
+            this._log.debug(`Showing RunningApplicationListWindow with state ${this.state}: ${aboutToShow}`)
             if (aboutToShow) {
                 this._updateState(State.OPENING);
                 this.show();
@@ -531,8 +525,8 @@ var RunningApplicationListWindow = GObject.registerClass({
                     if (nChildren) {
                         this._applicationSection.list.remove_all_children();
                     }
-                    this._applicationSection.title = `${this._confirmButtOnLabel} now…`
-                    this._onComplete('Confirm');
+                    this._applicationSection.title = `${this._confirmButtOnLabel} now, this may take a while, please wait…`;
+                    this._confirm(false);
                 }
             } else {
                 this.showRunningApps();
@@ -560,14 +554,19 @@ var RunningApplicationListWindow = GObject.registerClass({
             });
         }
 
-        _confirm() {
+        _confirm(hideDialog) {
             if (this.state == State.CONFIRMING || this.state == State.CONFIRMED)
                 return;
 
             this._updateState(State.CONFIRMING);
-            this.hide();
-            if (this._onComplete)
+            if (hideDialog)
+                this.hide();
+            if (this._onComplete) {
                 this._onComplete('Confirm');
+                this._cancelButton.reactive = false;
+                this._retryButton.reactive = true;
+                this._confirmButton.reactive = false;
+            }
 
             this._updateState(State.CONFIRMED);
         }
