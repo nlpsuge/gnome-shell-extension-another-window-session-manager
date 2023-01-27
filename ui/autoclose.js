@@ -64,6 +64,7 @@ var Autoclose = GObject.registerClass(
 
             this._runningApplicationListWindow = null;
             this._dbusImpl = null;
+            this._idleIdConfirm = null;
 
             this._overrideEndSessionDialog();
         }
@@ -188,7 +189,11 @@ var Autoclose = GObject.registerClass(
                                     that._runningApplicationListWindow._retryButton.reactive = true;
                                 } else {
                                     that._runningApplicationListWindow._applicationSection.title = `${confirmButtOnLabel} now, this may take a while, please wait…`;
-                                    that._runningApplicationListWindow._confirm(false);
+                                    that._idleIdConfirm = GLib.idle_add(GLib.PRIORITY_LOW, () => {
+                                        that._idleIdConfirm = null;
+                                        that._runningApplicationListWindow._confirm(false);
+                                        return GLib.SOURCE_REMOVE;
+                                    });
                                 }
                             } catch (error) {
                                 that._log.error(error);
@@ -237,6 +242,11 @@ var Autoclose = GObject.registerClass(
                 this._runningApplicationListWindow.destroyDialog()
             }
 
+            if (this._idleIdConfirm) {
+                GLib.source_remove(this._idleIdConfirm);
+                this._idleIdConfirm = null;
+            }
+
         }
 
     });
@@ -268,6 +278,8 @@ var RunningApplicationListWindow = GObject.registerClass({
             this._onOpen = onOpen;
             this._onComplete = onComplete;
             this._onRetry = onRetry;
+
+            this._idleIdConfirm = null;
 
             this._delegate = this;
             this._draggable = DND.makeDraggable(this, {
@@ -526,7 +538,11 @@ var RunningApplicationListWindow = GObject.registerClass({
                         this._applicationSection.list.remove_all_children();
                     }
                     this._applicationSection.title = `${this._confirmButtOnLabel} now, this may take a while, please wait…`;
-                    this._confirm(false);
+                    this._idleIdConfirm = GLib.idle_add(GLib.PRIORITY_LOW, () => {
+                        this._idleIdConfirm = null;
+                        this._confirm(false);
+                        return GLib.SOURCE_REMOVE;
+                    });
                 }
             } else {
                 this.showRunningApps();
@@ -601,6 +617,10 @@ var RunningApplicationListWindow = GObject.registerClass({
             if (this._overViewHidingId) {
                 Main.overview.disconnect(this._overViewHidingId);
                 this._overViewHidingId = 0;
+            }
+            if (this._idleIdConfirm) {
+                GLib.source_remove(this._idleIdConfirm);
+                this._idleIdConfirm = null;
             }
         }
 
