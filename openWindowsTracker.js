@@ -24,6 +24,7 @@ const PrefsUtils = Me.imports.utils.prefsUtils;
 const FileUtils = Me.imports.utils.fileUtils;
 const MetaWindowUtils = Me.imports.utils.metaWindowUtils;
 const Function = Me.imports.utils.function;
+const GnomeVersion = Me.imports.utils.gnomeVersion;
 
 const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
 
@@ -173,9 +174,16 @@ var OpenWindowsTracker = class {
     _overrideMetaRestart() {
         const that = this;
         _meta_restart = Meta.restart;
-        Meta.restart = function (message, context) {
-            that._meta_is_restarting = true;
-            _meta_restart(message, context);
+        if (GnomeVersion.isOlderThan43()) {
+            Meta.restart = function (message) {
+                that._meta_is_restarting = true;
+                _meta_restart(message);
+            }
+        } else {
+            Meta.restart = function (message, context) {
+                that._meta_is_restarting = true;
+                _meta_restart(message, context);
+            }
         }
     }
 

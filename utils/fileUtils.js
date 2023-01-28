@@ -12,6 +12,7 @@ var user_config = GLib.build_filenamev([home_dir, '.config']);
 // This extension can restore `xsm`'s session file, 
 // but desktop_file_id is missing in that file, so can't move them. Will be fixed in the future.
 var config_path_base = GLib.build_filenamev([user_config, 'another-window-session-manager']);
+// The session list
 var sessions_path = GLib.build_filenamev([config_path_base, 'sessions']);
 var sessions_backup_folder_name = 'backups';
 const sessions_backup_path = GLib.build_filenamev([sessions_path, sessions_backup_folder_name]);
@@ -28,7 +29,7 @@ var recently_closed_session_name = 'Recently Closed Session';
 var recently_closed_session_path = GLib.build_filenamev([sessions_path, recently_closed_session_name]);
 var recently_closed_session_file = Gio.File.new_for_path(recently_closed_session_path);
 
-var current_session_path = `${sessions_path}/currentSession`;
+var current_session_path = `${config_path_base}/currentSession`;
 
 var autostart_restore_desktop_file_path = GLib.build_filenamev([home_dir, '/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop']);
 var autostart_restore_previous_desktop_file_path = GLib.build_filenamev([home_dir, '/.config/autostart/_awsm-restore-previous-session.desktop']);
@@ -125,7 +126,7 @@ async function listAllSessions(sessionPath, recursion, callback) {
             for (const info of infos) {
                 const file = fileEnumerator.get_child(info);
                 if (recursion && info.get_file_type() === Gio.FileType.DIRECTORY) {
-                    listAllSessions(file.get_path(), recursion, callback);
+                    await listAllSessions(file.get_path(), recursion, callback);
                 }
 
                 if (callback) {
@@ -137,7 +138,6 @@ async function listAllSessions(sessionPath, recursion, callback) {
         }
     } catch (e) {
         _log.error(e);
-        return Promise.reject(e);
     }
 }
 

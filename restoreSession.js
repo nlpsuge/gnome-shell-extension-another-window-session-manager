@@ -116,7 +116,7 @@ var RestoreSession = class {
         );  
     }
 
-    async restorePreviousSession() {
+    async restorePreviousSession(removeAfterRestore) {
         try {
             this._log.info(`Restoring the previous session from ${FileUtils.current_session_path}`);
 
@@ -132,7 +132,7 @@ var RestoreSession = class {
                             }
                             const sessionConfig = FileUtils.getJsonObj(contents);
                             this._restoreOneSession(sessionConfig).then(([launched, running]) => {
-                                if (launched && !running) {
+                                if (removeAfterRestore && launched && !running) {
                                     const path = file.get_path();
                                     this._log.debug(`Restored ${sessionConfig.window_title}(${sessionConfig.app_name}), cleaning ${path}`);
                                     FileUtils.removeFile(path);

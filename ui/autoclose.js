@@ -94,11 +94,11 @@ var Autoclose = GObject.registerClass(
                     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/name#bound_function
                     // Function.prototype.bind() produces a function whose name is "bound " plus the function name.
                     if (buttonInfo.action.name !== `bound ${this.cancel.name}` && enableAutocloseSession) {
-                        buttonInfo.label = (`${buttonInfo.label}(via AWSM)`);
+                        buttonInfo.label = (`${buttonInfo.label} (via AWSM)`);
 
                         // The button underlying uses `label` as an input param, so we cannot use Clutter.Text here
                         // const label = new Clutter.Text();
-                        // label.set_markup(`${buttonInfo.label}(<b style='color:red'>via AWSM</b>)`);
+                        // label.set_markup(`${buttonInfo.label} (<b style='color:red'>via AWSM</b>)`);
                         // buttonInfo.label = label;
                     }
                 } catch (error) {

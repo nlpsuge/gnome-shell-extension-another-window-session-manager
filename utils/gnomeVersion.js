@@ -10,4 +10,8 @@ function isOlderThan42() {
     return GNOME_VERSION < 42;
 }
 
+function isOlderThan43() {
+    return GNOME_VERSION < 43;
+}
+
 
