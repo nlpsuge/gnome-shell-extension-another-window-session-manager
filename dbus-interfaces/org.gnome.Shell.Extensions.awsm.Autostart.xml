@@ -9,5 +9,9 @@
         <method name="RestorePreviousSession">
             <arg type="s" name="message" direction="out"/>
         </method>
+        <method name="RestorePreviousSessionWithArgs">
+            <arg type="b" name="removeAfterRestore" direction="in"/>
+            <arg type="s" name="message" direction="out"/>
+        </method>
     </interface>
 </node>
