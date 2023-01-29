@@ -167,7 +167,7 @@ var RestoreSession = class {
                     [launched, running] = this.launch(shell_app);
                     if (launched) {
                         if (!running) {
-                            this._log.info(`${app_name} has been launched! Preparing to restore ${session_config_object.window_title}(${app_name})!`);
+                            this._log.info(`${app_name} has been launched! Preparing to restore window ${session_config_object.window_title}(${app_name})!`);
                         }
                         const existingShellAppData = this._restoredApps.get(shell_app);
                         if (existingShellAppData) {
@@ -191,7 +191,7 @@ var RestoreSession = class {
                         const cmdString = cmd.join(' ');
                         const pid = this._cmdAppIdMap.get(cmdString);
                         if (pid) {
-                            this._log.debug(`${app_name} might be running, preparing to restore the window (${session_config_object.window_title}) states.`);
+                            this._log.debug(`${app_name} might be running, preparing to restore window (${session_config_object.window_title}) states.`);
     
                             const restoringShellAppData = restoringApps.get(pid);
                             if (restoringShellAppData) {

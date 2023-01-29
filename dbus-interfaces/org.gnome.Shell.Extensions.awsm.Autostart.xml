@@ -7,10 +7,8 @@
             <arg type="s" name="message" direction="out"/>
         </method>
         <method name="RestorePreviousSession">
-            <arg type="s" name="message" direction="out"/>
-        </method>
-        <method name="RestorePreviousSessionWithArgs">
-            <arg type="b" name="removeAfterRestore" direction="in"/>
+            <!-- a{sv} stands for Map<String, Variant> -->
+            <arg type="a{sv}" name="args" direction= "in"/>
             <arg type="s" name="message" direction="out"/>
         </method>
     </interface>

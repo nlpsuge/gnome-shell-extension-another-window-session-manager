@@ -147,14 +147,17 @@ var AutostartService = GObject.registerClass(
         }
 
         // TODO Press some hotkey (like Ctrl) so this time will not restore the previous session?
-        // Call this method asynchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession` 
-        RestorePreviousSession() {
-            this._restorePreviousSession(true);
-        }
-
-        // Call this method asynchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession false` 
-        RestorePreviousSessionWithArgs(removeAfterRestore) {
-            this._restorePreviousSession(removeAfterRestore);
+        // Call this method asynchronously through, for example: 
+        // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{'removeAfterRestore': <false>}"`
+        // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{}"`
+        RestorePreviousSession(args) {
+            let removeAfterRestore = args.removeAfterRestore;
+            if (removeAfterRestore) {
+                removeAfterRestore = removeAfterRestore.get_boolean();
+            } else {
+                removeAfterRestore = true;
+            }
+            return this._restorePreviousSession(removeAfterRestore);
         }
 
         _restorePreviousSession(removeAfterRestore) {
