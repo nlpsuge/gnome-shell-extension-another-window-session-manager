@@ -237,7 +237,7 @@ var SaveSession = class {
         sessionConfigObject.windows_count = runningShellApp.get_n_windows();
         sessionConfigObject.fullscreen = metaWindow.is_fullscreen();
         sessionConfigObject.minimized = metaWindow.minimized;
-        sessionConfigObject.display_server = Meta.is_wayland_compositor() ? 'Wayland' : 'X11'
+        sessionConfigObject.compositor_type = Meta.is_wayland_compositor() ? 'Wayland' : 'X11'
 
         const frameRect = metaWindow.get_frame_rect();
         let window_position = sessionConfigObject.window_position;
@@ -404,7 +404,7 @@ var SaveSession = class {
         this._log.debug(`Saving session ${sessionConfig.session_name} to local file`);
 
         return new Promise((resolve, reject) => {
-            GLib.idle_add(GLib.PRIORITY_HIGH_IDLE, () => {
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 // Use replace_contents_bytes_async instead of replace_contents_async, see: 
                 // https://gitlab.gnome.org/GNOME/gjs/-/blob/gnome-42/modules/core/overrides/Gio.js#L513
                 // https://gitlab.gnome.org/GNOME/gjs/-/issues/192

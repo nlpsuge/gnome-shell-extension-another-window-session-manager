@@ -79,7 +79,7 @@ var SessionConfigObject = class {
 
     is_focused; // boolean, whether is the currently active window
 
-    display_server; // string. X11, Wayland
+    compositor_type; // string. X11, Wayland
 }
 
 var SessionConfig = class {

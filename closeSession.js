@@ -115,7 +115,7 @@ var CloseSession = class {
                         || appInWhitelist 
                         || !this._skip_app_with_multiple_windows)
                     {
-                        closed = await this._awaitDeleteWindow(app, window);
+                        closed = await this._deleteWindow(app, window);
                         if (!closed) {
                             reason = 'it has at least one window still opening';
                         }
@@ -128,13 +128,9 @@ var CloseSession = class {
                 
             if (app.get_n_windows() === 1) {
                 const window = app.get_windows()[0];
-                // Window could be `undefined` here, maybe even though this._awaitDeleteWindow()
-                // returns true, the window still takes some time to close.
-                if (window?.can_close()) {
-                    closed = await this._awaitDeleteWindow(app, window);
-                    if (!closed) {
-                        reason = 'it has at least one window still opening, maybe it is not closable or still closing';
-                    }
+                closed = await this._quitApp(app, window);
+                if (!closed) {
+                    reason = 'it has at least one window still opening, maybe it is not closable or still closing';
                 }
             }
         } catch (e) {
@@ -148,7 +144,7 @@ var CloseSession = class {
         return [closed, reason];
     }
 
-    _awaitDeleteWindow(app, metaWindow) {
+    _deleteWindow(app, metaWindow) {
         return new Promise((resolve, reject) => {
             // We use 'windows-changed' here because a confirm window could be popped up
             const windowsChangedId = app.connect('windows-changed', () => {
@@ -157,6 +153,38 @@ var CloseSession = class {
             });
             metaWindow._aboutToClose = true;
             metaWindow.delete(DateUtils.get_current_time());
+        });
+    }
+
+    // See the implement of `shell_app_request_quit` of gnome-shell
+    _quitApp(app, metaWindow) {
+        if (!metaWindow) {
+            return Promise.resolve(true);
+        }
+
+        return new Promise((resolve, reject) => {
+            // We use 'windows-changed' here because a confirm window might be popped up
+            let windowsChangedId = app.connect('windows-changed', () => {
+                app.disconnect(windowsChangedId);
+                windowsChangedId = null;
+                resolve(app.get_n_windows() === 0);
+            });
+
+            const quitAction = 'app.quit';
+            if (app.action_group.has_action(quitAction)
+                && !app.action_group.get_action_parameter_type(quitAction)) {
+                metaWindow._aboutToClose = true;
+                // Some apps have `app.quit` action, check them in `lg` via: Shell.AppSystem.get_default().get_running().forEach(a => log(a.get_name() + ': ' + a.action_group.has_action('app.quit')))
+                app.action_group.activate_action(quitAction, null);
+            } else if (metaWindow.can_close()) {
+                metaWindow._aboutToClose = true;
+                metaWindow.delete(DateUtils.get_current_time());
+            }
+            
+            if (!metaWindow._aboutToClose) {
+                if (windowsChangedId) app.disconnect(windowsChangedId);
+                resolve(false);
+            }
         });
     }
 

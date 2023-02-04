@@ -1,7 +1,7 @@
 
 'use strict';
 
-const { Clutter, Gio, GLib, GObject, Meta, Shell, St, Atk, Pango } = imports.gi;
+const { Clutter, Gio, GLib, GObject, Meta, Shell, St, Atk, Pango, GTop } = imports.gi;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -22,6 +22,7 @@ const Log = Me.imports.utils.log;
 
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const FileUtils = Me.imports.utils.fileUtils;
+const SubprocessUtils = Me.imports.utils.subprocessUtils;
 
 const UiHelper = Me.imports.ui.uiHelper;
 
@@ -63,8 +64,8 @@ var Autoclose = GObject.registerClass(
             this._defaultAppSystem = Shell.AppSystem.get_default();
 
             this._runningApplicationListWindow = null;
-            this._dbusImpl = null;
-            this._idleIdConfirm = null;
+            
+            this._retryIdleId = null;
 
             this._overrideEndSessionDialog();
         }
@@ -82,10 +83,19 @@ var Autoclose = GObject.registerClass(
             // OpenAsync is promised and does not have a `try..catch...` surrounding the entire function, 
             // so here we catch the error to avoid `Unhandled promise rejection` possibly caused by this extension.
             EndSessionDialog.EndSessionDialog.prototype.OpenAsync = function (parameters, invocation) {
-                _OpenAsync.call(this, parameters, invocation)
-                    .catch(e => {
-                        that._log.error(e);
-                    });
+                try {
+                    if (this._openingByAWSM) {
+                        that._log.debug(`EndSessionDialog is already opening, ignore...`);
+                        return;
+                    }
+    
+                    _OpenAsync.call(this, parameters, invocation)
+                        .catch(e => {
+                            that._log.error(e);
+                        });
+                } catch (e) {
+                    that._log.error(e);
+                }
             }
 
             EndSessionDialog.EndSessionDialog.prototype.addButton = function (buttonInfo) {
@@ -131,24 +141,10 @@ var Autoclose = GObject.registerClass(
                         that._runningApplicationListWindow = new RunningApplicationListWindow(
                             confirmButtOnLabel,
                             () => {
-                                try {
-                                    that._log.debug('Unexporting EndSessionDialog dbus service');
-                                    that._dbusImpl = this._dbusImpl;
-                                    //this._dbusImpl.flush();
-                                    this._dbusImpl.unexport();
-                                } catch (error) {
-                                    that._log.error(error);
-                                }
+                                this._openingByAWSM = true;
                             },
                             (opt) => {
-                                try {
-                                    if (!this._dbusImpl.get_object_path()) {
-                                        that._log.debug('Restoring to export EndSessionDialog dbus service');
-                                        this._dbusImpl.export(Gio.DBus.session, '/org/gnome/SessionManager/EndSessionDialog');
-                                    }
-                                } catch (error) {
-                                    that._log.error(error);
-                                }
+                                this._openingByAWSM = false;
 
                                 if (opt === 'Confirm') {
                                     // this.close();
@@ -160,8 +156,12 @@ var Autoclose = GObject.registerClass(
                                 }
                             },
                             () => {
-                                const closeSession = new CloseSession.CloseSession();
-                                closeSession.closeWindows();
+                                that._retryIdleId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
+                                    that._retryIdleId = null;
+                                    const closeSession = new CloseSession.CloseSession();
+                                    closeSession.closeWindows();
+                                    return GLib.SOURCE_REMOVE;
+                                });
                             }
                         );
                     }
@@ -177,6 +177,7 @@ var Autoclose = GObject.registerClass(
 
                     that._runningApplicationListWindow.open();
 
+                    that._runningApplicationListWindow.updateRunningPids()
                     const closeSession = new CloseSession.CloseSession();
                     closeSession.closeWindows()
                         .then((result) => {
@@ -188,12 +189,7 @@ var Autoclose = GObject.registerClass(
                                     that._runningApplicationListWindow.showRunningApps();
                                     that._runningApplicationListWindow._retryButton.reactive = true;
                                 } else {
-                                    that._runningApplicationListWindow._applicationSection.title = `${confirmButtOnLabel} now, this may take a while, please wait…`;
-                                    that._idleIdConfirm = GLib.idle_add(GLib.PRIORITY_LOW, () => {
-                                        that._idleIdConfirm = null;
-                                        that._runningApplicationListWindow._confirm(false);
-                                        return GLib.SOURCE_REMOVE;
-                                    });
+                                    that._runningApplicationListWindow._prepareToConfirm();
                                 }
                             } catch (error) {
                                 that._log.error(error);
@@ -212,12 +208,6 @@ var Autoclose = GObject.registerClass(
             if (__confirm) {
                 EndSessionDialog.EndSessionDialog.prototype._confirm = __confirm;
                 __confirm = null;
-            }
-
-            if (this._dbusImpl && !this._dbusImpl.get_object_path()) {
-                this._log.debug('Restoring to export EndSessionDialog dbus service');
-                this._dbusImpl.export(Gio.DBus.session, '/org/gnome/SessionManager/EndSessionDialog');
-                this._dbusImpl = null;
             }
 
             if (__init) {
@@ -241,10 +231,9 @@ var Autoclose = GObject.registerClass(
             if (this._runningApplicationListWindow) {
                 this._runningApplicationListWindow.destroyDialog()
             }
-
-            if (this._idleIdConfirm) {
-                GLib.source_remove(this._idleIdConfirm);
-                this._idleIdConfirm = null;
+            if (this._retryIdleId) {
+                GLib.source_remove(this._retryIdleId);
+                this._retryIdleId = null;
             }
 
         }
@@ -279,7 +268,11 @@ var RunningApplicationListWindow = GObject.registerClass({
             this._onComplete = onComplete;
             this._onRetry = onRetry;
 
-            this._idleIdConfirm = null;
+            this._confirmIdleId = null;
+            this._checkProcessStateId = null;
+
+            // wm_class 
+            this._apps_recheck_process_state = new Set(['Microsoft-edge']);
 
             this._delegate = this;
             this._draggable = DND.makeDraggable(this, {
@@ -300,6 +293,8 @@ var RunningApplicationListWindow = GObject.registerClass({
             this._log = new Log.Log();
 
             this._defaultAppSystem = Shell.AppSystem.get_default();
+            
+            this._pidsMap = new Map();
 
             this._removeFromLayoutIfNecessary(this);
             // Main.layoutManager.modalDialogGroup.add_actor(this);
@@ -356,7 +351,7 @@ var RunningApplicationListWindow = GObject.registerClass({
 
             this._confirmButton = this.addButton({
                 action: () => {
-                    this._confirm(true);
+                    this._confirmNow();
                 },
                 label: _(`${this._confirmButtOnLabel} now`),
             });
@@ -369,7 +364,7 @@ var RunningApplicationListWindow = GObject.registerClass({
             });
             this.contentLayout.add_child(this._applicationSection);
 
-            this._defaultAppSystem.connect('app-state-changed', this._appStateChanged.bind(this));
+            this._appStateChangedId = this._defaultAppSystem.connect('app-state-changed', this._appStateChanged.bind(this));
             this.showRunningApps();
 
             this._overViewShowingId = Main.overview.connect('showing', () => {
@@ -379,6 +374,19 @@ var RunningApplicationListWindow = GObject.registerClass({
                 this.showAndUpdateState();
             });
 
+        }
+
+        updateRunningPids() {
+            this._defaultAppSystem.get_running()
+                .filter(ra => {
+                    return ra.get_windows()
+                             .find(w => this._apps_recheck_process_state.has(w.get_wm_class()));
+                })
+                .forEach(app => {
+                    app.get_pids().forEach(pid => {
+                        this._pidsMap.set(pid, app);
+                    });
+                });
         }
 
         _onDragBegin(_draggable, _time) {
@@ -537,16 +545,116 @@ var RunningApplicationListWindow = GObject.registerClass({
                     if (nChildren) {
                         this._applicationSection.list.remove_all_children();
                     }
-                    this._applicationSection.title = `${this._confirmButtOnLabel} now, this may take a while, please wait…`;
-                    this._idleIdConfirm = GLib.idle_add(GLib.PRIORITY_LOW, () => {
-                        this._idleIdConfirm = null;
-                        this._confirm(false);
-                        return GLib.SOURCE_REMOVE;
-                    });
+                    this._prepareToConfirm();
                 }
             } else {
                 this.showRunningApps();
             }
+        }
+
+        _prepareToConfirm() {
+            if (this._checkProcessStateId) return;
+
+            this._applicationSection.title = `Waiting below processes to exit, this may take a while…`;
+            this._log.info(`Waiting processes to exit`);
+            this._checkProcessStateId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200, () => {
+                this.updateRunningPids();
+                const pidStateMap = this._checkRunningPidState();
+                if (this._pidsMap.size) {
+                    this._showProcesses(pidStateMap);
+                } else {
+                    // this._log.info(`All processes of running apps have exited, ${this._confirmButtOnLabel} ...`);
+                    const nChildren = this._applicationSection.list.get_n_children();
+                    if (nChildren) {
+                        this._applicationSection.list.remove_all_children();
+                    }
+
+                    this._applicationSection.title = `${this._confirmButtOnLabel} now, this may take a while, please wait…`;
+                    this._confirmIdleId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
+                        this._confirmIdleId = null;
+                        this._confirm();
+                        return GLib.SOURCE_REMOVE;
+                    });
+                    this._checkProcessStateId = null;
+                    return GLib.SOURCE_REMOVE;
+                }
+                return GLib.SOURCE_CONTINUE;
+            });
+        }
+
+        _checkRunningPidState() {
+            const pidStateMap = new Map();
+            let state = new GTop.glibtop_proc_state();
+            for (const [pid, app] of this._pidsMap) {
+                GTop.glibtop_get_proc_state(state, pid);
+                // 0 has to indicate the process does not exist. See: https://developer-old.gnome.org/libgtop/stable/libgtop-procstate.html. 
+                // But I don't fully understand this page.🫣
+                const appName = app.get_name();
+                // A zombie process is in terminated state and it has completed execution.
+                // The underlying program is no longer executing, but the process remains 
+                // in the process table as a zombie process until its parent process calls 
+                // the wait system call to read its exit status, at which point the process
+                // is removed from the process table, finally ending the process's lifetime. 
+                // See: https://en.wikipedia.org/wiki/Zombie_process and https://en.wikipedia.org/wiki/Process_state#Terminated
+                if (state.state && state.state !== GTop.GLIBTOP_PROCESS_ZOMBIE) {
+                    // this._log.debug(`Process ${pid} (${appName}) is still running with state ${state.state}, waiting it to exit`)
+                    pidStateMap.set(pid, state.state);
+                } else {
+                    this._log.info(`Process ${pid} (${appName}) is exited with process state ${state.state} (${this._formatProcessState(state.state)})`);
+                    this._pidsMap.delete(pid)
+                }
+            }
+            return pidStateMap;
+        }
+
+        _showProcesses(pidStateMap) {
+            if (!this._pidsMap.size) {
+                return;
+            }
+
+            const nChildren = this._applicationSection.list.get_n_children();
+            if (nChildren) {
+                this._applicationSection.list.remove_all_children();
+            }
+            this._pidsMap.forEach((app, pid) => {
+                let listItem = new Dialog.ListSectionItem({
+                    icon_actor: app.create_icon_texture(64),
+                    title: app.get_name(),
+                    description: `pid: ${pid} | status: ${this._formatProcessState(pidStateMap.get(pid))}`,
+                });
+                this._applicationSection.list.add_child(listItem);
+            });
+        }
+
+        // Translated to js and borrowed from https://github.com/GNOME/gnome-system-monitor/blob/d80dceedd106ca2415aeb0cb71b54ae4bd93bf75/src/util.cpp#format_process_state
+        _formatProcessState(state) {
+            if (state === undefined) {
+                return _('Exited');
+            }
+            let status;
+            switch (state) {
+              case GTop.GLIBTOP_PROCESS_RUNNING:
+                status = _('Running');
+                break;
+        
+              case GTop.GLIBTOP_PROCESS_STOPPED:
+                status = _('Stopped');
+                break;
+        
+              case GTop.GLIBTOP_PROCESS_ZOMBIE:
+                status = _('Zombie');
+                break;
+        
+              case GTop.GLIBTOP_PROCESS_UNINTERRUPTIBLE:
+                status = _('Uninterruptible');
+                break;
+        
+              default:
+                status = _('Sleeping');
+                break;
+            }
+        
+          return status;
         }
 
         showRunningApps() {
@@ -570,18 +678,22 @@ var RunningApplicationListWindow = GObject.registerClass({
             });
         }
 
-        _confirm(hideDialog) {
+        _confirmNow() {
+            // Ignore the dialog state
+            if (this._onComplete) {
+                this._onComplete('Confirm');
+            }
+        }
+
+        _confirm() {
             if (this.state == State.CONFIRMING || this.state == State.CONFIRMED)
                 return;
 
             this._updateState(State.CONFIRMING);
-            if (hideDialog)
-                this.hide();
             if (this._onComplete) {
                 this._onComplete('Confirm');
                 this._cancelButton.reactive = false;
                 this._retryButton.reactive = true;
-                this._confirmButton.reactive = false;
             }
 
             this._updateState(State.CONFIRMED);
@@ -592,6 +704,12 @@ var RunningApplicationListWindow = GObject.registerClass({
                 return;
 
             this._updateState(State.CANCELING);
+            
+            if (this._checkProcessStateId) {
+                GLib.source_remove(this._checkProcessStateId);
+                this._checkProcessStateId = null;
+            }
+
             this.hide();
             if (this._onComplete)
                 this._onComplete('Cancel');
@@ -610,17 +728,25 @@ var RunningApplicationListWindow = GObject.registerClass({
         destroyDialog() {
             this.hide();
             super.destroy();
+            if (this._appStateChangedId) {
+                this._defaultAppSystem.disconnect(this._appStateChangedId);
+                this._appStateChangedId = null;
+            }
             if (this._overViewShowingId) {
                 Main.overview.disconnect(this._overViewShowingId);
-                this._overViewShowingId = 0;
+                this._overViewShowingId = null;
             }
             if (this._overViewHidingId) {
                 Main.overview.disconnect(this._overViewHidingId);
-                this._overViewHidingId = 0;
+                this._overViewHidingId = null;
             }
-            if (this._idleIdConfirm) {
-                GLib.source_remove(this._idleIdConfirm);
-                this._idleIdConfirm = null;
+            if (this._confirmIdleId) {
+                GLib.source_remove(this._confirmIdleId);
+                this._confirmIdleId = null;
+            }
+            if (this._checkProcessStateId) {
+                GLib.source_remove(this._checkProcessStateId);
+                this._checkProcessStateId = null;
             }
         }
 

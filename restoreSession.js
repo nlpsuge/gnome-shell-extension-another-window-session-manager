@@ -107,7 +107,7 @@ var RestoreSession = class {
             // Note that this timing might not be precise, see https://gjs-docs.gnome.org/glib20~2.66.1/glib.timeout_add
             this._restore_session_interval,
             () => {
-                if (session_config_objects.length === 0) {
+                if (!session_config_objects.length) {
                     return GLib.SOURCE_REMOVE;
                 }
                 this._restoreOneSession(session_config_objects.shift());
@@ -120,9 +120,10 @@ var RestoreSession = class {
         try {
             this._log.info(`Restoring the previous session from ${FileUtils.current_session_path}`);
 
+            const ignoringPaths = [GLib.build_filenamev([FileUtils.current_session_path, 'null'])];
             FileUtils.listAllSessions(FileUtils.current_session_path, true, (file, info) => {
                 const contentType = info.get_content_type();
-                if (contentType === 'application/json') {
+                if (contentType === 'application/json' && !ignoringPaths.includes(file.get_parent().get_path())) {
                     file.load_contents_async(
                         null, 
                         (file, asyncResult) => {
