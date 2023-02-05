@@ -23,6 +23,8 @@ var SaveSession = class {
     constructor() {
         this._log = new Log.Log();
 
+        this._saveSessionIdleId = null;
+
         this._windowTracker = Shell.WindowTracker.get_default();
         this._subprocessLauncher = new Gio.SubprocessLauncher({
             flags: (Gio.SubprocessFlags.STDOUT_PIPE |
@@ -404,7 +406,7 @@ var SaveSession = class {
         this._log.debug(`Saving session ${sessionConfig.session_name} to local file`);
 
         return new Promise((resolve, reject) => {
-            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._saveSessionIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 // Use replace_contents_bytes_async instead of replace_contents_async, see: 
                 // https://gitlab.gnome.org/GNOME/gjs/-/blob/gnome-42/modules/core/overrides/Gio.js#L513
                 // https://gitlab.gnome.org/GNOME/gjs/-/issues/192
@@ -433,6 +435,7 @@ var SaveSession = class {
                         reject(new CommonError.CommonError(errMsg, {desc: reason, cause: causedBy}));
                     });
                 });
+                this._saveSessionIdleId = null;
                 return GLib.SOURCE_REMOVE;
             });
     }
@@ -466,6 +469,10 @@ var SaveSession = class {
                 GLib.Source.remove(sourceId);
             });
             this._sourceIds = null;
+        }
+        if (this._saveSessionIdleId) {
+            GLib.Source.remove(this._saveSessionIdleId);
+            this._saveSessionIdleId = null;
         }
         
     }

@@ -11,7 +11,6 @@ const Log = Me.imports.utils.log;
 const subprocessLauncher = new Gio.SubprocessLauncher({
     flags: (Gio.SubprocessFlags.STDOUT_PIPE |
             Gio.SubprocessFlags.STDERR_PIPE)});
-const _log = new Log.Log();
 
 
 async function getProcessInfo(apps /*ShellApp*/, ignoreWindowsCb) {
@@ -60,21 +59,21 @@ async function getProcessInfo(apps /*ShellApp*/, ignoreWindowsCb) {
                             return resolve(processInfoMap);
                         }
     
-                        _log.error(new Error(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`));
+                        Log.Log.getDefault().error(new Error(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`));
                         resolve(processInfoMap);
                     } catch(e) {
-                        _log.error(e);
+                        Log.Log.getDefault().error(e);
                         reject(e);
                     }
                 }));
             } catch (e) {
-                _log.error(e);
+                Log.Log.getDefault().error(e);
                 reject(e);
             }
             
         })
     } catch (e) {
-        _log.error(e);
+        Log.Log.getDefault().error(e);
     }
 }
 
@@ -136,7 +135,7 @@ var trySpawnCmdstr = function(commandLineString, callBackOnSuccess, callBackOnFa
 
                 resolve([status === 0, status, stdoutInputStream, stderrInputStream]);
             } catch(e) {
-                _log.error(e);
+                Log.Log.getDefault().error(e);
                 reject(e);
             }
         }));
@@ -174,7 +173,7 @@ var trySpawnCmdstrWithBlocking = function(commandLineString, callBackOnSuccess, 
                 let status = proc.get_exit_status();
                 resolve([status === 0, status, stdout, stderr]);
             } catch(e) {
-                _log.error(e);
+                Log.Log.getDefault().error(e);
                 reject(e);
             }
         }));
@@ -199,7 +198,7 @@ var trySpawn = async function(commandLineArray, callBackOnSuccess, callBackOnFai
                 });
         });
     } catch (e) {
-        _log.error(e);
+        Log.Log.getDefault().error(e);
     }
 }
 /** 

@@ -135,8 +135,9 @@ var AutostartService = GObject.registerClass(
                 // Before the startup-complete emits, `Main.pushModal(this, params).get_seat_state()`
                 // returns CLUTTER_GRAB_STATE_NONE (0), which causes the dialog can't open. See: modalDialog.open() -> modalDialog.pushModal()
                 Main.layoutManager.connect('startup-complete', () => {
-                    this._idleIdOpenRestoreSessionDialog =GLib.idle_add(GLib.PRIORITY_LOW, () => {
+                    this._idleIdOpenRestoreSessionDialog = GLib.idle_add(GLib.PRIORITY_LOW, () => {
                         this._autostartDialog.open();
+                        this._idleIdOpenRestoreSessionDialog = null;
                         return GLib.SOURCE_REMOVE;
                     });
                 });
