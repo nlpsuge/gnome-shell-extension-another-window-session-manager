@@ -54,6 +54,7 @@ var MoveSession = class {
                 return;
             }
 
+            // TODO Use global.get_window_actors(); / Meta.get_window_actors() / display.list_all_windows() instead and then call this.moveWindowsByMetaWindow() and then can remove this.moveWindowsByShellApp()?
             const running_apps = this._defaultAppSystem.get_running();
             for (const shellApp of running_apps) {
                 await this.moveWindowsByShellApp(shellApp, session_config_objects);
@@ -408,16 +409,14 @@ var MoveSession = class {
             return [];
         }
 
-        const app_id = shellApp.get_id();
-
         let autoMoveInterestingWindows = [];
         const open_windows = shellApp.get_windows();
         saved_window_sessions.forEach(saved_window_session => {
-            if (app_id !== saved_window_session.desktop_file_id) {
-                return;
-            }
-
             open_windows.forEach(open_window => {
+                if (open_window.get_wm_class() != saved_window_session.wm_class) {
+                    return;
+                }
+
                 const title = open_window.get_title();
                 const windows_count = saved_window_session.windows_count;
                 const open_window_workspace_index = open_window.get_workspace().index();

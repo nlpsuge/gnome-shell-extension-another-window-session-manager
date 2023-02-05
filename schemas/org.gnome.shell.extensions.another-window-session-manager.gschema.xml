@@ -36,6 +36,21 @@
       <description>
       </description>
     </key>
+    <key name='enable-autoclose-session' type="b">
+      <default>true</default>
+      <summary>
+      Enable to close running apps and windows while Logout, Reboot and Shutdown
+      via endSessionDialog.
+      </summary>
+      <description>
+      </description>
+    </key>
+    <key name='enable-restore-previous-session' type="b">
+      <default>false</default>
+      <summary>Enable to Restore previous apps and windows at startup</summary>
+      <description>
+      </description>
+    </key>
     <key name='enable-autorestore-sessions' type="b">
       <default>false</default>
       <summary>Enable to restore session(s) on startup</summary>
@@ -65,6 +80,13 @@
       Set the timer on the AutostartDialog for some seconds, the upper value is 3600s
       </description>
     </key>
+    <key name='restore-previous-delay' type="i">
+      <default>5</default>
+      <summary>Start to restore the previous session after a specified delay</summary>
+      <description>
+      Start to restore the previous session after a specified delay, the upper value is 3600s
+      </description>
+    </key>
     <key name='autostart-delay' type="i">
       <default>5</default>
       <summary>Autostart delay</summary>
@@ -89,8 +111,10 @@
       <default>true</default>
       <summary>Stash and restore states</summary>
       <description>
-      Stash states during the users is using applications. 
-      And restore them after Gnome Shell restarts via `Alt+F2 -> r` and `killall -3 gnome-shell`.
+      Stash states while Gnome Shell restarts via `Alt+F2 -> r` or `killall -3 gnome-shell`, 
+      and restore the windows states after the restart finishes.
+      
+      Only enabled on X11, since Wayand doesn't support restart on fly.
       </description>
     </key>
     

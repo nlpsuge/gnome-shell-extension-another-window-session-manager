@@ -37,31 +37,51 @@ var CloseSession = class {
     }
 
     async closeWindows() {
-        this._log.debug('Closing open windows');
+        try {
+            this._log.debug('Closing open windows');
 
-        let workspaceManager = global.workspace_manager;
-        for (let i = 0; i < workspaceManager.n_workspaces; i++) {
-            // Make workspaces non-persistent, so they can be removed if no windows in it
-            workspaceManager.get_workspace_by_index(i)._keepAliveId = false;
-        }
+            let workspaceManager = global.workspace_manager;
+            for (let i = 0; i < workspaceManager.n_workspaces; i++) {
+                // Make workspaces non-persistent, so they can be removed if no windows in it
+                workspaceManager.get_workspace_by_index(i)._keepAliveId = false;
+            }
 
-        let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
-        for(const app of running_apps_closing_by_rules) {
-            await this._tryCloseAppsByRules(app).catch(e => {
-                this._log.error(e);
-            });
-        }
-        
-        for (const app of new_running_apps) {
-            this._log.info(`Closing ${app.get_name()}`);
-            this._closeOneApp(app)
-                .then(([closed, reason]) => {
-                    if (closed) {
-                        this._log.info(`Closed ${app.get_name()}`);
-                    } else {
-                        this._log.warn(`Can not close ${app.get_name()} because ${reason}`);
-                    }
+            let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
+            for(const app of running_apps_closing_by_rules) {
+                await this._tryCloseAppsByRules(app);
+            }
+            
+            let promises = [];
+            for (const app of new_running_apps) {
+                const promise = new Promise((resolve, reject) => {
+                    this._log.info(`Closing ${app.get_name()}`);
+                    this._closeOneApp(app).then(([closed, reason]) => {
+                        try {
+                            if (closed) {
+                                this._log.info(`Closed ${app.get_name()}`);
+                            } else {
+                                this._log.warn(`Can not close ${app.get_name()} because ${reason}`);
+                                app._cannot_close_reason = reason;
+                            }
+                            resolve();   
+                        } catch (error) {
+                            this._log.error(error);
+                            reject(error);
+                        }
+                    });
                 });
+                promises.push(promise);
+            }
+
+            await Promise.all(promises).catch(error => {
+                this._log.error(error);
+            });
+
+            return {
+                hasRunningApps: this._defaultAppSystem.get_running().length
+            };
+        } catch (error) {
+            this._log.error(error);
         }
     }
 
@@ -76,9 +96,10 @@ var CloseSession = class {
      * @returns true if this `app` is closed, otherwise return false which means it still has unclosed windows
      */
     async _closeOneApp(app) {
+        app._is_closing = true;
+        let closed = true;
+        let reason;
         try {
-            let closed = true;
-            let reason;
             if (app.get_n_windows() > 1) {
                 const appInWhitelist = this.whitelist.includes(app.get_id());
                 let windows = this._sortWindows(app);
@@ -94,9 +115,9 @@ var CloseSession = class {
                         || appInWhitelist 
                         || !this._skip_app_with_multiple_windows)
                     {
-                        closed = await this._awaitDeleteWindow(app, window);
+                        closed = await this._deleteWindow(app, window);
                         if (!closed) {
-                            reason = 'it has at least one window still open';
+                            reason = 'it has at least one window still opening';
                         }
                     } else {
                         closed = false;
@@ -107,24 +128,23 @@ var CloseSession = class {
                 
             if (app.get_n_windows() === 1) {
                 const window = app.get_windows()[0];
-                // Window could be `undefined` here, maybe even though this._awaitDeleteWindow()
-                // returns true, the window still takes some time to close.
-                if (window?.can_close()) {
-                    closed = await this._awaitDeleteWindow(app, window);
-                    if (!closed) {
-                        reason = 'it has at least one window still open, maybe it is not closable or still closing';
-                    }
+                closed = await this._quitApp(app, window);
+                if (!closed) {
+                    reason = 'it has at least one window still opening, maybe it is not closable or still closing';
                 }
             }
-            
-            return [closed, reason];
         } catch (e) {
+            closed = false;
+            reason = `Error raised while closing app: ${e.message}`;
             this._log.error(e);
-            return [false, `Error raised while closing app: ${e.message}`];
+        } finally {
+            app._is_closing = false;
         }
+
+        return [closed, reason];
     }
 
-    _awaitDeleteWindow(app, metaWindow) {
+    _deleteWindow(app, metaWindow) {
         return new Promise((resolve, reject) => {
             // We use 'windows-changed' here because a confirm window could be popped up
             const windowsChangedId = app.connect('windows-changed', () => {
@@ -136,47 +156,87 @@ var CloseSession = class {
         });
     }
 
-    async _tryCloseAppsByRules(app) {
-        // Help close dialogs.
-        // Or even might help close the app without sending keys further, for example if the apps
-        // has one normal window and some attached dialogs. 
-        this._log.info(`Closing ${app.get_name()}`);
-        const [closed, reason] = await this._closeOneApp(app)
-        if (closed) {
-            this._log.warn(`${app.get_name()} has been closed`);
-            return;
+    // See the implement of `shell_app_request_quit` of gnome-shell
+    _quitApp(app, metaWindow) {
+        if (!metaWindow) {
+            return Promise.resolve(true);
         }
 
-        const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
-        const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
-        const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
+        return new Promise((resolve, reject) => {
+            // We use 'windows-changed' here because a confirm window might be popped up
+            let windowsChangedId = app.connect('windows-changed', () => {
+                app.disconnect(windowsChangedId);
+                windowsChangedId = null;
+                resolve(app.get_n_windows() === 0);
+            });
 
-        if (rules?.type === 'shortcut') {
-            let keycodesSegments = [];
-            let shortcutsOriginal = [];
-            for (const order in rules.value) {
-                const rule = rules.value[order];
-                let shortcut = rule.shortcut;
-                const linuxKeycodes = this._convertToLinuxKeycodes(rule);
-                const translatedLinuxKeycodes = linuxKeycodes.slice()
-                            // Press keys
-                            .map(k => k + ':1')
-                            .concat(linuxKeycodes.slice()
-                                // Release keys
-                                .reverse().map(k => k + ':0'))
-                keycodesSegments.push(translatedLinuxKeycodes);
-                shortcutsOriginal.push(shortcut);
-            }
-
-            // Leave the overview first, so the keys can be sent to the activated windows
-            if (Main.overview.visible) {
-                this._log.debug('Leaving Overview before applying rules to close windows');
-                await this._leaveOverview();
+            const quitAction = 'app.quit';
+            if (app.action_group.has_action(quitAction)
+                && !app.action_group.get_action_parameter_type(quitAction)) {
+                metaWindow._aboutToClose = true;
+                // Some apps have `app.quit` action, check them in `lg` via: Shell.AppSystem.get_default().get_running().forEach(a => log(a.get_name() + ': ' + a.action_group.has_action('app.quit')))
+                app.action_group.activate_action(quitAction, null);
+            } else if (metaWindow.can_close()) {
+                metaWindow._aboutToClose = true;
+                metaWindow.delete(DateUtils.get_current_time());
             }
             
-            for (const linuxKeyCodes of keycodesSegments) {
-                await this._activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal);
+            if (!metaWindow._aboutToClose) {
+                if (windowsChangedId) app.disconnect(windowsChangedId);
+                resolve(false);
             }
+        });
+    }
+
+    async _tryCloseAppsByRules(app) {
+        // TODO emit is-closing?
+        app._is_closing = true;
+        try {
+            // Help close dialogs.
+            // Or even might help close the app without sending keys further, for example if the apps
+            // has one normal window and some attached dialogs. 
+            this._log.info(`Closing ${app.get_name()}`);
+            const [closed, reason] = await this._closeOneApp(app);
+            if (closed) {
+                this._log.warn(`${app.get_name()} has been closed`);
+                return;
+            }
+
+            const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
+            const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
+            const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
+
+            if (rules?.type === 'shortcut') {
+                let keycodesSegments = [];
+                let shortcutsOriginal = [];
+                for (const order in rules.value) {
+                    const rule = rules.value[order];
+                    let shortcut = rule.shortcut;
+                    const linuxKeycodes = this._convertToLinuxKeycodes(rule);
+                    const translatedLinuxKeycodes = linuxKeycodes.slice()
+                                // Press keys
+                                .map(k => k + ':1')
+                                .concat(linuxKeycodes.slice()
+                                    // Release keys
+                                    .reverse().map(k => k + ':0'))
+                    keycodesSegments.push(translatedLinuxKeycodes);
+                    shortcutsOriginal.push(shortcut);
+                }
+
+                // Leave the overview first, so the keys can be sent to the activated windows
+                if (Main.overview.visible) {
+                    this._log.debug('Leaving Overview before applying rules to close windows');
+                    await this._leaveOverview();
+                }
+                
+                for (const linuxKeyCodes of keycodesSegments) {
+                    await this._activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal);
+                }
+            }
+        } catch (e) {
+            this._log.error(e);
+        } finally {
+            app._is_closing = false;
         }
     }
 
@@ -252,7 +312,7 @@ var CloseSession = class {
                 }, (output) => {
                     const msg = `Failed to send keys to close ${app.get_name()} via ydotool`;
                     this._log.error(new Error(`${msg}. output: ${output}`));
-                    global.notify_error(`${msg}`, `Reason: ${output}.`);
+                    global.notify_error(`${msg}`, `${output}.`);
                 }
             );
         } catch (e) {
@@ -318,7 +378,7 @@ var CloseSession = class {
 
     _sortWindowsOnX11(app) {
         const savedWindowsMappingJsonStr = this._settings.get_string('windows-mapping');
-        const savedWindowsMapping = new Map(JSON.parse(savedWindowsMappingJsonStr));
+        const savedWindowsMapping = savedWindowsMappingJsonStr === '{}' ? new Map() : new Map(JSON.parse(savedWindowsMappingJsonStr));
 
         const app_info = app.get_app_info();
         const key = app_info ? app_info.get_filename() : app.get_name();

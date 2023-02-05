@@ -6,5 +6,10 @@
         <method name="RestoreSession">
             <arg type="s" name="message" direction="out"/>
         </method>
+        <method name="RestorePreviousSession">
+            <!-- a{sv} stands for Map<String, Variant> -->
+            <arg type="a{sv}" name="args" direction= "in"/>
+            <arg type="s" name="message" direction="out"/>
+        </method>
     </interface>
 </node>
