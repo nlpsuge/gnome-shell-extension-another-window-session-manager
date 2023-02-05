@@ -545,15 +545,6 @@ var OpenWindowsTracker = class {
     destroy() {
         this._cancelAllRunningSave();
 
-        if (this._signals && this._signals.length) {
-            this._signals.forEach(([id, obj]) => {
-                if (id && obj) {
-                    obj.disconnect(id);
-                }
-            });
-            this._signals = null;
-        }
-
         if (this._busWatchId) {
             Gio.bus_unwatch_name(this._busWatchId);
             this._busWatchId = 0;
@@ -595,6 +586,15 @@ var OpenWindowsTracker = class {
             });
             this._overrideSystemActionsPrototypeMap.clear();
             this._overrideSystemActionsPrototypeMap = null;
+        }
+
+        if (this._signals && this._signals.length) {
+            this._signals.forEach(([id, obj]) => {
+                if (id && obj) {
+                    obj.disconnect(id);
+                }
+            });
+            this._signals = null;
         }
     }
 
