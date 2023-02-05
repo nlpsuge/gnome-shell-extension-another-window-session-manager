@@ -138,9 +138,9 @@ var OpenWindowsTracker = class {
         this._signals.push([windowCreatedId, this._display]);
         this._signals.push([x11DisplayOpenedId, this._display]);
 
+        this._overrideSystemActionsPrototypeMap = new Map();
         // TODO Users can click the cancel button of EndSessionDialog, and autoclose.js could also call EndSessionDialog.cancel() function，
         // I don't know how to distinguish them, therefor set `Autoclose.sessionClosedByUser` to false in cancelled signal will not work.
-        this._overrideSystemActionsPrototypeMap = new Map();
         // this._overrideSystemActions();
     }
 
@@ -544,15 +544,6 @@ var OpenWindowsTracker = class {
     destroy() {
         this._cancelAllRunningSave();
 
-        if (this._signals && this._signals.length) {
-            this._signals.forEach(([id, obj]) => {
-                if (id && obj) {
-                    obj.disconnect(id);
-                }
-            });
-            this._signals = null;
-        }
-
         if (this._busWatchId) {
             Gio.bus_unwatch_name(this._busWatchId);
             this._busWatchId = 0;
@@ -594,6 +585,15 @@ var OpenWindowsTracker = class {
             });
             this._overrideSystemActionsPrototypeMap.clear();
             this._overrideSystemActionsPrototypeMap = null;
+        }
+
+        if (this._signals && this._signals.length) {
+            this._signals.forEach(([id, obj]) => {
+                if (id && obj) {
+                    obj.disconnect(id);
+                }
+            });
+            this._signals = null;
         }
     }
 
