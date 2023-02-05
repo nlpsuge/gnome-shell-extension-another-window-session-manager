@@ -14,6 +14,8 @@ const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
 
 Me.imports.utils.string;
 
+const Log = Me.imports.utils.log;
+
 let _indicator;
 let _autostartServiceProvider;
 let _openWindowsTracker;
@@ -53,6 +55,12 @@ function disable() {
         _autoclose.destroy();
         _autoclose = null;
     }
+
+    const defaultLog = Log.Log.getDefault();
+    if (defaultLog) {
+        defaultLog.destroy();
+    }
+
 }
 
 function init() {

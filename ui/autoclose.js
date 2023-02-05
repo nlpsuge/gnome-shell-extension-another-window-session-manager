@@ -157,9 +157,9 @@ var Autoclose = GObject.registerClass(
                             },
                             () => {
                                 that._retryIdleId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
-                                    that._retryIdleId = null;
                                     const closeSession = new CloseSession.CloseSession();
                                     closeSession.closeWindows();
+                                    that._retryIdleId = null;
                                     return GLib.SOURCE_REMOVE;
                                 });
                             }
@@ -516,7 +516,6 @@ var RunningApplicationListWindow = GObject.registerClass({
                 this._updateState(State.CLOSING);
                 this.hide();
 
-                // this.destroy();
                 this.emit('closed');
 
                 this._updateState(State.CLOSED);
@@ -571,8 +570,8 @@ var RunningApplicationListWindow = GObject.registerClass({
 
                     this._applicationSection.title = `${this._confirmButtOnLabel} now, this may take a while, please wait…`;
                     this._confirmIdleId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
-                        this._confirmIdleId = null;
                         this._confirm();
+                        this._confirmIdleId = null;
                         return GLib.SOURCE_REMOVE;
                     });
                     this._checkProcessStateId = null;
@@ -719,10 +718,6 @@ var RunningApplicationListWindow = GObject.registerClass({
 
         _updateState(state) {
             this.state = state
-        }
-
-        destroy() {
-            
         }
 
         destroyDialog() {
