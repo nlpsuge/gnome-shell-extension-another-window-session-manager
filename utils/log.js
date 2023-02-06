@@ -9,17 +9,7 @@ const PrefsUtils = Me.imports.utils.prefsUtils;
 var Log = class {
 
     constructor() {
-        this._default = null;
-
         this._prefsUtils = new PrefsUtils.PrefsUtils();
-    }
-
-    // Return a singleton instance
-    static getDefault() {
-        if (!this._default) {
-            this._default = new Log();
-        }
-        return this._default;
     }
     
     isDebug() {
@@ -53,8 +43,21 @@ var Log = class {
             this._prefsUtils = null;
         }
 
-        this._default = null;
+    }
 
+    // Return a singleton instance
+    static getDefault() {
+        if (!Log._default) {
+            Log._default = new Log();
+        }
+        return Log._default;
+    }
+    
+    static destroyDefault() {
+        if (Log._default) {
+            Log._default.destroy();
+            delete Log._default;
+        }
     }
 
 }

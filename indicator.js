@@ -2,8 +2,6 @@
 
 const { GObject, St, Gio, GLib, Clutter, Shell, Meta } = imports.gi;
 
-const Mainloop = imports.mainloop;
-
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -220,7 +218,7 @@ class AwsIndicator extends PanelMenu.Button {
         if (state) {
             this._searchSessionItem.reset();
             this._searchSessionItem._clearIcon.hide();
-            Mainloop.idle_add(() => this._searchSessionItem._entry.grab_key_focus());
+            this._searchSessionItem._entry.grab_key_focus();
         }
         super._onOpenStateChanged(menu, state);
     }

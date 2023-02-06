@@ -56,10 +56,7 @@ function disable() {
         _autoclose = null;
     }
 
-    const defaultLog = Log.Log.getDefault();
-    if (defaultLog) {
-        defaultLog.destroy();
-    }
+    Log.Log.destroyDefault();
 
 }
 
