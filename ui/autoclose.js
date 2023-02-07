@@ -720,6 +720,12 @@ var RunningApplicationListWindow = GObject.registerClass({
             this.state = state
         }
 
+        destroy() {
+            // This function is called when drag is canceled, but the dialog should be always shown.
+            // So we override it but do nothing. And there is a `destroyDialog()` which can be used to destroy the dialog anyway.
+            // TODO This function is also called after releasing the left button, which is wired, I probably misuse something in this class.
+        }
+
         destroyDialog() {
             this.hide();
             super.destroy();

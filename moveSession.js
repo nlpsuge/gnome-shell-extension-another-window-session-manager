@@ -250,8 +250,8 @@ var MoveSession = class {
     _changeWorkspace(metaWindow, desktop_number) {
         const currentFocusedWindow = global.display.get_focus_window();
         metaWindow.change_workspace_by_index(desktop_number, false);
-        if (currentFocusedWindow === metaWindow) {
-            this._log.debug(`Refocusing the previous focused window ${metaWindow.get_title()}`);
+        if (currentFocusedWindow === metaWindow && !Main.layoutManager._inOverview) {
+            this._log.debug(`Following the previous focused window ${metaWindow.get_title()}`);
             Main.activateWindow(metaWindow, DateUtils.get_current_time());
         }
     }
