@@ -122,6 +122,12 @@
       Only enabled on X11, since Wayand doesn't support restart on fly.
       </description>
     </key>
+    <key name='recently-closed-number-to-keep' type="i">
+      <default>25</default>
+      <summary>The number of recently closed sessions to keep. Set to 0 to disable it.</summary>
+      <description>
+      </description>
+    </key>
     <key name='window-width' type="i">
       <default>60</default>
       <summary>Set nautual width of the window of the popup menu</summary>
@@ -131,7 +137,7 @@
       </description>
     </key>
     <key name='tabs-position-on-popmenu' type="i">
-      <default>2</default>
+      <default>1</default>
       <summary>Set the tabs position on the popup menu</summary>
       <description>
       

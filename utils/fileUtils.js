@@ -37,6 +37,8 @@ var autostart_restore_previous_desktop_file_path = GLib.build_filenamev([home_di
 var desktop_template_path_ydotool_uinput_rules = GLib.build_filenamev([Me.path, '/template/60-awsm-ydotool-uinput.rules']);
 var system_udev_rules_path_ydotool_uinput_rules = '/etc/udev/rules.d/60-awsm-ydotool-uinput.rules';
 
+var recently_closed_path = GLib.build_filenamev([config_path_base, 'recentlyClosed']);
+
 
 /**
  * Get the absolute session path which contains sessions, 

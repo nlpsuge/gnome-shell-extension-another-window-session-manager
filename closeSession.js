@@ -206,7 +206,7 @@ var CloseSession = class {
             // Or even might help close the app without sending keys further, for example if the apps
             // has one normal window and some attached dialogs.
             this._log.info(`Closing ${app.get_name()}`);
-        const [closed, reason] = await this._closeOneApp(app);
+            const [closed, reason] = await this._closeOneApp(app);
             if (closed) {
                 this._log.warn(`${app.get_name()} has been closed`);
                 return;

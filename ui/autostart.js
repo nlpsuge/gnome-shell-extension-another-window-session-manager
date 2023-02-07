@@ -26,6 +26,7 @@ const RestoreSession = Me.imports.restoreSession;
 
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const FileUtils = Me.imports.utils.fileUtils;
+const DateUtils = Me.imports.utils.dateUtils;
 
 const OpenWindowsTracker = Me.imports.openWindowsTracker;
 
@@ -148,7 +149,7 @@ var AutostartService = GObject.registerClass(
         }
 
         // TODO Press some hotkey (like Ctrl) so this time will not restore the previous session?
-        // Call this method asynchronously through, for example: 
+        // Call this method asynchronously through, for example:
         // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{'removeAfterRestore': <false>}"`
         // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{}"`
         RestorePreviousSession(args) {
@@ -197,14 +198,108 @@ var AutostartService = GObject.registerClass(
 
         }
 
-        _restorePreviousWithDelay(removeAfterRestore) {
-            const restorePreviousDelay = this._settings.get_int('restore-previous-delay');
-            this._restorePreviousSourceId = GLib.timeout_add(GLib.PRIORITY_LOW, restorePreviousDelay,
-                () => {
-                    const restoreSession = new RestoreSession.RestoreSession();
+        async _restorePreviousWithDelay(removeAfterRestore) {
+            try {
+                await this._copyToRecentlyClosed();
+                const restorePreviousDelay = this._settings.get_int('restore-previous-delay');
+                this._restorePreviousSourceId = GLib.timeout_add(GLib.PRIORITY_LOW, restorePreviousDelay,
+                    () => {
+                        const restoreSession = new RestoreSession.RestoreSession();
                     restoreSession.restorePreviousSession(removeAfterRestore);
-                    return GLib.SOURCE_REMOVE;
+                        return GLib.SOURCE_REMOVE;
+                    });
+            } catch (e) {
+                this._log.error(e);
+            }
+        }
+
+        async _copyToRecentlyClosed() {
+            try {
+                // 0 disables this feature
+                const recentlyClosedNumberToKeep = this._settings.get_int('recently-closed-number-to-keep');
+                if (!recentlyClosedNumberToKeep) return;
+
+                this._log.debug(`Copying the previous session to ${FileUtils.recently_closed_path}`);
+                let windowsCount = 0;
+                let appsSet = new Set();
+                const files = [];
+                await FileUtils.listAllSessions(FileUtils.current_session_path, true, (file, info) => {
+                    const contentType = info.get_content_type();
+                    if (contentType === 'application/json') {
+                        files.push([file, info]);
+                        windowsCount++;
+                        appsSet.add(file.get_parent().get_path());
+                    }
                 });
+
+                // TODO
+                const recentlyClosedName = `${DateUtils.nowLocal()} - ${appsSet.size} apps (${windowsCount} windows)`;
+                const promises = [];
+                files.forEach(([file, info]) => {
+                    const promise = new Promise((resolve, reject) => {
+                        try {
+                            const fileName = file.get_basename();
+                            const fileParentPath = file.get_parent().get_path();
+                            const targetFileParentPath = fileParentPath.replace(
+                                FileUtils.current_session_path,
+                                GLib.build_filenamev([FileUtils.recently_closed_path, recentlyClosedName]));
+                            if (GLib.mkdir_with_parents(targetFileParentPath, 0o744) !== 0) {
+                                this._log.error(`Failed to create parent paths ${targetFileParentPath} for ${fileName}`);
+                                reject(e);
+                                return;
+                            }
+
+                            const targetFileFullPath = GLib.build_filenamev([targetFileParentPath, fileName]);
+                            file.copy_async(
+                                Gio.File.new_for_path(targetFileFullPath),
+                                Gio.FileCopyFlags.OVERWRITE,
+                                GLib.PRIORITY_DEFAULT,
+                                null,
+                                null,
+                                (file, asyncResult) => {
+                                    try {
+                                        resolve(file.copy_finish(asyncResult));
+                                    } catch (e) {
+                                        this._log.error(e);
+                                        reject(e);
+                                    }
+                                }
+                            );
+                        } catch (e) {
+                            this._log.error(e);
+                        }
+                    });
+                    promises.push(promise);
+                });
+
+                this._removeOldRecentlyClosed(recentlyClosedNumberToKeep);
+
+                await Promise.all(promises);
+                this._log.info(`Copied the previous session to ${FileUtils.recently_closed_path}`);
+            } catch (e) {
+                this._log.error(e);
+            }
+        }
+
+        async _removeOldRecentlyClosed(recentlyClosedNumberToKeep) {
+            try {
+                const recentlyClosedPath = FileUtils.recently_closed_path;
+                const allFileNames = [];
+                await FileUtils.listAllSessions(recentlyClosedPath, false, (file, info) => {
+                    allFileNames.push(file.get_basename());
+                });
+
+                allFileNames.sort().reverse();
+                
+                const removedFileNames = allFileNames.slice(recentlyClosedNumberToKeep);
+                removedFileNames.forEach(fileName => {
+                    const fullFilePath = GLib.build_filenamev([recentlyClosedPath, fileName]);
+                    this._log.info(`Removing older recently closed session ${fullFilePath}`);
+                    FileUtils.removeFile(fullFilePath, true);
+                });
+            } catch (e) {
+                this._log.error(e);
+            }
         }
 
         _disable() {

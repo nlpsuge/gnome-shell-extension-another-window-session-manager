@@ -144,6 +144,13 @@ const Prefs = GObject.registerClass(
                 Gio.SettingsBindFlags.DEFAULT
             );
 
+            this._settings.bind(
+                'recently-closed-number-to-keep',
+                this.recently_closed_number_spinbutton,
+                'value',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
             const window_width = this._settings.get_int('window-width');
             this.window_width_change_scale.set_value(window_width);
             this._settings.connect('changed::window-width', (settings) => {
@@ -236,6 +243,7 @@ const Prefs = GObject.registerClass(
             this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
             this.auto_close_session_switch = this._builder.get_object('auto_close_session_switch');
 
+            this.recently_closed_number_spinbutton = this._builder.get_object('recently_closed_number_spinbutton');
 
             this.window_width_change_scale = this._builder.get_object('window_width_change_scale');
             this.window_width_change_scale.set_format_value_func((scale, value) => {

@@ -254,8 +254,8 @@ class AwsIndicator extends PanelMenu.Button {
             this.notebook._notebookBoxLayout.x_align = this._settings.get_int('tabs-position-on-popmenu');
         });
         this.notebook.appendPage('Session List', this._sessionListSection);
-        this.notebook.appendPage('Running Apps/Windows', this._runningSection, this._buildRunningSection.bind(this));
         this.notebook.appendPage('Recently Closed', this._recentlyClosedSection, this._buildRecentlyClosedSection.bind(this));
+        this.notebook.appendPage('Running Apps/Windows', this._runningSection, this._buildRunningSection.bind(this));
 
         this.menu.addMenuItem(this.notebook, this._itemIndex++);
 

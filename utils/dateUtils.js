@@ -29,3 +29,7 @@ var getRealTime = function(window) {
     const realUserTime = GLib.DateTime.new_from_unix_local(realUserTimestamp).format('%Y-%m-%d %T')
     return realUserTime;
 }
+
+var nowLocal = function(format) {
+    return GLib.DateTime.new_now_local().format(format ? format : '%Y-%m-%d %T')
+}
