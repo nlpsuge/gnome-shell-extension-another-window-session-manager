@@ -1,6 +1,6 @@
 'use strict';
 
-const { Shell, Gio, GLib } = imports.gi;
+const { Shell, Gio, GLib, Meta } = imports.gi;
 
 const ByteArray = imports.byteArray;
 
@@ -15,15 +15,15 @@ const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 const MetaWindowUtils = Me.imports.utils.metaWindowUtils;
 const CommonError = Me.imports.utils.CommonError;
-
-// for make prototype affect
-Me.imports.utils.string;
+const SubprocessUtils = Me.imports.utils.subprocessUtils;
 
 
 var SaveSession = class {
 
     constructor() {
         this._log = new Log.Log();
+
+        this._saveSessionIdleId = null;
 
         this._windowTracker = Shell.WindowTracker.get_default();
         this._subprocessLauncher = new Gio.SubprocessLauncher({
@@ -35,48 +35,122 @@ var SaveSession = class {
     }
 
     async saveSessionAsync(sessionName, baseDir = null, backup = true) {
-        this._log.debug(`Generating session ${sessionName}`);
+        try {
+            this._log.debug(`Generating session ${sessionName}`);
 
-        const sessionConfig = await this._buildSession(sessionName);
-
-        sessionConfig.x_session_config_objects = sessionConfig.sort();
-        
-        if (backup) {
-            await this.backupExistingSessionIfNecessary(sessionName, baseDir);
+            const sessionConfig = await this._buildSession(sessionName);
+    
+            sessionConfig.x_session_config_objects = sessionConfig.sort();
+            
+            if (backup) {
+                await this.backupExistingSessionIfNecessary(sessionName, baseDir);
+            }
+    
+            await this._saveSessionConfigAsync(sessionConfig, baseDir);
+    
+            // TODO saved Notification   
+        } catch (error) {
+            this._log.error(error);
         }
+    }
 
-        await this._saveSessionConfigAsync(sessionConfig, baseDir);
+    async saveWindowsSessionAsync(metaWindows, cancellableMap) {
+        try {
+            const apps = new Set();
+            for (const metaWindow of metaWindows) {
+                const cancellable = cancellableMap ? cancellableMap.get(metaWindow) : null;
+                if (cancellable && cancellable.is_cancelled()) continue;
+                const app = this._windowTracker.get_window_app(metaWindow);
+                if (!app) continue;
+                if (UiHelper.ignoreWindows(metaWindow)) continue;
+                apps.add(app);
+            }
 
-        // TODO saved Notification
+            if (!apps.size) return;
+    
+            const processInfoPromise = SubprocessUtils.getProcessInfo(apps);
 
+            const result = [];
+            for (const metaWindow of metaWindows) {
+                try {
+                    const cancellable = cancellableMap ? cancellableMap.get(metaWindow) : null;
+                    if (cancellable && cancellable.is_cancelled()) continue;
+                    const app = this._windowTracker.get_window_app(metaWindow);
+                    if (!app) continue;
+                    if (UiHelper.ignoreWindows(metaWindow)) continue;
+
+                    const sessionName = `${MetaWindowUtils.getStableWindowId(metaWindow)}.json`;
+                    const baseDir = `${FileUtils.current_session_path}/${metaWindow.get_wm_class()}`;
+
+                    this._log.debug(`Generating window session ${sessionName}`);
+                
+                    const [canContinue, sessionConfigObject] = this._builtSessionDetails(
+                        app, 
+                        metaWindow, 
+                        cancellable);
+                    if (!canContinue) return;
+            
+                    const processInfoMap = await processInfoPromise;
+                    const processInfoArray = processInfoMap.get(metaWindow.get_pid());
+                    this._setFieldsFromProcess(processInfoArray, sessionConfigObject);
+            
+                    const success = await this._saveSessionConfigAsync({
+                        ...sessionConfigObject, 
+                        session_name: sessionName
+                    }, baseDir, cancellable);
+                    result.push([success, metaWindow, baseDir, sessionName]);
+                } catch (e) {
+                    // Ignore cancelation errors
+                    if (!e?.cause?.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) {
+                        this._log.error(e);
+                    }
+                    result.push([false, metaWindow]);
+                }
+            }
+            return result;
+        } catch (e) {
+            this._log.error(e);
+        }
     }
 
     async saveWindowSessionAsync(metaWindow, sessionName, baseDir, cancellable = null) {
-        if (cancellable && cancellable.is_cancelled()) {
-            return;
+        try {
+            if (cancellable && cancellable.is_cancelled()) {
+                return;
+            }
+    
+            const app = this._windowTracker.get_window_app(metaWindow);
+            if (!app) return;
+            if (UiHelper.ignoreWindows(metaWindow)) return;
+    
+            this._log.debug(`Generating window session ${sessionName}`);
+            
+            const _getProcessInfoPromise = this._getProcessInfo([app])
+            
+            const [canContinue, sessionConfigObject] = this._builtSessionDetails(
+                app, 
+                metaWindow, 
+                cancellable);
+            if (!canContinue) return;
+    
+            const processInfoMap = await _getProcessInfoPromise;
+            const processInfoArray = processInfoMap.get(metaWindow.get_pid());
+            this._setFieldsFromProcess(processInfoArray, sessionConfigObject);
+    
+            return await this._saveSessionConfigAsync({
+                ...sessionConfigObject, 
+                session_name: sessionName
+            }, baseDir, cancellable);
+        } catch (e) {
+            this._log.error(e);
         }
-
-        const app = this._windowTracker.get_window_app(metaWindow);
-        if (!app) return;
-        if (this._ignoreWindows(metaWindow)) return;
-
-        this._log.debug(`Generating window session ${sessionName}`);
-        
-        const [canContinue, sessionConfigObject] = this._builtSessionDetails(
-            app, 
-            metaWindow, 
-            cancellable);
-        if (!canContinue) return;
-
-        await this._saveSessionConfigAsync({
-            ...sessionConfigObject, 
-            session_name: sessionName
-        }, baseDir, cancellable);
     }
     
     async _buildSession(sessionName) {
         const runningShellApps = this._defaultAppSystem.get_running();
-        const _getProcessInfoPromise = this._getProcessInfo(runningShellApps)
+        const _getProcessInfoPromise = SubprocessUtils.getProcessInfo(runningShellApps, (metaWindow) => {
+            return UiHelper.ignoreWindows(metaWindow);
+        })
 
         const sessionConfig = new SessionConfig.SessionConfig();
         sessionConfig.session_name = sessionName ? sessionName : FileUtils.default_sessionName;
@@ -115,7 +189,7 @@ var SaveSession = class {
 
         let metaWindows = runningShellApp.get_windows();
         metaWindows = metaWindows.filter(metaWindow => {
-            if (this._ignoreWindows(metaWindow)) {
+            if (UiHelper.ignoreWindows(metaWindow)) {
                 ignoredWindowsMap.get(runningShellApp).push(metaWindow);
                 return false;
             }
@@ -152,6 +226,9 @@ var SaveSession = class {
         sessionConfigObject.monitor_number = metaWindow.get_monitor();
         sessionConfigObject.is_on_primary_monitor = metaWindow.is_on_primary_monitor();
         sessionConfigObject.pid = metaWindow.get_pid();
+        // TODO Since we can launch an app in the terminal after `su - username` or `su username`, we 
+        // should get the user ID who creates/launches this process. In the future, we can restore
+        // this kind of apps under the user ID
         sessionConfigObject.username = GLib.get_user_name();
 
         sessionConfigObject.client_machine_name = GLib.get_host_name();
@@ -162,6 +239,7 @@ var SaveSession = class {
         sessionConfigObject.windows_count = runningShellApp.get_n_windows();
         sessionConfigObject.fullscreen = metaWindow.is_fullscreen();
         sessionConfigObject.minimized = metaWindow.minimized;
+        sessionConfigObject.compositor_type = Meta.is_wayland_compositor() ? 'Wayland' : 'X11'
 
         const frameRect = metaWindow.get_frame_rect();
         let window_position = sessionConfigObject.window_position;
@@ -198,7 +276,8 @@ var SaveSession = class {
             // Save the .desktop full path, so we know which desktop is used by this app.
             sessionConfigObject.desktop_file_id_full_path = desktopAppInfo.get_filename();
         } else {
-            // No app info associated with this application, we just set an empty string
+            // This app is backed by a window, which means that
+            // no app info associated with this application, we just set an empty string
             // Shell.App does have an id like window:22, but it's useless for restoring
             // If desktop_file_id is '', launch this application via command line
             sessionConfigObject.desktop_file_id = '';
@@ -256,80 +335,6 @@ var SaveSession = class {
         return [true, sessionConfigObject];
     }
 
-    _getProcessInfo(runningShellApps) {
-        const pidSet = new Set();
-        for (const runningShellApp of runningShellApps) {
-            let metaWindows = runningShellApp.get_windows();
-            for (const metaWindow of metaWindows) {
-                if (this._ignoreWindows(metaWindow)) {
-                    continue;
-                }
-
-                const pid = metaWindow.get_pid();
-                // pid is `0` if not known
-                // Note that pass `0` or negative value to `ps -p` will get `error: process ID out of range`
-                if (pid > 0) pidSet.add(pid);
-            }
-        }
-
-        // Separate with comma
-        const pids = Array.from(pidSet).join(',');
-        // TODO get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
-        const psCmd = ['ps', '--no-headers', '-p', `${pids}`, '-o', 'lstart,%cpu,%mem,pid,command'];
-    
-        return new Promise((resolve, reject) => {
-            try {
-                const proc = this._subprocessLauncher.spawnv(psCmd);
-                proc.communicate_utf8_async(null, null, ((proc, res) => {
-                    try {
-                        const processInfoMap = new Map();
-                        let [, stdout, stderr] = proc.communicate_utf8_finish(res);
-                        let status = proc.get_exit_status();
-                        if (status === 0 && stdout) {
-                            const lines = stdout.trim();
-                            for (const line of lines.split('\n')) {
-                                const processInfoArray = line.split(' ').filter(a => a);
-                                const pid = processInfoArray.slice(7, 8).join();
-                                processInfoMap.set(Number(pid), processInfoArray);
-                            }
-                            return resolve(processInfoMap);
-                        }
-    
-                        this._log.error(new Error(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`));
-                        resolve(processInfoMap);
-                    } catch(e) {
-                        this._log.error(e);
-                        reject(e);
-                    }
-                }));
-            } catch (e) {
-                this._log.error(e);
-                reject(e);
-            }
-            
-        })
-    }
-
-    _ignoreWindows(metaWindow) {
-        if (UiHelper.isDialog(metaWindow)) {
-            return true;
-        }
-
-        // The override-redirect windows is invisible to the users,
-        // and the workspace index is -1 and don't have proper x, y, width, height.
-        // See also:
-        // https://gjs-docs.gnome.org/meta9~9_api/meta.window#method-is_override_redirect
-        // https://wiki.tcl-lang.org/page/wm+overrideredirect
-        // https://docs.oracle.com/cd/E36784_01/html/E36843/windowapi-3.html
-        // https://stackoverflow.com/questions/38162932/what-does-overrideredirect-do
-        // https://ml.cddddr.org/cl-windows/msg00166.html
-        if (metaWindow.is_override_redirect()) {
-            return true;
-        }
-           
-        return false;
-    }
-
     async backupExistingSessionIfNecessary(sessionName, baseDir) {
 
         const sessions_path = FileUtils.get_sessions_path();
@@ -377,7 +382,7 @@ var SaveSession = class {
 
     _saveSessionConfigAsync(sessionConfig, baseDir = null, cancellable = null) {
         if (cancellable && cancellable.is_cancelled()) {
-            return;
+            return Promise.resolve(false);
         }
 
         const sessions_path = FileUtils.get_sessions_path(baseDir);
@@ -401,7 +406,7 @@ var SaveSession = class {
         this._log.debug(`Saving session ${sessionConfig.session_name} to local file`);
 
         return new Promise((resolve, reject) => {
-            const sourceId = GLib.idle_add(GLib.PRIORITY_HIGH_IDLE, () => {
+            this._saveSessionIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
                 // Use replace_contents_bytes_async instead of replace_contents_async, see: 
                 // https://gitlab.gnome.org/GNOME/gjs/-/blob/gnome-42/modules/core/overrides/Gio.js#L513
                 // https://gitlab.gnome.org/GNOME/gjs/-/issues/192
@@ -417,7 +422,7 @@ var SaveSession = class {
                         try {
                             success = sessionFile.replace_contents_finish(asyncResult);
                             if (success) {
-                                this._log.info(`Saved session into ${sessionFile.get_path()}!`);
+                                this._log.info(`Session saved to ${sessionFile.get_path()}!`);
                                 resolve(success);
                                 // TODO Notification
                                 return;
@@ -426,13 +431,13 @@ var SaveSession = class {
                             causedBy = e;
                         }
                         const errMsg = `Cannot save session: ${sessionFile.get_path()}`;
-                        const reason = `Failed to save session into ${sessionFile.get_path()}!`;
+                        const reason = `Failed to save session to ${sessionFile.get_path()}!`;
                         reject(new CommonError.CommonError(errMsg, {desc: reason, cause: causedBy}));
                     });
                 });
+                this._saveSessionIdleId = null;
                 return GLib.SOURCE_REMOVE;
             });
-            this._sourceIds.push(sourceId);
     }
 
     _setFieldsFromProcess(processInfoArray, sessionConfigObject) {
@@ -464,6 +469,10 @@ var SaveSession = class {
                 GLib.Source.remove(sourceId);
             });
             this._sourceIds = null;
+        }
+        if (this._saveSessionIdleId) {
+            GLib.Source.remove(this._saveSessionIdleId);
+            this._saveSessionIdleId = null;
         }
         
     }

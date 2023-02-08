@@ -1,9 +1,7 @@
 # gnome-shell-extension-another-window-session-manager
-Close and save open windows. And restore from a saved windows session.
+Close open windows gracefully and save them as a session. And you can restore them when necessary manually or automatically at startup.
 
 Most importantly, it supports both X11 and Wayland!
-
-This project is in early development, but it's basically working now. More features will be added in the future.
 
 This extension is based on several [Gnome technologies](https://www.gnome.org/technologies/) and APIs including [Meta](https://gjs-docs.gnome.org/meta9~9_api), [Shell](https://gjs-docs.gnome.org/shell01~0.1_api/) and [St(Shell Toolkit)](https://gjs-docs.gnome.org/st10~1.0_api/).
 
@@ -45,18 +43,20 @@ After confirm to save:
 ## Preferences
 
 ### Restore sessions
-To modify the delay, timer, and how to restore a session:
-![image](https://user-images.githubusercontent.com/2271720/185134291-b496f34b-dad0-4a1f-8641-17232dfac93c.png)
+![image](https://user-images.githubusercontent.com/2271720/214390369-04736886-6dac-48de-bcde-782277a4448e.png)
 
 ### Close windows
-![image](https://user-images.githubusercontent.com/2271720/176687352-e99a5f7d-9260-4f63-abd4-abaa4671daf3.png)
+![image](https://user-images.githubusercontent.com/2271720/215283405-5c052244-8223-4aa4-9786-2798a073c3e0.png)
 
 # Main features
-1. Close open windows
-1. Close apps with multiple windows via `ydotool` so you don't lose sessions of this app (See also: [How to make Close by rules work](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work))
-1. Save open windows
-1. Restore session(s)
-1. Restore a session at startup (See also: [#9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9#issuecomment-1097012874)). Please note that this feature is **disabled by default**.
+1. Restore the previous session at startup. **disabled by default**.
+1. Save running apps and windows automatically when necessary, this will be used to restore the previous session at startup.
+1. Close running apps and windows automatically before `Log Out`, `Restart`, `Power Off`. **disabled by default**.
+1. Close running windows gracefully
+1. Close apps with multiple windows gracefully via `ydotool` so you don't lose sessions of this app (See also: [How to make Close by rules work](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work))
+1. Save running apps and windows manually
+1. Restore a selected session at startup (See also: [#9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9#issuecomment-1097012874)). **disabled by default**.
+1. Restore a saved session manually
 1. Restore window state, including `Always on Top`, `Always on Visible Workspace` and maximization
 1. Restore window workspace, size and position
 1. Restore 2 column window tiling
@@ -68,6 +68,25 @@ To modify the delay, timer, and how to restore a session:
 1. ...
 
 ## Close windows
+
+### Auto close session
+Enable this feature through `Auto close session` under `Close windows`:
+
+![image](https://user-images.githubusercontent.com/2271720/214387813-fece3c78-6e27-494a-9edd-4705350c7179.png)
+
+After you click the `Log Out/Restart/Power Off` button:
+
+![image](https://user-images.githubusercontent.com/2271720/214377307-0af5b841-93b8-4b6c-bd09-7a620dc79025.png)
+
+If the second button on the above dialog has `via AWSM`, it means this feature is enabled. 
+
+After you click `Log Out(via AWSM)`, all apps and windows will be closed automatically by AWSM. But some apps might be still opening, you have to close them yourself; then if there are no running apps, this extension logs out the current user immediately.
+
+![image](https://user-images.githubusercontent.com/2271720/214394659-651e6259-842c-49ca-9c97-6df62c9485d1.png)
+
+You can move it around in case it covers other windows.
+
+Please note that currently if this option is enabled, it modifies the Gnome Shell `endSessionDialog` **globally**, which means running `gnome-session-quit --logout` will also popup the new modified dialog.
 
 ### How to make `Close by rules` work
 
@@ -88,14 +107,40 @@ sudo echo '# See:
 #Remove executable permission (a.k.a. x)
 sudo chmod 644 /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
 
-# 3. Autostart the ydotoold service under the normal user
+# 3. Copy ydotool.service to /usr/lib/systemd/user, so `systemctl --user enable ydotool.service` can work
 sudo cp /usr/lib/systemd/system/ydotool.service /usr/lib/systemd/user
-sudo systemctl --user enable ydotool.service
+# 4. Autostart the ydotoold service under the normal user
+systemctl --user enable ydotool.service
+
+
+## misc. ##
+
+# Check if the ydotoold service is running, if not it can be started by the folowing cmd
+systemctl --user status ydotool.service
+# Start the ydotoold service under the normal user
+systemctl --user start ydotool.service
+
+# Check if ydotool is working. the word `hello` should print on the terminal, if not you might need to reboot the system or try to relogin your account. 
+ydotool type 'hello'
 ```
 
-And then reboot the system to take effect. Relogin maybe work too.
+Feel free to fill an issue if `ydotool` does not work under normal user, you may also want to do that in [its git issue area](https://github.com/ReimuNotMoe/ydotool/issues)
 
 ## Restore sessions
+
+### Restore previous apps and windows at startup
+![image](https://user-images.githubusercontent.com/2271720/214390369-04736886-6dac-48de-bcde-782277a4448e.png)
+
+Activate `Restore previous apps and windows at startup` to enable this feature. This option and `Restore selected session at startup` are exclusive. And this option works for shutting down the system normally (via Log Out/Restart/Power Off buttons) and other ways (like pressing the physical power-off button).
+
+Then while startup, AWSM will launch and restore apps and states from the previous saved session configs.
+
+The session configs are saved in the path `~/.config/another-window-session-manager/sessions/currentSession`.
+
+You can use the below command to test it. 
+```bash
+gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{'removeAfterRestore': <false>}"
+```
 
 ### How to `Restore a session at startup`?
 
@@ -136,13 +181,11 @@ Use `gdbus` to call the remote method, which is provided by this exension, to im
 
 * ydotool
 
-Send keys to close the application with multiple windows.
+Send keys to close the application gracefully with multiple windows.
 
 # Known issues
 
 1. On both X11 and Wayland, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) continually during the process of restoring, the window size and position may can't be restored, and it may restore many instances of an application. **As a workaround, click the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) only once until all apps are restored.**
-2. ~~On both X11 and Wayland, due to [this bug](https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134) within mutter, in Overview, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) then immediately click the newly created workspace, the Gnome Shell can crash. To fix this issue, the Overview will be toggled hidden after clicking the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) when in Overview. I will remove this behavior once I find a better solution or it's fixed in a new version of Gnome Shell.~~ ([Fixed in Gnome 42](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/pull/38))
-3. ...
 
 # Support applications launched via a command line or applications that don't have a proper .desktop file
 If the .desktop is missing from a session file, restoring an application relies on the command line completely.
@@ -190,11 +233,11 @@ Note that I've marked `backups` as a reserved word, so you can't use it as a ses
       - [x] Debugging mode
       - [ ] whitelist using for closing application with multiple windows
 1. - [x] Support restoring a saved session at startup ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
-1. - [ ] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
+1. - [x] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
 1. - [ ] All TODO tags in the projects
 1. - [ ] Translation?
 1. - [ ] A client tool called `awsm-client` (See: [issue 34](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/34))
 1. - [ ] Fix any typo or grammar errors.
 1. - [ ] Open the Preferences on the popup menu 
-1. - [ ] Open the session file from the popup menu
+1. - [x] Open the session file from the popup menu
 

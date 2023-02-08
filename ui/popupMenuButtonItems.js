@@ -88,7 +88,7 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
         return timeline;
     }
 
-    // Add the icon description. Only once icon may be too weird?
+    // Add the icon description
     addIconDescription(iconDescription) {
         this.iconDescriptionLabel = new St.Label({
             text: iconDescription
@@ -146,9 +146,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
             }
 
             RestoreSession.restoringApps.clear();
-            this.closeSession.closeWindows().catch(e => {
-                this._log.error(e)
-            });
+            this.closeSession.closeWindows();
             this._hideConfirm();
 
             // Set the actor the timeline is associated with to make sure Clutter.Timeline works normally.

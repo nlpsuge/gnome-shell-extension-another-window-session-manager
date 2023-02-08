@@ -7,6 +7,8 @@ const Main = imports.ui.main;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
+const UiHelper = Me.imports.ui.uiHelper;
+
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 const DateUtils = Me.imports.utils.dateUtils;
@@ -28,7 +30,7 @@ var MoveSession = class {
 
     }
 
-    moveWindows(sessionName) {
+    async moveWindows(sessionName) {
         if (!sessionName) {
             sessionName = this.sessionName;
         }
@@ -52,54 +54,58 @@ var MoveSession = class {
                 return;
             }
 
+            // TODO Use global.get_window_actors(); / Meta.get_window_actors() / display.list_all_windows() instead and then call this.moveWindowsByMetaWindow() and then can remove this.moveWindowsByShellApp()?
             const running_apps = this._defaultAppSystem.get_running();
             for (const shellApp of running_apps) {
-                this.moveWindowsByShellApp(shellApp, session_config_objects);
+                await this.moveWindowsByShellApp(shellApp, session_config_objects);
             }
         }
 
     }
 
-    moveWindowsByShellApp(shellApp, saved_window_sessions) {
-        const interestingWindows = this._getAutoMoveInterestingWindows(shellApp, saved_window_sessions);
+    async moveWindowsByShellApp(shellApp, saved_window_sessions) {
+        try {
+            const interestingWindows = this._getAutoMoveInterestingWindows(shellApp, saved_window_sessions);
         
-        if (!interestingWindows.length) {
-            return;
-        }
-        
-        for (const interestingWindow of interestingWindows) {
-            const open_window = interestingWindow.open_window;
-            const saved_window_session = interestingWindow.saved_window_session;
-            const title = open_window.get_title();
-            const desktop_number = saved_window_session.desktop_number;
-
-            try {
-                this._restoreMonitor(open_window, saved_window_session);
-                this._restoreWindowGeometry(open_window, saved_window_session);
-                this._restoreTiling(open_window, saved_window_session);
-                this._createEnoughWorkspace(desktop_number);
-
-                // Sticky windows don't need moving, in fact moving would unstick them
-                // See: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/gnome-41/js/ui/windowManager.js#L1070
-                const is_sticky = saved_window_session.window_state.is_sticky;
-                if (is_sticky && open_window.is_on_all_workspaces()) {
-                    this._log.debug(`The window '${shellApp.get_name()} - ${title}' is already sticky on workspace ${desktop_number}`);
-                } else {
-                    this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${open_window.get_workspace().index()}`);
-                    this._changeWorkspace(open_window, desktop_number);
-                }
-
-                // restore window state if necessary due to moving windows could lost window state
-                this._restoreWindowState(open_window, saved_window_session);
-
-            } catch (e) {
-                // I just don't want one failure breaks the loop 
-
-                this._log.error(e, `Failed to move window ${title} for ${shellApp.get_name()} automatically`);
+            if (!interestingWindows.length) {
+                return;
             }
-            saved_window_session.moved = true;
+        
+            for (const interestingWindow of interestingWindows) {
+                const open_window = interestingWindow.open_window;
+                if (UiHelper.ignoreWindows(open_window)) continue;
+    
+                const saved_window_session = interestingWindow.saved_window_session;
+                const title = open_window.get_title();
+                const desktop_number = saved_window_session.desktop_number;
+    
+                try {
+                    await this._restoreWindowStates(open_window, saved_window_session);
+                    this._createEnoughWorkspace(desktop_number);
+    
+                    // Sticky windows don't need moving, in fact moving would unstick them
+                    // See: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/gnome-41/js/ui/windowManager.js#L1070
+                    const is_sticky = saved_window_session.window_state.is_sticky;
+                    if (is_sticky && open_window.is_on_all_workspaces()) {
+                        this._log.debug(`The window '${shellApp.get_name()} - ${title}' is already sticky on workspace ${desktop_number}`);
+                    } else {
+                        this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${open_window.get_workspace().index()}`);
+                        this._changeWorkspace(open_window, desktop_number);
+                    }
+    
+                    // restore window state if necessary due to moving windows could lost window state
+                    this._restoreWindowState(open_window, saved_window_session);
+    
+                } catch (e) {
+                    // I just don't want one failure breaks the loop
+    
+                    this._log.error(e, `Failed to move window ${title} for ${shellApp.get_name()} automatically`);
+                }
+                saved_window_session.moved = true;
+            }   
+        } catch (error) {
+            this._log.error(error, shellApp ? shellApp.get_name() : 'This app may be closed.');
         }
-
     }
 
     // Inspired by https://github.com/Leleat/Tiling-Assistant/blob/main/tiling-assistant%40leleat-on-github/src/extension/resizeHandler.js
@@ -108,110 +114,117 @@ var MoveSession = class {
     }
 
     /**
-     * We need to move the window before changing the workspace, because
+     * We need to move the window to the monitor it belongs before moving it to the workspace, because
      * the move itself could cause a workspace change if the window enters
      * the primary monitor
      * 
-     * @see https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/gnome-41/js/ui/workspace.js#L1483
+     * @see https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/gnome-41/js/ui/workspace.js#L1497
      */
-    _restoreMonitor(metaWindow, saved_window_session) {
-        const currentMonitorNumber = metaWindow.get_monitor();
+    async _restoreMonitor(metaWindow, saved_window_session) {
+        const currentMonitorIndex = metaWindow.get_monitor();
         // -1 if the window has been recently unmanaged and does not have a monitor
-        if (currentMonitorNumber === -1) {
-            return;
-        }
-
-        const primaryMonitorIndex = global.display.get_primary_monitor()
-
-        const toMonitorNumber = saved_window_session.monitor_number;
-        if (toMonitorNumber === undefined) {
-            if (currentMonitorNumber !== primaryMonitorIndex) {
-                this._log.info(`${shellApp.get_name()} - ${metaWindow.get_title()} doesn't have the monitor number data, click the save open windows button to save it. Moving it to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
-                metaWindow.move_to_monitor(primaryMonitorIndex);
-            }
-            return;
+        if (currentMonitorIndex === -1) {
+            return Promise.resolve(metaWindow);
         }
 
         const shellApp = this._windowTracker.get_window_app(metaWindow);
+        const primaryMonitorIndex = global.display.get_primary_monitor()
+        const savedMonitorIndex = saved_window_session.monitor_number;
 
+        let toMonitorIndex = null;
+        if (savedMonitorIndex === undefined) {
+            if (currentMonitorIndex !== primaryMonitorIndex) {
+                this._log.info(`${shellApp.get_name()} - ${metaWindow.get_title()} doesn't have the monitor number data, click the save open windows button to save it. Moving it to the primary monitor ${primaryMonitorIndex} from ${currentMonitorIndex}`);
+                toMonitorIndex = primaryMonitorIndex;
+            }
+        }
         // It's possible to save the unmanaged windows
-        if (toMonitorNumber === -1) {
-            if (currentMonitorNumber !== primaryMonitorIndex) {
-                this._log.info(`${shellApp.get_name()} - ${metaWindow.get_title()} is unmanaged when saving, moving it to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
-                metaWindow.move_to_monitor(primaryMonitorIndex);
+        else if (savedMonitorIndex === -1) {
+            if (currentMonitorIndex !== primaryMonitorIndex) {
+                this._log.info(`${shellApp.get_name()} - ${metaWindow.get_title()} is unmanaged when saving, moving it to the primary monitor ${primaryMonitorIndex} from ${currentMonitorIndex}`);
+                toMonitorIndex = primaryMonitorIndex;
             }
-            return;
         }
-
-        const is_on_primary_monitor = saved_window_session.is_on_primary_monitor;
-        if (is_on_primary_monitor) {
-            if (currentMonitorNumber !== primaryMonitorIndex) {
-                this._log.info(`Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
-                metaWindow.move_to_monitor(primaryMonitorIndex);
+        else if (saved_window_session.is_on_primary_monitor) {
+            if (currentMonitorIndex !== primaryMonitorIndex) {
+                this._log.info(`Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to the primary monitor ${primaryMonitorIndex} from ${currentMonitorIndex}`);
+                toMonitorIndex = primaryMonitorIndex;
             }
-            return;
         }
-        
         // It causes Gnome shell to crash, if we move a monitor to a non-existing monitor on X11 and Wayland!
         // We move all windows on non-existing monitors to the primary monitor
-        const totalMonitors = global.display.get_n_monitors()
-        if (toMonitorNumber > totalMonitors - 1) {
-            if (currentMonitorNumber !== primaryMonitorIndex) {
-                this._log.info(`Monitor ${toMonitorNumber} doesn't exist. Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to the primary monitor ${primaryMonitorIndex} from ${currentMonitorNumber}`);
-                metaWindow.move_to_monitor(primaryMonitorIndex);
+        else if (savedMonitorIndex > global.display.get_n_monitors() - 1) {
+            if (currentMonitorIndex !== primaryMonitorIndex) {
+                this._log.info(`Monitor ${savedMonitorIndex} doesn't exist. Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to the primary monitor ${primaryMonitorIndex} from ${currentMonitorIndex}`);
+                toMonitorIndex = primaryMonitorIndex;
             }
-            return;
+        }
+        else if (currentMonitorIndex !== savedMonitorIndex) {
+            this._log.debug(`Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to monitor ${savedMonitorIndex} from ${currentMonitorIndex}`);
+            // So, you don't want to unplug the monitor, which we are moving the window in to, at this moment. 🤣
+            toMonitorIndex = savedMonitorIndex;
         }
 
-        if (currentMonitorNumber !== toMonitorNumber) {
-            this._log.debug(`Moving ${shellApp.get_name()} - ${metaWindow.get_title()} to monitor ${toMonitorNumber} from ${currentMonitorNumber}`);
-            // So, you don't want to unplug the monitor, which we are moving the window in to, at this moment. 🤣
-            metaWindow.move_to_monitor(toMonitorNumber);
-            return;
+        if (toMonitorIndex != null) {
+            return new Promise((resolve, reject) => {
+                // MetaWindow.move_to_monitor() can no longer be assumed to have updated the monitor on return, as under wayland
+                // Wait for the monitor change to take effect
+                // See: https://gitlab.gnome.org/GNOME/gnome-shell/-/commit/1cb01ec5b139da136cac665fc705e4ddd1d926a1
+                const id = global.display.connect('window-entered-monitor',
+                    (dsp, num, w) => {
+                        if (w === metaWindow)
+                            global.display.disconnect(id);
+                        resolve(metaWindow);
+                    });
+                metaWindow.move_to_monitor(toMonitorIndex);
+            });
         }
         
+        return Promise.resolve(metaWindow);
     }
 
-    createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions) {
-        const saved_window_session = this._getOneMatchedSavedWindow(metaWindow, saved_window_sessions);
-        if (!saved_window_session) {
-            return null;
-        }
+    async createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions) {
+        try {
+            if (UiHelper.ignoreWindows(metaWindow)) return null;
 
-        if (saved_window_session.moved) {
-            this._restoreWindowStates(metaWindow, saved_window_session);
-            return saved_window_session;
-        }
-
-        this._restoreMonitor(metaWindow, saved_window_session);
-
-        const desktop_number = saved_window_session.desktop_number;
-        this._createEnoughWorkspace(desktop_number);
-        if (this._log.isDebug()) {
-            const shellApp = this._windowTracker.get_window_app(metaWindow);
-            this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
-        }
-        this._changeWorkspace(metaWindow, desktop_number);
-        return saved_window_session;
-    }
-
-    moveWindowsByMetaWindow(metaWindow, saved_window_sessions) {
-        const saved_window_session = this._getOneMatchedSavedWindow(metaWindow, saved_window_sessions);
-        if (!saved_window_session) {
-            return;
-        }
-
-        if (saved_window_session.moved) {
-            const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            const saved_window_session = this._getOneMatchedSavedWindow(metaWindow, saved_window_sessions);
+            if (!saved_window_session) {
+                return null;
+            }
+    
+            if (saved_window_session.moved) {
                 this._restoreWindowStates(metaWindow, saved_window_session);
-                return GLib.SOURCE_REMOVE;
-            });
-            this._sourceIds.push(sourceId);
-        } else {
-            const sourceId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-                this._restoreMonitor(metaWindow, saved_window_session);
-                this._restoreWindowGeometry(metaWindow, saved_window_session);
-                this._restoreTiling(metaWindow, saved_window_session);
+                return saved_window_session;
+            }
+    
+            await this._restoreMonitor(metaWindow, saved_window_session);
+    
+            const desktop_number = saved_window_session.desktop_number;
+            this._createEnoughWorkspace(desktop_number);
+            if (this._log.isDebug()) {
+                const shellApp = this._windowTracker.get_window_app(metaWindow);
+                this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
+            }
+            this._changeWorkspace(metaWindow, desktop_number);
+            return saved_window_session;   
+        } catch (error) {
+            this._log.error(error, metaWindow ? metaWindow.get_title() : 'This window may be destroyed.');
+        }
+    }
+
+    async moveWindowsByMetaWindow(metaWindow, saved_window_sessions) {
+        try {
+            if (UiHelper.ignoreWindows(metaWindow)) return;
+
+            const saved_window_session = this._getOneMatchedSavedWindow(metaWindow, saved_window_sessions);
+            if (!saved_window_session) {
+                return;
+            }
+
+            if (saved_window_session.moved) {
+                await this._restoreWindowStates(metaWindow, saved_window_session);
+            } else {
+                await this._restoreWindowStates(metaWindow, saved_window_session);
                 const desktop_number = saved_window_session.desktop_number;
                 // It's necessary to move window again to ensure an app goes to its own workspace.
                 // In a sort of situation, some apps probably just don't want to move when call createEnoughWorkspaceAndMoveWindows() from `Meta.Display::window-created` signal.
@@ -228,17 +241,17 @@ var MoveSession = class {
                 this._restoreWindowState(metaWindow, saved_window_session);
 
                 saved_window_session.moved = true;
-                return GLib.SOURCE_REMOVE;
-            });
-            this._sourceIds.push(sourceId);
+            }
+        } catch (error) {
+            this._log.error(error, metaWindow ? metaWindow.get_title() : 'This window may be destroyed.');
         }
     }
 
     _changeWorkspace(metaWindow, desktop_number) {
         const currentFocusedWindow = global.display.get_focus_window();
         metaWindow.change_workspace_by_index(desktop_number, false);
-        if (currentFocusedWindow === metaWindow) {
-            this._log.debug(`Refocusing the previous focused window ${metaWindow.get_title()}`);
+        if (currentFocusedWindow === metaWindow && !Main.layoutManager._inOverview) {
+            this._log.debug(`Following the previous focused window ${metaWindow.get_title()}`);
             Main.activateWindow(metaWindow, DateUtils.get_current_time());
         }
     }
@@ -277,10 +290,20 @@ var MoveSession = class {
      * 
      * @see https://help.gnome.org/users/gnome-help/stable/shell-windows-maximize.html.en
      */
-    _restoreWindowStates(metaWindow, saved_window_session) {
-        this._restoreWindowState(metaWindow, saved_window_session);
-        this._restoreWindowGeometry(metaWindow, saved_window_session);
-        this._restoreTiling(metaWindow, saved_window_session);
+    async _restoreWindowStates(metaWindow, saved_window_session, markToMoved = false) {
+        try {
+            if (UiHelper.ignoreWindows(metaWindow)) return;
+
+            await this._restoreMonitor(metaWindow, saved_window_session);
+            this._restoreWindowState(metaWindow, saved_window_session);
+            this._restoreWindowGeometry(metaWindow, saved_window_session);
+            this._restoreTiling(metaWindow, saved_window_session);
+            if (markToMoved) {
+                saved_window_session.moved = true;
+            }
+        } catch (error) {
+            this._log.error(error, metaWindow ? metaWindow.get_title() : 'This window may be destroyed.');
+        }
     }
 
     _restoreWindowState(metaWindow, saved_window_session) {
@@ -349,7 +372,7 @@ var MoveSession = class {
             const to_width = window_position.width;
             const to_height = window_position.height;
 
-            const currentMonitor = global.display.get_current_monitor();
+            const currentMonitor = metaWindow.get_monitor();
             const rectWorkArea = metaWindow.get_work_area_for_monitor(currentMonitor);
             
             // For more info about the below issue see also: https://github.com/Leleat/Tiling-Assistant/blob/1e4176a9a7037ee5dd0612e4c9f9dbe45d4e67cf/tiling-assistant%40leleat-on-github/src/extension/tilingWindowManager.js#L186-L199
@@ -386,16 +409,14 @@ var MoveSession = class {
             return [];
         }
 
-        const app_id = shellApp.get_id();
-
         let autoMoveInterestingWindows = [];
         const open_windows = shellApp.get_windows();
         saved_window_sessions.forEach(saved_window_session => {
-            if (app_id !== saved_window_session.desktop_file_id) {
-                return;
-            }
-
             open_windows.forEach(open_window => {
+                if (open_window.get_wm_class() != saved_window_session.wm_class) {
+                    return;
+                }
+
                 const title = open_window.get_title();
                 const windows_count = saved_window_session.windows_count;
                 const open_window_workspace_index = open_window.get_workspace().index();
@@ -404,15 +425,13 @@ var MoveSession = class {
                 if (windows_count === 1 || title === saved_window_session.window_title) {
                     if (open_window_workspace_index === desktop_number) {
                         this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
-                        this._restoreWindowStates(open_window, saved_window_session);
-                        saved_window_session.moved = true;
-                        return;
+                        this._restoreWindowStates(open_window, saved_window_session, true);
+                    } else {
+                        autoMoveInterestingWindows.push({
+                            open_window: open_window,
+                            saved_window_session: saved_window_session
+                        });
                     }
-
-                    autoMoveInterestingWindows.push({
-                        open_window: open_window,
-                        saved_window_session: saved_window_session
-                    });
                 }
 
             });

@@ -4,8 +4,6 @@ const { GObject, St, Clutter, Atk } = imports.gi;
 
 const PopupMenu = imports.ui.popupMenu;
 
-const Mainloop = imports.mainloop;
-
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 

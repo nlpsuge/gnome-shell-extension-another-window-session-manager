@@ -10,9 +10,8 @@ var Log = class {
 
     constructor() {
         this._prefsUtils = new PrefsUtils.PrefsUtils();
-        
     }
-
+    
     isDebug() {
         return this._prefsUtils.isDebug();
     }
@@ -24,6 +23,9 @@ var Log = class {
     }
 
     error(e, logContent) {
+        if (!(e instanceof Error)) {
+            e = new Error(e);
+        }
         logError(e, `[ERROR  ][Another window session manager] ${logContent}`);
     }
 
@@ -41,6 +43,21 @@ var Log = class {
             this._prefsUtils = null;
         }
 
+    }
+
+    // Return a singleton instance
+    static getDefault() {
+        if (!Log._default) {
+            Log._default = new Log();
+        }
+        return Log._default;
+    }
+    
+    static destroyDefault() {
+        if (Log._default) {
+            Log._default.destroy();
+            delete Log._default;
+        }
     }
 
 }

@@ -3,6 +3,80 @@
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+
+const Log = Me.imports.utils.log;
+
+const subprocessLauncher = new Gio.SubprocessLauncher({
+    flags: (Gio.SubprocessFlags.STDOUT_PIPE |
+            Gio.SubprocessFlags.STDERR_PIPE)});
+
+
+async function getProcessInfo(apps /*ShellApp*/, ignoreWindowsCb) {
+    try {
+        const pidSet = new Set();
+        for (const app of apps) {
+            let metaWindows = app.get_windows();
+            for (const metaWindow of metaWindows) {
+                if (ignoreWindowsCb && ignoreWindowsCb(metaWindow)) {
+                    continue;
+                }
+    
+                const pid = metaWindow.get_pid();
+                // pid is `0` if not known
+                // Note that pass `0` or negative value to `ps -p` will get `error: process ID out of range`
+                if (pid > 0) pidSet.add(pid);
+            }
+        }
+
+        if (!pidSet.size) return;
+    
+        // Separated with comma
+        const pids = Array.from(pidSet).join(',');
+        // TODO get_sandboxed_app_id() Gets an unique id for a sandboxed app (currently flatpaks and snaps are supported).
+        const psCmd = ['ps', '--no-headers', '-p', `${pids}`, '-o', 'lstart,%cpu,%mem,pid,command'];
+    
+        return new Promise((resolve, reject) => {
+            try {
+                // const proc = subprocessLauncher.spawnv(psCmd);
+                let proc = Gio.Subprocess.new(
+                    psCmd,
+                    Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+                );
+                proc.communicate_utf8_async(null, null, ((proc, res) => {
+                    try {
+                        const processInfoMap = new Map();
+                        let [, stdout, stderr] = proc.communicate_utf8_finish(res);
+                        let status = proc.get_exit_status();
+                        if (status === 0 && stdout) {
+                            const lines = stdout.trim();
+                            for (const line of lines.split('\n')) {
+                                const processInfoArray = line.split(' ').filter(a => a);
+                                const pid = processInfoArray.slice(7, 8).join();
+                                processInfoMap.set(Number(pid), processInfoArray);
+                            }
+                            return resolve(processInfoMap);
+                        }
+    
+                        Log.Log.getDefault().error(new Error(`Failed to query process info. status: ${status}, stdout: ${stdout}, stderr: ${stderr}`));
+                        resolve(processInfoMap);
+                    } catch(e) {
+                        Log.Log.getDefault().error(e);
+                        reject(e);
+                    }
+                }));
+            } catch (e) {
+                Log.Log.getDefault().error(e);
+                reject(e);
+            }
+            
+        })
+    } catch (e) {
+        Log.Log.getDefault().error(e);
+    }
+}
+
 // A simple asynchronous read loop
 function readOutput(stream, lineBuffer) {
     stream.read_line_async(0, null, (stream, res) => {
@@ -19,26 +93,123 @@ function readOutput(stream, lineBuffer) {
     });
 }
 
-var trySpawn = function(commandLineArray, callBackOnSuccess, callBackOnFailure) {
+/**
+ * We can get the pid after `proc.wait_finish(res)`, but note that the 
+ * subprocess might exit later with failure.
+ * 
+ */
+var trySpawnCmdstr = function(commandLineString, callBackOnSuccess, callBackOnFailure) {
+    let success_, argv;
+
+    try {
+        [success_, argv] = GLib.shell_parse_argv(commandLineString);
+    } catch (err) {
+        // Replace "Error invoking GLib.shell_parse_argv: " with
+        // something nicer
+        err.message = err.message.replace(/[^:]*: /, `${_('Could not parse command:')}\n`);
+        throw err;
+    }
+
+    let proc = Gio.Subprocess.new(
+        argv,
+        Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+    );
     return new Promise((resolve, reject) => {
-        trySpawnAsync(commandLineArray, 
-            (output) => {
-                if (callBackOnSuccess) {
-                    callBackOnSuccess(output);
+        proc.wait_async(null, ((proc, res) => {
+            try {
+                let successful = proc.wait_finish(res);
+                let status = proc.get_exit_status();
+                let stdoutInputStream = proc.get_stdout_pipe();
+                let stderrInputStream = proc.get_stderr_pipe();
+                if (!(stdoutInputStream instanceof Gio.DataInputStream)) {
+                    stdoutInputStream = new Gio.DataInputStream({
+                        base_stream: stdoutInputStream,
+                    });
                 }
-                resolve(output);
-            }, 
-            (output) => {
-                if (callBackOnFailure) {
-                    callBackOnFailure(output);
+
+                if (!(stderrInputStream instanceof Gio.DataInputStream)) {
+                    stderrInputStream = new Gio.DataInputStream({
+                        base_stream: stderrInputStream,
+                    });
                 }
-                reject(new Error(output));
-            })
+
+                resolve([status === 0, status, stdoutInputStream, stderrInputStream]);
+            } catch(e) {
+                Log.Log.getDefault().error(e);
+                reject(e);
+            }
+        }));
     });
 }
-// Based on:
-// 1. https://gjs.guide/guides/gio/subprocesses.html#asynchronous-communication
-// 2. https://gitlab.gnome.org/GNOME/gnome-shell/blob/8fda3116f03d95fabf3fac6d082b5fa268158d00/js/misc/util.js:L111
+
+/**
+ * Deprecated. Use `trySpawnCmdstr()` instead.
+ * 
+ * Since `proc.communicate_utf8_finish(res)` only returns value
+ * after the subprocess (created by `commandLineString`)
+ * exits, we cannot get the pid right after the subprocess launches. 
+ * So there will be some kind of blocking here. 
+ */
+var trySpawnCmdstrWithBlocking = function(commandLineString, callBackOnSuccess, callBackOnFailure) {
+    let success_, argv;
+
+    try {
+        [success_, argv] = GLib.shell_parse_argv(commandLineString);
+    } catch (err) {
+        // Replace "Error invoking GLib.shell_parse_argv: " with
+        // something nicer
+        err.message = err.message.replace(/[^:]*: /, `${_('Could not parse command:')}\n`);
+        throw err;
+    }
+
+    let proc = Gio.Subprocess.new(
+        argv,
+        Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+    );
+    return new Promise((resolve, reject) => {
+        proc.communicate_utf8_async(null, null, ((proc, res) => {
+            try {
+                let [, stdout, stderr] = proc.communicate_utf8_finish(res);
+                let status = proc.get_exit_status();
+                resolve([status === 0, status, stdout, stderr]);
+            } catch(e) {
+                Log.Log.getDefault().error(e);
+                reject(e);
+            }
+        }));
+    });
+}
+
+var trySpawn = async function(commandLineArray, callBackOnSuccess, callBackOnFailure) {
+    try {
+        return await new Promise((resolve, reject) => {
+            trySpawnAsync(commandLineArray,
+                (output) => {
+                    if (callBackOnSuccess) {
+                        callBackOnSuccess(output);
+                    }
+                    resolve(output);
+                },
+                (output, status) => {
+                    if (callBackOnFailure) {
+                        callBackOnFailure(output, status);
+                    }
+                    reject(new Error(output));
+                });
+        });
+    } catch (e) {
+        Log.Log.getDefault().error(e);
+    }
+}
+/** 
+ * Based on:
+ * 1. https://gjs.guide/guides/gio/subprocesses.html#asynchronous-communication
+ * 2. https://gitlab.gnome.org/GNOME/gnome-shell/blob/8fda3116f03d95fabf3fac6d082b5fa268158d00/js/misc/util.js:L111
+ * 
+ * This implement will return the `stderr` and `stdout` to caller via two callback 
+ * `callBackOnFailure` and `callBackOnFailure`
+ * 
+ */
 var trySpawnAsync = function(commandLineArray, callBackOnSuccess, callBackOnFailure) {
     try {
         let [, pid, stdin, stdout, stderr] = GLib.spawn_async_with_pipes(
@@ -92,6 +263,8 @@ var trySpawnAsync = function(commandLineArray, callBackOnSuccess, callBackOnFail
         // Watch for the process to finish, being sure to set a lower priority than
         // we set for the read loop, so we get all the output
         GLib.child_watch_add(GLib.PRIORITY_DEFAULT_IDLE, pid, (pid, status) => {
+            // TODO Note that this status is usually not equal to the integer passed to `exit()`
+            // See: https://gitlab.gnome.org/GNOME/glib/-/blob/5d498f4d1ce0fd124cbfb065fb2155a2e964bf5f/glib/gmain.h#L244
             if (status === 0) {
                 if (callBackOnSuccess) {
                     callBackOnSuccess(stdoutLines.join('\n'));

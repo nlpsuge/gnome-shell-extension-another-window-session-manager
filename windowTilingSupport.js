@@ -102,6 +102,10 @@ var WindowTilingSupport = class {
     }
 
     static _grabOpEnd(display, grabbedWindow, grabOp) {
+        // grabbedWindow is null, tested on Fedora 35 with Gnome 41.6 and Wayland,
+        // by clicking the indicator show and then hide the popup menu
+        if (!grabbedWindow) return;
+
         const oldGrabbedWindowRect = this._grabbedWindowsAboutToUntileMap.get(grabbedWindow);
         const currentRect = grabbedWindow.get_frame_rect();
         // Untile if any of x, y, width and height changed

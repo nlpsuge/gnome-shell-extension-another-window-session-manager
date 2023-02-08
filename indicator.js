@@ -2,8 +2,6 @@
 
 const { GObject, St, Gio, GLib, Clutter, Shell, Meta } = imports.gi;
 
-const Mainloop = imports.mainloop;
-
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -41,7 +39,7 @@ class AwsIndicator extends PanelMenu.Button {
 
         this._sessions_path = FileUtils.sessions_path;
 
-        this.monitor = null;
+        this.monitors = [];
 
         this._sessionsMenuSection = null;
 
@@ -78,7 +76,7 @@ class AwsIndicator extends PanelMenu.Button {
     }
 
     // TODO Move this method and related code to a single .js file
-    _windowCreated(display, metaWindow, userData) {
+    async _windowCreated(display, metaWindow, userData) {
         if (!Meta.is_wayland_compositor()) {
             // We call createEnoughWorkspaceAndMoveWindows() if and only if all conditions checked.
             
@@ -96,31 +94,32 @@ class AwsIndicator extends PanelMenu.Button {
             // Install https://extensions.gnome.org/extension/4679/burn-my-windows/ to watch this process.
 
             const shellApp = this._windowTracker.get_window_app(metaWindow);
-            if (shellApp) {
-            
-                const shellAppData = RestoreSession.restoringApps.get(shellApp);
-                if (shellAppData) {
-                    const saved_window_sessions = shellAppData.saved_window_sessions;
+            let shellAppData = RestoreSession.restoringApps.get(shellApp);
+            if (!shellAppData) {
+                shellAppData = RestoreSession.restoringApps.get(metaWindow.get_pid());
+            }
 
-                    // On X11, we have to create enough workspace and move windows before receive the first-frame signal.
-                    // If not, all windows will be shown in current workspace when stay in Overview, which is not pretty.
-                    let matchedSavedWindowSession = this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
-                    
-                    if (matchedSavedWindowSession) {
-                        // We try to restore window state here if necessary.
-                        // Below are possible reasons:
-                        // 1) In current implement there is no guarantee that the first-frame and shown signals can be triggered immediately. You have to click a window to trigger them.
-                        // 2) The restored window state could be lost
-                        this._log.debug(`Restoring window state of ${shellApp.get_name()} - ${metaWindow.get_title()} if necessary`);
-                        this._moveSession._restoreWindowState(metaWindow, matchedSavedWindowSession);
+            if (shellAppData) {
+                const saved_window_sessions = shellAppData.saved_window_sessions;
+
+                // On X11, we have to create enough workspace and move windows before receive the first-frame signal.
+                // If not, all windows will be shown in current workspace when stay in Overview, which is not pretty.
+                let matchedSavedWindowSession = await this._moveSession.createEnoughWorkspaceAndMoveWindows(metaWindow, saved_window_sessions);
+                
+                if (matchedSavedWindowSession) {
+                    // We try to restore window state here if necessary.
+                    // Below are possible reasons:
+                    // 1) In current implement there is no guarantee that the first-frame and shown signals can be triggered immediately. You have to click a window to trigger them.
+                    // 2) The restored window state could be lost
+                    this._log.debug(`Restoring window state of ${shellApp.get_name()} - ${metaWindow.get_title()} if necessary`);
+                    this._moveSession._restoreWindowState(metaWindow, matchedSavedWindowSession);
 
 
-                        // Fix window geometry later on in first-frame signal
-                        // TODO The side-effect is when a window is already in the current workspace there will be two same logs (The window 'Clocks' is already on workspace 0 for Clocks) in the journalctl, which is not pretty.
-                        // TODO Maybe it's better to use another state to indicator whether a window has been restored geometry.
-                        matchedSavedWindowSession.moved = false;
-                    }
-                }             
+                    // Fix window geometry later on in first-frame signal
+                    // TODO The side-effect is when a window is already in the current workspace there will be two same logs (The window 'Clocks' is already on workspace 0 for Clocks) in the journalctl, which is not pretty.
+                    // TODO Maybe it's better to use another state to indicator whether a window has been restored geometry.
+                    matchedSavedWindowSession.moved = false;
+                }
             }
         }
         
@@ -142,16 +141,13 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
 
-            // To prevent the below error when disable this extension after restore apps:
-            // JS ERROR: TypeError: this._log is null 
-            if (!this._log) {
-                return;
-            }
-
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> first-frame: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
-            const shellAppData = RestoreSession.restoringApps.get(shellApp);
+            let shellAppData = RestoreSession.restoringApps.get(shellApp);
+            if (!shellAppData) {
+                shellAppData = RestoreSession.restoringApps.get(metaWindow.get_pid());
+            }
             if (!shellAppData) {
                 return;
             }
@@ -179,16 +175,13 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
 
-            // To prevent the below error when disable this extension after restore apps:
-            // JS ERROR: TypeError: this._log is null
-            if (!this._log) {
-                return;
-            }
-
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> shown: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
-            const shellAppData = RestoreSession.restoringApps.get(shellApp);
+            let shellAppData = RestoreSession.restoringApps.get(shellApp);
+            if (!shellAppData) {
+                shellAppData = RestoreSession.restoringApps.get(metaWindow.get_pid());
+            }
             if (!shellAppData) {
                 return;
             }
@@ -225,7 +218,7 @@ class AwsIndicator extends PanelMenu.Button {
         if (state) {
             this._searchSessionItem.reset();
             this._searchSessionItem._clearIcon.hide();
-            Mainloop.idle_add(() => this._searchSessionItem._entry.grab_key_focus());
+            this._searchSessionItem._entry.grab_key_focus();
         }
         super._onOpenStateChanged(menu, state);
     }
@@ -276,13 +269,14 @@ class AwsIndicator extends PanelMenu.Button {
         if (!GLib.file_test(this._sessions_path, GLib.FileTest.EXISTS)) {
             // TODO Empty session
             this._log.info(`${this._sessions_path} not found! It's harmless, please save some windows in the panel menu to create it automatically.`);
+            this._sessionsMenuSection.removeAll();
             return;
         }
 
         this._log.debug('List all sessions to add session items');
         
         let sessionFileInfos = [];
-        await FileUtils.listAllSessions(null, false, this._prefsUtils.isDebug(),(file, info) => {
+        await FileUtils.listAllSessions(null, false, (file, info) => {
             // We have an interest in regular and text files
 
             const file_type = info.get_file_type();
@@ -307,9 +301,11 @@ class AwsIndicator extends PanelMenu.Button {
                 file: file
             });
 
-        }).catch(e => {this._log.error(e, 'Error listing all sessions')});
+        }).catch(e => {
+            this._log.error(e, 'Error listing all sessions')
+        });
 
-        // Sort by modification time: https://gjs-docs.gnome.org/gio20~2.66p/gio.fileenumerator
+        // Sort by modification time: https://gjs-docs.gnome.org/gio20~2.0/gio.fileenumerator
         // The latest on the top, if a file has no modification time put it on the bottom
         sessionFileInfos.sort((sessionFileInfo1, sessionFileInfo2) => {
             const info1 = sessionFileInfo1.info;
@@ -381,31 +377,63 @@ class AwsIndicator extends PanelMenu.Button {
      */
     _addSessionFolderMonitor() {
         const sessionPathFile = Gio.File.new_for_path(this._sessions_path);
-        // Ok, it's the directory we are monitoring :)
-        // TODO If the parent of this._sessions_path was deleted, this.monitor don't get the 'changed' signal, so the panel menu items not removed.
-        this.monitor = sessionPathFile.monitor_directory(Gio.FileMonitorFlags.NONE, null);
-        this.monitor.connect('changed', this._sessionChanged.bind(this));
+        this._monitor_directory(sessionPathFile);
+
+        // Moving a directory on the same filesystem doesn’t move its contents, so we
+        // monitor each parent directory because I want to receive the `changed` when they are moved
+        let parent = sessionPathFile.get_parent();
+        // If parent is null, then it represents the root directory of the file system
+        while (parent) {
+            if (parent.get_path() === `${FileUtils.user_config}`) {
+                break;
+            }
+            this._monitor_directory(parent);
+            parent = parent.get_parent();
+        }
+
+    }
+
+    _monitor_directory(directory) {
+        const monitor = directory.monitor_directory(
+            Gio.FileMonitorFlags.WATCH_MOUNTS |
+            Gio.FileMonitorFlags.WATCH_MOVES, null);
+        monitor.connect('changed', this._sessionChanged.bind(this));
+        this.monitors.push(monitor);
     }
 
     // https://gjs-docs.gnome.org/gio20~2.66p/gio.filemonitor#signal-changed
     // Looks like the document is wrong ...
-    _sessionChanged(monitor, file, other_file, eventType) {
-        this._log.debug(`Session changed, readd all session items from ${this._sessions_path}. ${file.get_path()} changed. Event type: ${eventType}`);
+    _sessionChanged(monitor, fileMonitored, otherFile, eventType) {
+        const pathMonitored = fileMonitored.get_path();
+        const otherFilePath = otherFile?.get_path();
+        this._log.debug(`Session changed, readd all session items from ${this._sessions_path}. ${pathMonitored} changed. other_file: ${otherFilePath}. Event type: ${eventType}`);
 
         // Ignore CHANGED and CREATED events, since in both cases
         // we'll get a CHANGES_DONE_HINT event when done.
         if (eventType === Gio.FileMonitorEvent.CHANGED ||
-            eventType === Gio.FileMonitorEvent.CREATED) 
-            return;
-                
+            eventType === Gio.FileMonitorEvent.CREATED) {
+                return;
+        }
+        
+        // The eventType is Gio.FileMonitorEvent.RENAMED while modify the content of a text file,
+        // so otherFile is the correct file we need to read.
+        // The doc said:
+        // If using Gio.FileMonitorFlags.WATCH_MOVES on a directory monitor, and
+        // the information is available (and if supported by the backend),
+        // event_type may be Gio.FileMonitorEvent.RENAMED,
+        // Gio.FileMonitorEvent.MOVED_IN or Gio.FileMonitorEvent.MOVED_OUT.
+        if (eventType === Gio.FileMonitorEvent.RENAMED) {
+            fileMonitored = otherFile;
+        }
+
         // Ignore temporary files generated by Gio
-        if (file.get_basename().startsWith('.goutputstream-')) {
+        if (fileMonitored.get_basename().startsWith('.goutputstream-')) {
             return;
         }
 
         let info = null;
         try {
-            info = file.query_info(
+            info = fileMonitored.query_info(
                 [Gio.FILE_ATTRIBUTE_STANDARD_TYPE, 
                     Gio.FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE].join(','),
                 Gio.FileQueryInfoFlags.NONE,
@@ -417,7 +445,9 @@ class AwsIndicator extends PanelMenu.Button {
             const file_type = info.get_file_type();
             const content_type = info.get_content_type();
             if (!(file_type === Gio.FileType.REGULAR &&
-                  content_type === 'text/plain')) {
+                  content_type === 'text/plain') && 
+                    // Parent folders could be changed
+                    !this._sessions_path.startsWith(pathMonitored)) {
                 return;
             }
         }
@@ -481,9 +511,12 @@ class AwsIndicator extends PanelMenu.Button {
     }
 
     destroy() {
-        if (this.monitor) {
-            this.monitor.cancel();
-            this.monitor = null;
+        if (this.monitors) {
+            this.monitors.forEach ((monitor) => {
+                monitor.cancel();
+                monitor = null;
+            });
+            this.monitors = [];
         }
 
         if (this._sessions_path) {
@@ -493,11 +526,6 @@ class AwsIndicator extends PanelMenu.Button {
         if (this._prefsUtils) {
             this._prefsUtils.destroy();
             this._prefsUtils = null;
-        }
-
-        if (this._log) {
-            this._log.destroy();
-            this._log = null;
         }
 
         if (this._metaWindowConnectIds) {
@@ -511,6 +539,11 @@ class AwsIndicator extends PanelMenu.Button {
         if (this._displayId) {
             this._display.disconnect(this._displayId);
             this._displayId = 0;
+        }
+
+        if (this._log) {
+            this._log.destroy();
+            this._log = null;
         }
 
         super.destroy();

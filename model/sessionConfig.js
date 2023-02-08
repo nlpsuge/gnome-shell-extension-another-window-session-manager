@@ -78,6 +78,8 @@ var SessionConfigObject = class {
     window_tiling; // WindowTiling
 
     is_focused; // boolean, whether is the currently active window
+
+    compositor_type; // string. X11, Wayland
 }
 
 var SessionConfig = class {
@@ -89,7 +91,7 @@ var SessionConfig = class {
     // TODO 
     // https://gjs-docs.gnome.org/meta9~9_api/meta.workspace#method-activate_with_focus
     // https://gjs-docs.gnome.org/meta9~9_api/meta.window#method-activate
-    focused_window; // SessionConfigObject
+    focused_window; // SessionConfigObject or SessionConfigObject.window_id?
     windows_count; // int
     x_session_config_objects = []; // list[SessionConfigObject]
 
