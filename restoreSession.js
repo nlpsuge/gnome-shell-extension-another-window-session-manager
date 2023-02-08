@@ -165,7 +165,8 @@ var RestoreSession = class {
                         });
                     }
                     
-                    [launched, running] = this.launch(shell_app);
+                    const desktopNumber = session_config_object.desktop_number;
+                    [launched, running] = this.launch(shell_app, desktopNumber);
                     if (launched) {
                         if (!running) {
                             this._log.info(`${app_name} has been launched! Preparing to restore window ${session_config_object.window_title}(${app_name})!`);
@@ -270,7 +271,7 @@ var RestoreSession = class {
         }
     }
 
-    launch(shellApp) {
+    launch(shellApp, desktopNumber) {
         if (this._restoredApps.has(shellApp)) {
             this._log.info(`${shellApp.get_name()} is restored, skipping`);
             return [true, false];
@@ -283,12 +284,10 @@ var RestoreSession = class {
             return [true, true];
         }
 
-        // -1 current workspace?
-        let workspace = -1;
         const launched = shellApp.launch(
             // 0 for current event timestamp
             0, 
-            workspace,
+            desktopNumber,
             this._getProperGpuPref(shellApp));
         return [launched, false];
     }
