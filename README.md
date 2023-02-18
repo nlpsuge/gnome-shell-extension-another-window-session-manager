@@ -49,9 +49,9 @@ After confirm to save:
 ![image](https://user-images.githubusercontent.com/2271720/215283405-5c052244-8223-4aa4-9786-2798a073c3e0.png)
 
 # Main features
-1. Restore the previous session at startup. **disabled by default**.
+1. Restore the previous session at startup. **disabled by default**, to enable it please activate `Restore previous apps and windows at startup` under `Restore sessions`. (See also: [Restore previous apps and windows at startup](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#restore-previous-apps-and-windows-at-startup)).
 1. Save running apps and windows automatically when necessary, this will be used to restore the previous session at startup.
-1. Close running apps and windows automatically before `Log Out`, `Restart`, `Power Off`. **disabled by default**.
+1. Close running apps and windows automatically before `Log Out`, `Restart`, `Power Off`. **disabled by default**, to enable it please activate `Auto close session` under `Close windows`. (See also: [Auto close session](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#auto-close-session)).
 1. Close running windows gracefully
 1. Close apps with multiple windows gracefully via `ydotool` so you don't lose sessions of this app (See also: [How to make Close by rules work](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work))
 1. Save running apps and windows manually
@@ -182,6 +182,12 @@ Use `gdbus` to call the remote method, which is provided by this exension, to im
 * ydotool
 
 Send keys to close the application gracefully with multiple windows.
+
+* libgtop2
+
+As of version 34, AWSM also uses `libgtop2` to query process information, just like `ps`. The cost of calling `ps` is very high, so I'm planing to remove this entirely.
+
+In `Fedora`, install it via `dnf install libgtop2`, while in `Pop!_OS 22.04`, you can install `gir1.2-gtop-2.0` as the suggestion of https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/69#issuecomment-1423117200 
 
 # Known issues
 

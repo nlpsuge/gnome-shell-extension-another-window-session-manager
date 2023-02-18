@@ -17,12 +17,15 @@ const Constants = Me.imports.constants;
 
 const UiHelper = Me.imports.ui.uiHelper;
 
+var MUTTER_SCHEMA = 'org.gnome.mutter';
+
 
 var CloseSession = class {
     constructor() {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
+        this._mutterSettings = new Gio.Settings({ schema_id: MUTTER_SCHEMA });
 
         this._skip_app_with_multiple_windows = true;
         this._defaultAppSystem = Shell.AppSystem.get_default();
@@ -36,15 +39,11 @@ var CloseSession = class {
         this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'smplayer.desktop'];
     }
 
-    async closeWindows() {
+    async closeWindows(workspacePersistent) {
         try {
             this._log.debug('Closing open windows');
 
-            let workspaceManager = global.workspace_manager;
-            for (let i = 0; i < workspaceManager.n_workspaces; i++) {
-                // Make workspaces non-persistent, so they can be removed if no windows in it
-                workspaceManager.get_workspace_by_index(i)._keepAliveId = false;
-            }
+            if (workspacePersistent) this._updateWorkspacePersistent(true);
 
             let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
             for(const app of running_apps_closing_by_rules) {
@@ -77,11 +76,34 @@ var CloseSession = class {
                 this._log.error(error);
             });
 
+            this._updateWorkspacePersistent(false);
+
             return {
                 hasRunningApps: this._defaultAppSystem.get_running().length
             };
         } catch (error) {
             this._log.error(error);
+        }
+    }
+
+    _updateWorkspacePersistent(allPersistent) {
+        const dynamicWorkspaces = this._mutterSettings.get_boolean('dynamic-workspaces');
+        if (dynamicWorkspaces) {
+            // Starting from the right
+            let workspaceManager = global.workspace_manager;
+            for (let i = workspaceManager.n_workspaces - 2; i >= 0; i--) {
+                const workspace = workspaceManager.get_workspace_by_index(i);
+                if (allPersistent) {
+                    // Before closing windows, make all workspace persistent.
+                    workspace._keepAliveId = true;
+                } else if (!workspace.n_windows) {
+                    // If there is no window on it, make the workspace non-persistent, and the workspace will be removed automatically
+                    workspace._keepAliveId = false;
+                } else {
+                    // Until find the workspace with windows. This keeps the workspace index of unclosed windows unchanged.
+                    break;
+                }
+            }
         }
     }
 
