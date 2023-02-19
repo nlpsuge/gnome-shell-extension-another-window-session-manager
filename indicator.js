@@ -154,7 +154,7 @@ class AwsIndicator extends PanelMenu.Button {
             
             const saved_window_sessions = shellAppData.saved_window_sessions;
             
-            this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
+            this._moveSession.moveWindowByMetaWindow(metaWindow, saved_window_sessions);
         
             metaWindowActor.disconnect(firstFrameId);
             firstFrameId = 0;
@@ -188,7 +188,7 @@ class AwsIndicator extends PanelMenu.Button {
             
             const saved_window_sessions = shellAppData.saved_window_sessions;
             
-            this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
+            this._moveSession.moveWindowByMetaWindow(metaWindow, saved_window_sessions);
         
             metaWindow.disconnect(shownId);
             shownId = 0;
