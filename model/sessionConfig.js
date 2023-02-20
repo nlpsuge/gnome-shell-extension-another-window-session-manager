@@ -88,11 +88,11 @@ var SessionConfig = class {
     backup_time; // str
     restore_times; // list = []
     active_workspace_index; // int
+    n_workspace; // int. the total number of workspaces
     // TODO 
     // https://gjs-docs.gnome.org/meta9~9_api/meta.workspace#method-activate_with_focus
     // https://gjs-docs.gnome.org/meta9~9_api/meta.window#method-activate
     focused_window; // SessionConfigObject or SessionConfigObject.window_id?
-    windows_count; // int
     x_session_config_objects = []; // list[SessionConfigObject]
 
 

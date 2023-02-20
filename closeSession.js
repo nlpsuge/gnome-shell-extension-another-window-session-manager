@@ -43,9 +43,11 @@ var CloseSession = class {
      *
      * @param {Shell.App} app
      */
-    async closeWindows(app) {
+    async closeWindows(app, workspacePersistent) {
         try {
             this._log.debug('Closing open windows');
+
+            if (workspacePersistent) this._updateWorkspacePersistent(true);
 
             if (!app) {
                 let workspaceManager = global.workspace_manager;
@@ -87,11 +89,33 @@ var CloseSession = class {
                 this._log.error(error);
             });
 
+            this._updateWorkspacePersistent(false);
+
             return {
                 hasRunningApps: this._defaultAppSystem.get_running().length
             };
         } catch (error) {
             this._log.error(error);
+        }
+    }
+
+    _updateWorkspacePersistent(allPersistent) {
+        if (Meta.prefs_get_dynamic_workspaces()) {
+            // Starting from the right
+            let workspaceManager = global.workspace_manager;
+            for (let i = workspaceManager.n_workspaces - 2; i >= 0; i--) {
+                const workspace = workspaceManager.get_workspace_by_index(i);
+                if (allPersistent) {
+                    // Before closing windows, make all workspace persistent.
+                    workspace._keepAliveId = true;
+                } else if (!workspace.n_windows) {
+                    // If there is no window on it, make the workspace non-persistent, and the workspace will be removed automatically
+                    workspace._keepAliveId = false;
+                } else {
+                    // Until find the workspace with windows. This keeps the workspace index of unclosed windows unchanged.
+                    break;
+                }
+            }
         }
     }
 

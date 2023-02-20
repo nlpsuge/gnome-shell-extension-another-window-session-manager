@@ -12,6 +12,8 @@ const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const SubprocessUtils = Me.imports.utils.subprocessUtils;
+const DateUtils = Me.imports.utils.dateUtils;
+
 const UiHelper = Me.imports.ui.uiHelper;
 
 // All launching apps by Shell.App#launch()
@@ -43,6 +45,26 @@ var RestoreSession = class {
         this._display = global.display;
 
         this._connectIds = [];
+    }
+
+    /**
+     * Restore workspaces and make them persistent, etc
+     */
+    static restoreFromSummary() {
+        Log.Log.getDefault().debug(`Prepare to restore summary`);
+        FileUtils.loadSummary().then(([summary, path]) => {
+            Log.Log.getDefault().info(`Restoring summary from ${path}`);
+            const savedNWorkspace = summary.n_workspace;
+            const workspaceManager = global.workspace_manager;
+            const currentNWorkspace = workspaceManager.n_workspaces;
+            const moreWorkspace = savedNWorkspace - currentNWorkspace;
+            if (moreWorkspace) {
+                for (let i = currentNWorkspace; i <= savedNWorkspace; i++) {
+                    workspaceManager.append_new_workspace(false, DateUtils.get_current_time());
+                    workspaceManager.get_workspace_by_index(i)._keepAliveId = true;
+                }
+            }
+        }).catch(e => Log.Log.getDefault().error(e));
     }
 
     restoreSession(sessionName) {
@@ -165,7 +187,8 @@ var RestoreSession = class {
                         });
                     }
                     
-                    [launched, running] = this.launch(shell_app);
+                    const desktopNumber = session_config_object.desktop_number;
+                    [launched, running] = this.launch(shell_app, desktopNumber);
                     if (launched) {
                         if (!running) {
                             this._log.info(`${app_name} has been launched! Preparing to restore window ${session_config_object.window_title}(${app_name})!`);
@@ -193,7 +216,8 @@ var RestoreSession = class {
                         const pid = this._cmdAppIdMap.get(cmdString);
                         if (pid) {
                             this._log.debug(`${app_name} might be running, preparing to restore window (${session_config_object.window_title}) states.`);
-    
+                            
+                            // Here we use pid as the key, because the associated ShellApp might not be instantiated at this moment
                             const restoringShellAppData = restoringApps.get(pid);
                             if (restoringShellAppData) {
                                 restoringShellAppData.saved_window_sessions.push(session_config_object);
@@ -270,7 +294,7 @@ var RestoreSession = class {
         }
     }
 
-    launch(shellApp) {
+    launch(shellApp, desktopNumber) {
         if (this._restoredApps.has(shellApp)) {
             this._log.info(`${shellApp.get_name()} is restored, skipping`);
             return [true, false];
@@ -283,12 +307,10 @@ var RestoreSession = class {
             return [true, true];
         }
 
-        // -1 current workspace?
-        let workspace = -1;
         const launched = shellApp.launch(
             // 0 for current event timestamp
             0, 
-            workspace,
+            desktopNumber,
             this._getProperGpuPref(shellApp));
         return [launched, false];
     }

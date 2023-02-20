@@ -64,7 +64,7 @@ class RunningSubMenuMenuItem extends PopupMenu.PopupSubMenuMenuItem {
     }
 
     _onClickCloseApp(button, event) {
-        this._closeSession.closeWindows(this.app).catch(e => {
+        this._closeSession.closeWindows(this.app, false).catch(e => {
             this._log.error(e)
         });
     }

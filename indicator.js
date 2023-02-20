@@ -4,8 +4,6 @@ const { GObject, St, Gio, GLib, Clutter, Shell, Meta } = imports.gi;
 
 const Main = imports.ui.main;
 
-const Mainloop = imports.mainloop;
-
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -162,7 +160,7 @@ class AwsIndicator extends PanelMenu.Button {
             
             const saved_window_sessions = shellAppData.saved_window_sessions;
             
-            this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
+            this._moveSession.moveWindowByMetaWindow(metaWindow, saved_window_sessions);
         
             metaWindowActor.disconnect(firstFrameId);
             firstFrameId = 0;
@@ -196,7 +194,7 @@ class AwsIndicator extends PanelMenu.Button {
             
             const saved_window_sessions = shellAppData.saved_window_sessions;
             
-            this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
+            this._moveSession.moveWindowByMetaWindow(metaWindow, saved_window_sessions);
         
             metaWindow.disconnect(shownId);
             shownId = 0;

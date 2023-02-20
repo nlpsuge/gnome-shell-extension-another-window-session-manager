@@ -38,7 +38,7 @@
   </object>
 
   <object class="GtkNotebook" id="prefs_notebook">
-    <property name="focusable">1</property>
+    <property name="focusable">0</property>
     <child>
       <object class="GtkNotebookPage">
         <property name="child">

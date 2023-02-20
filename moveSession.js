@@ -54,13 +54,21 @@ var MoveSession = class {
                 return;
             }
 
-            // TODO Use global.get_window_actors(); / Meta.get_window_actors() / display.list_all_windows() instead and then call this.moveWindowsByMetaWindow() and then can remove this.moveWindowsByShellApp()?
+            // TODO Use global.get_window_actors(); / Meta.get_window_actors() / display.list_all_windows() instead and then call this.moveWindowByMetaWindow() and then can remove this.moveWindowsByShellApp()?
+            await this.moveApps(session_config_objects);
+        }
+
+    }
+
+    async moveApps(session_config_objects) {
+        try {
             const running_apps = this._defaultAppSystem.get_running();
             for (const shellApp of running_apps) {
                 await this.moveWindowsByShellApp(shellApp, session_config_objects);
-            }
+            }   
+        } catch (error) {
+            Log.Log.getDefault().error(error);
         }
-
     }
 
     async moveWindowsByShellApp(shellApp, saved_window_sessions) {
@@ -72,29 +80,29 @@ var MoveSession = class {
             }
         
             for (const interestingWindow of interestingWindows) {
-                const open_window = interestingWindow.open_window;
-                if (UiHelper.ignoreWindows(open_window)) continue;
+                const metaWindow = interestingWindow.open_window;
+                if (UiHelper.ignoreWindows(metaWindow)) continue;
     
                 const saved_window_session = interestingWindow.saved_window_session;
-                const title = open_window.get_title();
+                const title = metaWindow.get_title();
                 const desktop_number = saved_window_session.desktop_number;
     
                 try {
-                    await this._restoreWindowStates(open_window, saved_window_session);
+                    await this._restoreWindowStates(metaWindow, saved_window_session);
                     this._createEnoughWorkspace(desktop_number);
     
                     // Sticky windows don't need moving, in fact moving would unstick them
                     // See: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/gnome-41/js/ui/windowManager.js#L1070
                     const is_sticky = saved_window_session.window_state.is_sticky;
-                    if (is_sticky && open_window.is_on_all_workspaces()) {
+                    if (is_sticky && metaWindow.is_on_all_workspaces()) {
                         this._log.debug(`The window '${shellApp.get_name()} - ${title}' is already sticky on workspace ${desktop_number}`);
                     } else {
-                        this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${open_window.get_workspace().index()}`);
-                        this._changeWorkspace(open_window, desktop_number);
+                        this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
+                        this._changeWorkspace(metaWindow, desktop_number);
                     }
     
                     // restore window state if necessary due to moving windows could lost window state
-                    this._restoreWindowState(open_window, saved_window_session);
+                    this._restoreWindowState(metaWindow, saved_window_session);
     
                 } catch (e) {
                     // I just don't want one failure breaks the loop
@@ -212,7 +220,7 @@ var MoveSession = class {
         }
     }
 
-    async moveWindowsByMetaWindow(metaWindow, saved_window_sessions) {
+    async moveWindowByMetaWindow(metaWindow, saved_window_sessions) {
         try {
             if (UiHelper.ignoreWindows(metaWindow)) return;
 
@@ -250,8 +258,8 @@ var MoveSession = class {
     _changeWorkspace(metaWindow, desktop_number) {
         const currentFocusedWindow = global.display.get_focus_window();
         metaWindow.change_workspace_by_index(desktop_number, false);
-        if (currentFocusedWindow === metaWindow) {
-            this._log.debug(`Refocusing the previous focused window ${metaWindow.get_title()}`);
+        if (currentFocusedWindow === metaWindow && !Main.layoutManager._inOverview) {
+            this._log.debug(`Following the previous focused window ${metaWindow.get_title()}`);
             Main.activateWindow(metaWindow, DateUtils.get_current_time());
         }
     }

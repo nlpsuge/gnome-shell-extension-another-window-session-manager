@@ -38,6 +38,31 @@ var SaveSession = class {
         this._sourceIds = [];
     }
 
+    async saveSummaryAsync(cancellable) {
+        try {
+            if (cancellable && cancellable.is_cancelled()) {
+                return;
+            }
+            
+            const sessionConfig = new SessionConfig.SessionConfig();
+            sessionConfig.active_workspace_index = global.workspace_manager.get_active_workspace_index();
+            sessionConfig.n_workspace = global.workspace_manager.n_workspaces;
+            const focusedWindow = global.display.get_focus_window();
+            if (focusedWindow) {
+                const sessionName = `${MetaWindowUtils.getStableWindowId(focusedWindow)}.json`;
+                sessionConfig.focused_window = GLib.build_filenamev([FileUtils.current_session_path, focusedWindow.get_wm_class(), sessionName]);
+            }
+            delete sessionConfig.x_session_config_objects;
+
+            await this._saveSessionConfigAsync({
+                ...sessionConfig,
+                session_name: FileUtils.current_session_summary_name
+            }, FileUtils.current_session_path, cancellable);
+        } catch(error) {
+            this._log.error(error);
+        }
+    }
+
     async saveSessionAsync(sessionName, baseDir = null, backup = true) {
         try {
             this._log.debug(`Generating session ${sessionName}`);
@@ -360,7 +385,7 @@ var SaveSession = class {
                 session_file.copy_async(
                     Gio.File.new_for_path(session_file_backup),
                     Gio.FileCopyFlags.OVERWRITE,
-                    GLib.PRIORITY_DEFAULT,
+                    GLib.PRIORITY_LOW,
                     null,
                     null,
                     (file, asyncResult) => {
@@ -410,7 +435,7 @@ var SaveSession = class {
         this._log.debug(`Saving session ${sessionConfig.session_name} to local file`);
 
         return new Promise((resolve, reject) => {
-            this._saveSessionIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._saveSessionIdleId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
                 // Use replace_contents_bytes_async instead of replace_contents_async, see: 
                 // https://gitlab.gnome.org/GNOME/gjs/-/blob/gnome-42/modules/core/overrides/Gio.js#L513
                 // https://gitlab.gnome.org/GNOME/gjs/-/issues/192

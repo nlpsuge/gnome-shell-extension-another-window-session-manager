@@ -15,6 +15,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 const SaveSession = Me.imports.saveSession;
 const CloseSession = Me.imports.closeSession;
 const RestoreSession = Me.imports.restoreSession;
+const MoveSession = Me.imports.moveSession;
 
 const Autoclose = Me.imports.ui.autoclose;
 const UiHelper = Me.imports.ui.uiHelper;
@@ -62,6 +63,20 @@ var OpenWindowsTracker = class {
             'workspace-changed',
         ];
 
+        this._signalsToSaveSummary = [
+            {
+                instance: global.display,
+                signals: ['notify::focus-window']
+            },
+            {
+                instance: global.workspace_manager,
+                signals: [
+                    'notify::n-workspaces',
+                    'active-workspace-changed'
+                ]
+            }
+        ];
+
         this._windowTracker = Shell.WindowTracker.get_default();
         this._defaultAppSystem = Shell.AppSystem.get_default();
         this._wm = global.workspace_manager;
@@ -71,6 +86,8 @@ var OpenWindowsTracker = class {
         this._settings = this._prefsUtils.getSettings();
 
         this._saveSession = new SaveSession.SaveSession(false);
+        this._moveSession = new MoveSession.MoveSession();
+
         this._restoringSession = false;
         this._runningSaveCancelableMap = new Map();
         this._windowsAboutToSaveSet = new Set();
@@ -95,22 +112,36 @@ var OpenWindowsTracker = class {
 
         const x11DisplayOpenedId = this._display.connect('x11-display-opened', () => {
             this._restoringSession = true;
-            // `installed-changed` emits after `shell_app_system_init()` is called 
-            // and all `window-created` of existing window emits.
-            const installedChanged = this._defaultAppSystem.connect('installed-changed', () => {
+            this._allSavedWindowSessions = [];
+
+            // `installed-changed` emits after `shell_app_system_init()` is called
+            // and all `window-created` emits.
+            const installedChangedId = this._defaultAppSystem.connect('installed-changed', () => {
+                // RestoreSession.RestoreSession.restoreFromSummary();
+
+                Log.Log.getDefault().info(`Restoring windows states after gnome shell starts`);
+                this._moveSession.moveApps(this._allSavedWindowSessions);
+
                 this._restoringSession = false;
             });
-            this._signals.push([installedChanged, this._defaultAppSystem]);
+            this._signals.push([installedChangedId, this._defaultAppSystem]);
         });
+        this._signals.push([x11DisplayOpenedId, this._display]);
 
         const windowCreatedId = this._display.connect('window-created', (display, window, userData) => {
             this._onWindowCreatedSaveOrUpdateWindowsMapping(display, window, userData);
 
             this._restoreOrSaveWindowSession(window);
         });
+        this._signals.push([windowCreatedId, this._display]);
 
         this._meta_is_restarting = false;
         this._overrideMetaRestart();
+
+        this._saveSummaryCancellable = null;
+        this._summaryAboutToSave = false;
+        this._connectSignalsToSaveSummary();
+        this._saveSummary();
 
         this._saveAllWindows();
         const settingsChangedToSaveAllWindows = [
@@ -135,8 +166,6 @@ var OpenWindowsTracker = class {
             this._prepareToSaveWindowSession(w2);
         });
         this._signals.push([windowUntiledId, WindowTilingSupport]);
-        this._signals.push([windowCreatedId, this._display]);
-        this._signals.push([x11DisplayOpenedId, this._display]);
 
         this._overrideSystemActionsPrototypeMap = new Map();
         // TODO Users can click the cancel button of EndSessionDialog, and autoclose.js could also call EndSessionDialog.cancel() function，
@@ -184,6 +213,30 @@ var OpenWindowsTracker = class {
                 that._meta_is_restarting = true;
                 _meta_restart(message, context);
             }
+        }
+    }
+
+    _connectSignalsToSaveSummary() {
+        this._signalsToSaveSummary.forEach(e => {
+            e.signals.forEach(signal => {
+                const id = e.instance.connect(signal, () => {
+                    this._summaryAboutToSave = true;
+                });
+                this._signals.push([id, e.instance]);
+            });
+        });
+    }
+
+    async _saveSummary() {
+        try {
+            if (this._restoringSession) return;
+            if (this._saveSummaryCancellable && !this._saveSummaryCancellable.is_cancelled())
+                this._saveSummaryCancellable.cancel();
+
+            this._saveSummaryCancellable = new Gio.Cancellable();
+            await this._saveSession.saveSummaryAsync(this._saveSummaryCancellable);
+        } catch (error) {
+            Log.Log.getDefault().error(error);
         }
     }
 
@@ -242,10 +295,12 @@ var OpenWindowsTracker = class {
         }
 
         const sessionContent = FileUtils.getJsonObj(contents);
+        Log.Log.getDefault().debug(`Prepare to restore window session from ${sessionFilePath}`);
+
+        this._allSavedWindowSessions.push(sessionContent);
+
+        // TODO It's no necessary to put sessions to `RestoreSession.restoringApps` any more, since this job has been done by `MoveSession.moveApps(sessions)`
         const app = this._windowTracker.get_app_from_pid(sessionContent.pid);
-
-        this._log.debug(`Restoring window session from ${sessionFilePath}`);
-
         if (app && app.get_name() == sessionContent.app_name) {
             const restoringShellAppData = RestoreSession.restoringApps.get(app);
             if (restoringShellAppData) {
@@ -280,6 +335,12 @@ var OpenWindowsTracker = class {
     _saveWindowSessionPeriodically() {
         // TODO Add an option: save session config delay
         this._saveSessionByBatchTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+            if (this._summaryAboutToSave) {
+                this._saveSummary().then(() => {
+                    this._summaryAboutToSave = false;
+                });
+            }
+
             if (this._windowsAboutToSaveSet.size) {
                 const windows = [...this._windowsAboutToSaveSet];
 
@@ -287,15 +348,15 @@ var OpenWindowsTracker = class {
                     this._windowsAboutToSaveSet.delete(window);
 
                     // Cancel running save operation
-                    // this._cancelRunningSave(window);
+                    this._cancelRunningSave(window);
 
-                    // const cancellable = new Gio.Cancellable();
-                    // this._runningSaveCancelableMap.set(window, cancellable);
+                    const cancellable = new Gio.Cancellable();
+                    this._runningSaveCancelableMap.set(window, cancellable);
                 });
 
                 this._saveSession.saveWindowsSessionAsync(
                     windows,
-                    null
+                    this._runningSaveCancelableMap
                 ).then(sessionSaved => {
                     try {
                         if (sessionSaved) {

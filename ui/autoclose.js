@@ -158,7 +158,7 @@ var Autoclose = GObject.registerClass(
                             () => {
                                 that._retryIdleId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
                                     const closeSession = new CloseSession.CloseSession();
-                                    closeSession.closeWindows();
+                                    closeSession.closeWindows(null, true);
                                     that._retryIdleId = null;
                                     return GLib.SOURCE_REMOVE;
                                 });
@@ -179,7 +179,7 @@ var Autoclose = GObject.registerClass(
 
                     that._runningApplicationListWindow.updateRunningPids()
                     const closeSession = new CloseSession.CloseSession();
-                    closeSession.closeWindows()
+                    closeSession.closeWindows(null, true)
                         .then((result) => {
                             try {
                                 const { hasRunningApps } = result;
@@ -718,6 +718,12 @@ var RunningApplicationListWindow = GObject.registerClass({
 
         _updateState(state) {
             this.state = state
+        }
+
+        destroy() {
+            // This function is called when drag is canceled, but the dialog should be always shown.
+            // So we override it but do nothing. And there is a `destroyDialog()` which can be used to destroy the dialog anyway.
+            // TODO This function is also called after releasing the left button, which is wired, I probably misuse something in this class.
         }
 
         destroyDialog() {

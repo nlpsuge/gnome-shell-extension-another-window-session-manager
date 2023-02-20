@@ -31,6 +31,9 @@ var recently_closed_session_file = Gio.File.new_for_path(recently_closed_session
 
 var current_session_path = `${config_path_base}/currentSession`;
 
+var current_session_summary_name = 'summary.json';
+var current_session_summary_path = GLib.build_filenamev([current_session_path, 'summary.json']);
+
 var autostart_restore_desktop_file_path = GLib.build_filenamev([home_dir, '/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop']);
 var autostart_restore_previous_desktop_file_path = GLib.build_filenamev([home_dir, '/.config/autostart/_awsm-restore-previous-session.desktop']);
 
@@ -39,6 +42,34 @@ var system_udev_rules_path_ydotool_uinput_rules = '/etc/udev/rules.d/60-awsm-ydo
 
 var recently_closed_path = GLib.build_filenamev([config_path_base, 'recentlyClosed']);
 
+async function loadSummary() {
+    try {
+        return await loadFile(current_session_summary_path);
+    } catch (error) {
+        Log.Log.getDefault().error(error);
+    }
+}
+
+async function loadFile(path) {
+    try {
+        return new Promise((resolve, reject) => {
+            const file = Gio.File.new_for_path(path);
+            file.load_contents_async(
+            null,
+            (file, asyncResult) => {
+                try {
+                    const [success, contents, _] = file.load_contents_finish(asyncResult);
+                    resolve([getJsonObj(contents), path]);
+                } catch (error) {
+                    Log.Log.getDefault().error(error);
+                    reject(error);
+                }
+            });
+        });
+    } catch (error) {
+        Log.Log.getDefault().error(error);
+    }
+}
 
 /**
  * Get the absolute session path which contains sessions, 
