@@ -138,6 +138,7 @@ var OpenWindowsTracker = class {
         this._meta_is_restarting = false;
         this._overrideMetaRestart();
 
+        this._saveSummaryCancellable = null;
         this._summaryAboutToSave = false;
         this._connectSignalsToSaveSummary();
         this._saveSummary();
@@ -229,7 +230,11 @@ var OpenWindowsTracker = class {
     async _saveSummary() {
         try {
             if (this._restoringSession) return;
-            await this._saveSession.saveSummaryAsync(null);   
+            if (this._saveSummaryCancellable && !this._saveSummaryCancellable.is_cancelled())
+                this._saveSummaryCancellable.cancel();
+
+            this._saveSummaryCancellable = new Gio.Cancellable();
+            await this._saveSession.saveSummaryAsync(this._saveSummaryCancellable);
         } catch (error) {
             Log.Log.getDefault().error(error);
         }
@@ -343,15 +348,15 @@ var OpenWindowsTracker = class {
                     this._windowsAboutToSaveSet.delete(window);
 
                     // Cancel running save operation
-                    // this._cancelRunningSave(window);
+                    this._cancelRunningSave(window);
 
-                    // const cancellable = new Gio.Cancellable();
-                    // this._runningSaveCancelableMap.set(window, cancellable);
+                    const cancellable = new Gio.Cancellable();
+                    this._runningSaveCancelableMap.set(window, cancellable);
                 });
                 
                 this._saveSession.saveWindowsSessionAsync(
                     windows,
-                    null
+                    this._runningSaveCancelableMap
                 ).then(sessionSaved => {
                     try {
                         if (sessionSaved) {
