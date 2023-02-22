@@ -344,6 +344,8 @@ var CloseSession = class {
                 (output) => {
                     this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
                 }, (output) => {
+                    // TODO ydotool.service might be inactive due to any reason, we can try to start the service first and send the shortcuts before notifying the the below failure to users
+                    // In Fedora, start it via systemctl --user status ydotool.service
                     const msg = `Failed to send keys to close ${app.get_name()} via ydotool`;
                     this._log.error(new Error(`${msg}. output: ${output}`));
                     global.notify_error(`${msg}`, `${output}.`);

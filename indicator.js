@@ -215,9 +215,47 @@ class AwsIndicator extends PanelMenu.Button {
             this._signal.disconnectSafely(metaWindowActor, firstFrameId);
         });
 
+        // Restore states once the window title is changed while the app is launching. 
+        // This works for some apps, such as Visual Studio Code. When vs code launches, the first title is `Visual Studio Code`,
+        // the second could be `indicator.js - gnome-shell-extension-another-window-session-manager - Visual Studio Code`.
+        // Here `notify::title` catches the second.
+        let titleChangedId = metaWindow.connect('notify::title', () => {
+            if (this._isDestroyed) {
+                metaWindow.disconnect(titleChangedId);
+                return;
+            }
+
+            if (metaWindow._aboutToClose) {
+                return;
+            }
+
+            const shellApp = this._windowTracker.get_window_app(metaWindow);
+            if (!shellApp) {
+                return;
+            }
+
+            // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
+            this._log.debug(`window-created -> title changed: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
+
+            let shellAppData = RestoreSession.restoringApps.get(shellApp);
+            if (!shellAppData) {
+                shellAppData = RestoreSession.restoringApps.get(metaWindow.get_pid());
+            }
+            if (!shellAppData) {
+                return;
+            }
+            
+            const saved_window_sessions = shellAppData.saved_window_sessions;
+            
+            this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
+        
+            metaWindow.disconnect(titleChangedId);
+            titleChangedId = 0;
+        });
+
         this._metaWindowConnectIds.push([metaWindow, shownId]);
         this._metaWindowConnectIds.push([metaWindow, unmanagingId]);
-        
+        this._metaWindowConnectIds.push([metaWindow, titleChangedId]);
     }
 
     _onOpenStateChanged(menu, state) {
