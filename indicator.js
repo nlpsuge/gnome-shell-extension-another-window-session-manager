@@ -209,10 +209,10 @@ class AwsIndicator extends PanelMenu.Button {
             this._signal.disconnectSafely(metaWindowActor, firstFrameId);
         });
 
-        // Restore states once the window title is changed while the app is launching. 
-        // This works for some apps, such as Visual Studio Code. When vs code launches, the first title is `Visual Studio Code`,
+        // The window title might be changing multiple times while the app is starting. 
+        // For some apps, such as Visual Studio Code, when it's starting, the first title is `Visual Studio Code`,
         // the second could be `indicator.js - gnome-shell-extension-another-window-session-manager - Visual Studio Code`.
-        // Here `notify::title` catches the second.
+        // In the above instance, `notify::title` catches the second.
         let titleChangedId = metaWindow.connect('notify::title', () => {
             if (this._isDestroyed) {
                 metaWindow.disconnect(titleChangedId);
@@ -241,7 +241,7 @@ class AwsIndicator extends PanelMenu.Button {
             
             const saved_window_sessions = shellAppData.saved_window_sessions;
             
-            this._moveSession.moveWindowsByMetaWindow(metaWindow, saved_window_sessions);
+            this._moveSession.moveWindowByMetaWindow(metaWindow, saved_window_sessions);
         
             metaWindow.disconnect(titleChangedId);
             titleChangedId = 0;
