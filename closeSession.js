@@ -17,15 +17,12 @@ const Constants = Me.imports.constants;
 
 const UiHelper = Me.imports.ui.uiHelper;
 
-var MUTTER_SCHEMA = 'org.gnome.mutter';
-
 
 var CloseSession = class {
     constructor() {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
-        this._mutterSettings = new Gio.Settings({ schema_id: MUTTER_SCHEMA });
 
         this._skip_app_with_multiple_windows = true;
         this._defaultAppSystem = Shell.AppSystem.get_default();
@@ -87,8 +84,7 @@ var CloseSession = class {
     }
 
     _updateWorkspacePersistent(allPersistent) {
-        const dynamicWorkspaces = this._mutterSettings.get_boolean('dynamic-workspaces');
-        if (dynamicWorkspaces) {
+        if (Meta.prefs_get_dynamic_workspaces()) {
             // Starting from the right
             let workspaceManager = global.workspace_manager;
             for (let i = workspaceManager.n_workspaces - 2; i >= 0; i--) {
