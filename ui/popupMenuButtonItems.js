@@ -235,7 +235,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this._addYesAndNoButtons();
 
         this._log = new Log.Log();
-        this._saveSession = new SaveSession.SaveSession();
+        this._saveSession = new SaveSession.SaveSession(true);
 
         this._timeline = this.createTimeLine();
 

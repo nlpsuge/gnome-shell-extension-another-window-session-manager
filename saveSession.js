@@ -2,6 +2,8 @@
 
 const { Shell, Gio, GLib, Meta } = imports.gi;
 
+const Main = imports.ui.main;
+
 const ByteArray = imports.byteArray;
 
 const ExtensionUtils = imports.misc.extensionUtils;
@@ -20,7 +22,8 @@ const SubprocessUtils = Me.imports.utils.subprocessUtils;
 
 var SaveSession = class {
 
-    constructor() {
+    constructor(notifyUser) {
+        this._notifyUser = notifyUser;
         this._log = new Log.Log();
 
         this._saveSessionIdleId = null;
@@ -447,7 +450,11 @@ var SaveSession = class {
                         try {
                             success = sessionFile.replace_contents_finish(asyncResult);
                             if (success) {
-                                this._log.info(`Session saved to ${sessionFile.get_path()}!`);
+                                const savedMsg = `Session ${sessionConfig.session_name} saved to ${sessionFile.get_path()}!`;
+                                Log.Log.getDefault().info(`${savedMsg}`);
+                                if (this._notifyUser) {
+                                    Main.notify(`Another Window Session Manager`, savedMsg);
+                                }
                                 resolve(success);
                                 // TODO Notification
                                 return;
