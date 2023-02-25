@@ -23,7 +23,7 @@ class Button extends GObject.Object {
     }
 
     _createButton(iconSymbolic) {
-        let icon = new St.Icon({
+        this.icon = new St.Icon({
             gicon: IconFinder.find(iconSymbolic),
             style_class: 'system-status-icon'
         });
@@ -31,7 +31,7 @@ class Button extends GObject.Object {
         let button = new St.Button({
             style_class: this.button_style_class ? this.button_style_class : 'aws-item-button',
             can_focus: true,
-            child: icon,
+            child: this.icon,
             x_align: Clutter.ActorAlign.END,
             x_expand: false,
             y_expand: true,

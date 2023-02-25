@@ -36,13 +36,29 @@ var CloseSession = class {
         this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'smplayer.desktop'];
     }
 
-    async closeWindows(workspacePersistent) {
+    /**
+     * 
+     * @param {boolean} workspacePersistent Whether to make the workspaces persistent or not
+     * @param {int} workspace               The workspace index to close, starting from 0.
+     *                                      Pass `-1` to close the current workspace, 
+     *                                      `null` or `undefined` to close all windows on all workspaces.
+     * @returns {hasRunningApps: the number of the current running apps}
+     */
+    async closeWindows(workspacePersistent, workspaceIndex) {
         try {
-            this._log.debug('Closing open windows');
+            let onWhichWorkspaceLog;
+            if (workspaceIndex === -1) {
+                onWhichWorkspaceLog = 'on current workspace';
+            } else if (workspaceIndex) {
+                onWhichWorkspaceLog = `on ${Meta.prefs_get_workspace_name(workspaceIndex)}`;
+            } else {
+                onWhichWorkspaceLog = 'on all workspace';
+            }
+            this._log.info(`Closing open windows ${onWhichWorkspaceLog}`);
 
             if (workspacePersistent) this._updateWorkspacePersistent(true);
 
-            let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
+            let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules(workspaceIndex);
             for(const app of running_apps_closing_by_rules) {
                 await this._tryCloseAppsByRules(app);
             }
@@ -51,7 +67,7 @@ var CloseSession = class {
             for (const app of new_running_apps) {
                 const promise = new Promise((resolve, reject) => {
                     this._log.info(`Closing ${app.get_name()}`);
-                    this._closeOneApp(app).then(([closed, reason]) => {
+                    this._closeOneApp(app, workspaceIndex).then(([closed, reason]) => {
                         try {
                             if (closed) {
                                 this._log.info(`Closed ${app.get_name()}`);
@@ -108,12 +124,10 @@ var CloseSession = class {
      *   * If the `app` is in the whitelist, which means the app can close safely, delete all its windows.
      * * If a window can not close, leave it open.
      * 
-     * TODO Call an explicit "app.quit" action first?
-     * 
      * @param {Shell.App} app 
      * @returns true if this `app` is closed, otherwise return false which means it still has unclosed windows
      */
-    async _closeOneApp(app) {
+    async _closeOneApp(app, workspaceIndex) {
         app._is_closing = true;
         let closed = true;
         let reason;
@@ -121,6 +135,12 @@ var CloseSession = class {
             if (app.get_n_windows() > 1) {
                 const appInWhitelist = this.whitelist.includes(app.get_id());
                 let windows = this._sortWindows(app);
+                
+                const windowsOnWorkspace = this._listWindowsOnWorkspace(workspaceIndex);
+                if (windowsOnWorkspace) {
+                    windows = windows.filter(w => windowsOnWorkspace.includes(w));
+                }
+
                 for (let i = windows.length - 1; i >= 0; i--) {
                     let window = windows[i];
                     if (!window.can_close()) {
@@ -328,7 +348,7 @@ var CloseSession = class {
                 (output) => {
                     this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
                 }, (output) => {
-                    // TODO ydotool.service might be inactive due to any reason, we can try to start the service first and send the shortcuts before notifying the the below failure to users
+                    // TODO ydotool.service might be inactive due to any reason, we can try to start the service first and send the shortcuts again before notifying the the below failure to users
                     // In Fedora, start it via systemctl --user status ydotool.service
                     const msg = `Failed to send keys to close ${app.get_name()} via ydotool`;
                     this._log.error(new Error(`${msg}. output: ${output}`));
@@ -341,14 +361,14 @@ var CloseSession = class {
         
     }
 
-    _getRunningAppsClosingByRules() {
+    _getRunningAppsClosingByRules(workspaceIndex) {
+        const running_apps = this._listRunningAppsOnWorkspace(workspaceIndex);
         if (!this._settings.get_boolean('enable-close-by-rules')) {
-            return [[], this._defaultAppSystem.get_running()];
+            return [[], running_apps];
         }
 
         let running_apps_closing_by_rules = [];
         let new_running_apps = [];
-        let running_apps = this._defaultAppSystem.get_running();
         for (const app of running_apps) {
             const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
             const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
@@ -361,6 +381,35 @@ var CloseSession = class {
         }
 
         return [running_apps_closing_by_rules, new_running_apps];
+    }
+
+    _listRunningAppsOnWorkspace(workspaceIndex) {
+        let running_apps = [];
+
+        const windows = this._listWindowsOnWorkspace(workspaceIndex);
+        if (windows) {
+            windows.forEach(w => {
+                const app = Shell.WindowTracker.get_default().get_window_app(w);
+                if (app) running_apps.push(app);
+            });
+        } else {
+            running_apps = this._defaultAppSystem.get_running();
+        }
+
+        return running_apps;
+    }
+
+    _listWindowsOnWorkspace(workspaceIndex) {
+        if (workspaceIndex === -1) {
+            workspaceIndex = global.workspace_manager.get_active_workspace_index();
+        }
+
+        if (workspaceIndex) {
+            const workspace = global.workspace_manager.get_workspace_by_index(workspaceIndex);
+            return workspace.list_windows();
+        }
+
+        return null;
     }
 
     _activateAndFocusWindow(app) {

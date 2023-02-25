@@ -24,16 +24,36 @@ class PopupMenuButtonItems extends GObject.Object {
 
     _init() {
         super._init();
+        this._signals = [];
         this.buttonItems = [];
         this.addButtonItems();
     }
 
     addButtonItems() {
-        const popupMenuButtonItemClose = new PopupMenuButtonItemClose('close-symbolic.svg');
+        const itemCloseOpenWindows = new PopupMenuButtonItemClose('close-symbolic.svg', 'Close open windows', 'Closing open windows ...');
+        const closeOpenWindowsConfirmedId = itemCloseOpenWindows.connect('confirmed', () => {
+            if (Main.overview.visible) {
+                Main.overview.toggle();
+            }
+
+            RestoreSession.restoringApps.clear();
+            new CloseSession.CloseSession().closeWindows();
+        });
+        const itemCloseCurrentWorkspace = new PopupMenuButtonItemClose('empty-symbolic.svg', 'Close current workspace', 'Closing current workspace ...');
+        const closeCurrentWorkspaceConfirmedId = itemCloseCurrentWorkspace.connect('confirmed', () => {
+            if (Main.overview.visible) {
+                Main.overview.toggle();
+            }
+            new CloseSession.CloseSession().closeWindows(false, -1);
+        });
         const popupMenuButtonItemSave = new PopupMenuButtonItemSave('save-symbolic.svg');
         
-        this.buttonItems.push(popupMenuButtonItemClose);
+        this.buttonItems.push(itemCloseOpenWindows);
+        this.buttonItems.push(itemCloseCurrentWorkspace);
         this.buttonItems.push(popupMenuButtonItemSave);
+
+        this._signals.push([itemCloseOpenWindows, closeOpenWindowsConfirmedId]);
+        this._signals.push([itemCloseOpenWindows, closeCurrentWorkspaceConfirmedId]);
     }
 
 });
@@ -75,6 +95,9 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
             icon_symbolic: iconSymbolic,
             button_style_class: 'button-item',
         }).button;
+        if (iconSymbolic === 'empty-symbolic.svg') {
+            button.set_style('border: none;');
+        }
         return button;
     }
 
@@ -99,19 +122,23 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
 });
 
 
-var PopupMenuButtonItemClose = GObject.registerClass(
+var PopupMenuButtonItemClose = GObject.registerClass({
+    Signals: {
+        'confirmed': {},
+    }
+},
 class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
-    _init(iconSymbolic) {
+    _init(iconSymbolic, itemDescription, prompt) {
         super._init();
+        this._prompt = prompt;
+
         this.confirmLabel;
         
         this.closingLabel;
 
-        this.closeSession = new CloseSession.CloseSession();
-
-        this._createButton(iconSymbolic);
-        this.addIconDescription('Close open windows');
+        this._closeButton = this._createButton(iconSymbolic);
+        this.addIconDescription(itemDescription);
         this._addConfirm();
         this._addYesAndNoButtons();
         this._addClosingPrompt();
@@ -141,12 +168,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this.yesButton.connect('clicked', () => {
             // TODO Do this when enable_close_by_rules is true? 
             this._parent.close();
-            if (Main.overview.visible) {
-                Main.overview.toggle();
-            }
-
-            RestoreSession.restoringApps.clear();
-            this.closeSession.closeWindows();
+            this.emit('confirmed');
             this._hideConfirm();
 
             // Set the actor the timeline is associated with to make sure Clutter.Timeline works normally.
@@ -175,7 +197,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     _addClosingPrompt() {
         this.closingLabel = new St.Label({
             style_class: 'confirm-before-operate',
-            text: 'Closing open windows ...',
+            text: this._prompt,
             x_expand: false,
             x_align: Clutter.ActorAlign.CENTER,
         });
@@ -186,6 +208,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         const closeButton = super.createButton(iconSymbolic);
         this.actor.add_child(closeButton);
         closeButton.connect('clicked', this._onClicked.bind(this));
+        return closeButton;
     }
 
     _onClicked(button, event) {
