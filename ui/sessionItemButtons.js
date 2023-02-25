@@ -37,7 +37,7 @@ class SessionItemButtons extends GObject.Object {
         this.sessionItem = sessionItem;
 
         // TODO Nullify created object?
-        this._saveSession = new SaveSession.SaveSession();
+        this._saveSession = new SaveSession.SaveSession(true);
         this._moveSession = new MoveSession.MoveSession();
         this._closeSession = new CloseSession.CloseSession();
 
@@ -46,8 +46,6 @@ class SessionItemButtons extends GObject.Object {
 
     addButtons() {
         this._addTags();
-        
-        this._addSeparator();
 
         const saveButton = this._addButton('save-symbolic.svg');
         new Tooltip.Tooltip({
@@ -175,6 +173,8 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _addTags() {
+        if (Log.Log.getDefault().isDebug()) return;
+
         // TODO Make the modification time align left
 
         let button = new St.Button({
@@ -187,6 +187,7 @@ class SessionItemButtons extends GObject.Object {
         }
         this.sessionItem.actor.add_child(button);
 
+        this._addSeparator();
     }
 
     _addSeparator() {
