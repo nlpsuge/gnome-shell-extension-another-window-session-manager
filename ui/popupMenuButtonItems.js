@@ -56,6 +56,15 @@ class PopupMenuButtonItems extends GObject.Object {
         this._signals.push([itemCloseOpenWindows, closeCurrentWorkspaceConfirmedId]);
     }
 
+    destroy() {
+        if (this._signals && this._signals.length) {
+            this._signals.forEach(([obj, id]) => {
+                obj.disconnect(id);
+            });
+            this._signals = null;
+        }
+    }
+
 });
 
 
