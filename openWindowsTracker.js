@@ -77,6 +77,8 @@ var OpenWindowsTracker = class {
             }
         ];
 
+        this._signals = [];
+
         this._windowTracker = Shell.WindowTracker.get_default();
         this._defaultAppSystem = Shell.AppSystem.get_default();
         this._wm = global.workspace_manager;
@@ -107,7 +109,6 @@ var OpenWindowsTracker = class {
             this._onNameVanishedGnomeShell.bind(this)
         );
 
-        this._signals = [];
         this._display = global.display;
 
         const x11DisplayOpenedId = this._display.connect('x11-display-opened', () => {
