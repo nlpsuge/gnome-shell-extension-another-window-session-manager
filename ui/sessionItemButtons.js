@@ -173,7 +173,7 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _addTags() {
-        if (Log.Log.getDefault().isDebug()) return;
+        if (!Log.Log.getDefault().isDebug()) return;
 
         // TODO Make the modification time align left
 

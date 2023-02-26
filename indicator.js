@@ -279,6 +279,11 @@ class AwsIndicator extends PanelMenu.Button {
         }));
 
         this._addSessionFolderMonitor();
+        this._settings.connect('changed::debugging-mode', () => {
+            this._addSessionItems().catch((error => {
+                this._log.error(error, 'Error reloading session items while debugging-mode was changed');
+            }));
+        });
     }
 
     _addScrollableSessionsMenuSection() {
