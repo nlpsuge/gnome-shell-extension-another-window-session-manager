@@ -321,6 +321,7 @@ var CloseSession = class {
             
             this._log.info(`Closing ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
             
+            await this._startYdotoold();
             this._activateAndFocusWindow(app);
             await SubprocessUtils.trySpawn(cmd, 
                 (output) => {
@@ -335,8 +336,32 @@ var CloseSession = class {
             );
         } catch (e) {
             this._log.error(e);
+        }    
+    }
+
+    async _startYdotoold() {
+        try {
+            return new Promise((resolve, reject) => {
+                // Shell.util_start_systemd_unit only has been promisified since gnome 3.38
+                let startSystemdUnitMethod = Shell.util_start_systemd_unit;
+                if (Shell._original_util_start_systemd_unit) {
+                    startSystemdUnitMethod = Shell._original_util_start_systemd_unit;
+                }
+                startSystemdUnitMethod('ydotool.service', 'replace',
+                null,
+                (source, asyncResult) => {
+                    try {
+                        Shell.util_start_systemd_unit_finish(asyncResult);   
+                        resolve(true);
+                    } catch (error) {
+                        Log.Log.getDefault().error(error);
+                        reject(false);
+                    }
+                });
+            });   
+        } catch (error) {
+            Log.Log.getDefault().error(error);
         }
-        
     }
 
     _getRunningAppsClosingByRules() {
