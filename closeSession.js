@@ -107,9 +107,7 @@ var CloseSession = class {
      * * If the `app` has multiple windows, only delete those windows that their type are dialog (See UiHelper.isDialog(window))
      *   * If the `app` is in the whitelist, which means the app can close safely, delete all its windows.
      * * If a window can not close, leave it open.
-     * 
-     * TODO Call an explicit "app.quit" action first?
-     * 
+     *
      * @param {Shell.App} app 
      * @returns true if this `app` is closed, otherwise return false which means it still has unclosed windows
      */
