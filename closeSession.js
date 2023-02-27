@@ -43,8 +43,11 @@ var CloseSession = class {
             if (workspacePersistent) this._updateWorkspacePersistent(true);
 
             let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
-            for(const app of running_apps_closing_by_rules) {
-                await this._tryCloseAppsByRules(app);
+            if (running_apps_closing_by_rules.length) {
+                await this._startYdotoold();
+                for(const app of running_apps_closing_by_rules) {
+                    await this._tryCloseAppsByRules(app);
+                }
             }
             
             let promises = [];
@@ -321,7 +324,6 @@ var CloseSession = class {
             
             this._log.info(`Closing ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
             
-            await this._startYdotoold();
             this._activateAndFocusWindow(app);
             await SubprocessUtils.trySpawn(cmd, 
                 (output) => {
@@ -340,6 +342,7 @@ var CloseSession = class {
     async _startYdotoold() {
         try {
             return new Promise((resolve, reject) => {
+                Log.Log.getDefault().debug('Starting ydotool.service');
                 // Shell.util_start_systemd_unit only has been promisified since gnome 3.38
                 let startSystemdUnitMethod = Shell.util_start_systemd_unit;
                 if (Shell._original_util_start_systemd_unit) {
@@ -349,10 +352,11 @@ var CloseSession = class {
                 null,
                 (source, asyncResult) => {
                     try {
-                        Shell.util_start_systemd_unit_finish(asyncResult);   
-                        resolve(true);
+                        const started = Shell.util_start_systemd_unit_finish(asyncResult);
+                        Log.Log.getDefault().debug(`Finished to start ydotool.service. Started: ${started}`);
+                        resolve(started);
                     } catch (error) {
-                        Log.Log.getDefault().error(error);
+                        Log.Log.getDefault().error(error, 'Failed to start ydotool.service');
                         reject(false);
                     }
                 });
