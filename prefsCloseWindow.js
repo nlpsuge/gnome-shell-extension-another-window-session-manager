@@ -41,25 +41,14 @@ var UICloseWindows = GObject.registerClass(
                 close_by_rules_multi_grid2.attach(this.close_by_rules_list_box, 0, 0, 1, 1);
             }
             
-            const newRuleRowBox = new Gtk.Box({
-                orientation: 'horizontal',
-            });
-            newRuleRowBox.append(new AwsmNewRuleRow('Add application', 'rules.addApplication'));
-            newRuleRowBox.append(new AwsmNewRuleRow('Add keyword', 'rules.addKeyword'));
-            this.close_by_rules_list_box.append(newRuleRowBox);
-            newRuleRowBox.get_parent().remove_css_class('activatable');
+            this.close_by_rules_list_box.append(new AwsmNewRuleRow());
 
             this._actionGroup = new Gio.SimpleActionGroup();
             this.close_by_rules_list_box.insert_action_group('rules', this._actionGroup);
-            newRuleRowBox.insert_action_group('rules', this._actionGroup);
 
             let action;
-            action = new Gio.SimpleAction({ name: 'addApplication' });
-            action.connect('activate', this._onAddApplicationActivated.bind(this));
-            this._actionGroup.add_action(action);
-
-            action = new Gio.SimpleAction({ name: 'addKeyword' });
-            action.connect('activate', this._onAddKeywordActivated.bind(this));
+            action = new Gio.SimpleAction({ name: 'add' });
+            action.connect('activate', this._onAddActivated.bind(this));
             this._actionGroup.add_action(action);
 
             action = new Gio.SimpleAction({
@@ -96,12 +85,7 @@ var UICloseWindows = GObject.registerClass(
 
         }
 
-        _onAddKeywordActivated() {
-            log('_onAddKeywordActivated');
-            
-        }
-
-        _onAddApplicationActivated() {
+        _onAddActivated() {
             const dialog = new AwsmNewRuleDialog(this._builder.get_object('prefs_notebook').get_root());
             dialog.connect('response', (dlg, id) => {
                 const appInfo = id === Gtk.ResponseType.OK
@@ -647,12 +631,18 @@ const RuleRow = GObject.registerClass({
 });
 
 const AwsmNewRuleRow = GObject.registerClass(
-    class AwsmNewRuleRow extends Gtk.Button {
-        _init(label, action_name) {
+    class AwsmNewRuleRow extends Gtk.ListBoxRow {
+        _init() {
             super._init({
-                action_name: action_name,
-                label: label,
-                hexpand: true,
+                action_name: 'rules.add',
+                child: new Gtk.Image({
+                    icon_name: 'list-add-symbolic',
+                    pixel_size: 16,
+                    margin_top: 12,
+                    margin_bottom: 12,
+                    margin_start: 12,
+                    margin_end: 12,
+                }),
             });
             this.update_property(
                 [Gtk.AccessibleProperty.LABEL], ['Add Rule']);
