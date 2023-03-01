@@ -48,14 +48,7 @@ var UICloseWindows = GObject.registerClass(
 
             let action;
             action = new Gio.SimpleAction({ name: 'add' });
-            action.connect('activate', this._onAddActivated.bind(this));
-            this._actionGroup.add_action(action);
-
-            action = new Gio.SimpleAction({
-                name: 'remove',
-                parameter_type: new GLib.VariantType('s'),
-            });
-            action.connect('activate', this._onRemoveActivated.bind(this));
+            action.connect('activate', this._onAddAppActivated.bind(this));
             this._actionGroup.add_action(action);
 
             action = new Gio.SimpleAction({
@@ -85,13 +78,13 @@ var UICloseWindows = GObject.registerClass(
 
         }
 
-        _onAddActivated() {
-            const dialog = new AwsmNewRuleDialog(this._builder.get_object('prefs_notebook').get_root());
+        _onAddAppActivated() {
+            const dialog = new AwsmNewRuleByAppDialog(this._builder.get_object('prefs_notebook').get_root());
             dialog.connect('response', (dlg, id) => {
                 const appInfo = id === Gtk.ResponseType.OK
                     ? dialog.get_widget().get_app_info() : null;
                 if (appInfo) {
-                    const closeWindowsRule = new CloseWindowsRule.CloseWindowsRule();
+                    const closeWindowsRule = new CloseWindowsRule.CloseWindowsRuleByApp();
                     closeWindowsRule.type = 'shortcut';
                     closeWindowsRule.value = {};
                     closeWindowsRule.appId = appInfo.get_id();
@@ -111,9 +104,8 @@ var UICloseWindows = GObject.registerClass(
             dialog.show();
         }
 
-        _onRemoveActivated(action, param) {
-            // Get the real value inside the GLib.Variant
-            const removedAppDesktopFilePath = param.deepUnpack();
+        _onRemoveActivated(action, source) {
+            const removedAppDesktopFilePath = source.appDesktopFilePath;
             const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
             let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
             delete oldCloseWindowsRulesObj[removedAppDesktopFilePath];
@@ -146,7 +138,7 @@ var UICloseWindows = GObject.registerClass(
                     // TODO
                     // row.set({ value: GLib.Variant.new_strv(ruleDetail.value) });
                 } else if (appInfo) {
-                    const newRuleRow = new RuleRow(appInfo, ruleDetail);
+                    const newRuleRow = new RuleRowByApp(appInfo, ruleDetail);
                     this.close_by_rules_list_box.insert(newRuleRow, index);
                     if (autoNewAccelerator) {
                         // TODO Fix the below error when autoNewAccelerator is true in the case of adding the new accelerator button after adding a new rule: 
@@ -176,30 +168,25 @@ var UICloseWindows = GObject.registerClass(
     });
 
 const RuleRow = GObject.registerClass({
+    Signals: {
+        'accelerator-updated': {
+            param_types: [GObject.TYPE_INT, CloseWindowsRule.GdkShortcuts]
+        },
+        'accelerator-deleted': {
+            param_types: [GObject.TYPE_INT]
+        },
+        'row-deleted': {
+            param_types: []
+        },
+        'key-delay-changed': {
+            param_types: [GObject.TYPE_INT]
+        }
+    },
     Properties: {
         'enabled': GObject.ParamSpec.boolean(
             'enabled', 'enabled', 'enabled',
             GObject.ParamFlags.READWRITE,
             false
-        ),
-        'app-name': GObject.ParamSpec.string(
-            'app-name', 'The application name', 'The application name',
-            GObject.ParamFlags.READABLE,
-            ''
-        ),
-        'app-id': GObject.ParamSpec.string(
-            'app-id',
-            'The application id',
-            'The .desktop file name of an app',
-            GObject.ParamFlags.READABLE,
-            ''
-        ),
-        'app-desktop-file-path': GObject.ParamSpec.string(
-            'app-desktop-file-path',
-            'The app desktop file path',
-            'The .desktop file name of an app',
-            GObject.ParamFlags.READABLE,
-            ''
         ),
         'type': GObject.ParamSpec.string(
             'type', 'type', 'type',
@@ -215,7 +202,7 @@ const RuleRow = GObject.registerClass({
         
     },
 }, class RuleRow extends Gtk.ListBoxRow {
-    _init(appInfo, ruleDetail) {
+    _init(ruleDetail) {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
@@ -240,7 +227,6 @@ const RuleRow = GObject.registerClass({
             // value: GLib.Variant.new_strv(ruleDetail.value),
             child: ruleRowBox,
         });
-        this._appInfo = appInfo;
         this._ruleDetail = ruleDetail;
 
         this._rendererAccelBox = null;
@@ -254,27 +240,6 @@ const RuleRow = GObject.registerClass({
             GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL);
         boxLeft.append(this._enabledCheckButton);
 
-        const icon = new Gtk.Image({
-            gicon: appInfo.get_icon(),
-            pixel_size: 32,
-        });
-        icon.get_style_context().add_class('icon-dropshadow');
-        icon.set_tooltip_text(appInfo.get_display_name());
-        boxLeft.append(icon);
-
-        const label = new Gtk.Label({
-            label: appInfo.get_display_name(),
-            halign: Gtk.Align.START,
-            hexpand: true,
-            // Make sure that text align left
-            xalign: 0,
-            width_chars: 20,
-            max_width_chars: 20,
-            ellipsize: Pango.EllipsizeMode.END,
-        });
-        label.set_tooltip_text(appInfo.get_display_name());
-        boxLeft.append(label);
-
         boxLeft.append(this._newShortcutComboBox());
 
         boxLeft.append(this._newDelaySpinButton());
@@ -282,9 +247,10 @@ const RuleRow = GObject.registerClass({
         this._append_accel(boxRight);
 
         const buttonRemove = new Gtk.Button({
-            action_name: 'rules.remove',
-            action_target: new GLib.Variant('s', this.appDesktopFilePath),
             icon_name: 'edit-delete-symbolic',
+        });
+        buttonRemove.connect('clicked', () => {
+            this.emit('row-deleted');
         });
         const boxRemoveButton = this._newBox({
             hexpand: true,
@@ -296,14 +262,9 @@ const RuleRow = GObject.registerClass({
         ruleRowBox.append(boxLeft);
         ruleRowBox.append(boxRight);
 
-        this.connect('notify::enabled',
-            () => {
-                this.activate_action('rules.update', new GLib.Variant('a{sv}', {
-                    appDesktopFilePath: GLib.Variant.new_string(this.appDesktopFilePath),
-                    enabled: GLib.Variant.new_boolean(this._enabledCheckButton.get_active()),
-                    // value: this.value,
-                }))
-            });
+        this.boxLeft = boxLeft;
+        this.boxRight = boxRight;
+        
     }
 
     _newDelaySpinButton() {
@@ -319,13 +280,9 @@ const RuleRow = GObject.registerClass({
             snap_to_ticks: true,
             margin_end: 6,
         });
-        spinButton.connect('value-changed', (widget) => {
-            const keyDelayValue = widget.get_value();
-            const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
-            let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
-            oldCloseWindowsRulesObj[this.appDesktopFilePath].keyDelay = keyDelayValue;
-            const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
-            this._settings.set_string('close-windows-rules', newCloseWindowsRules);
+        spinButton.connect('value-changed', (source) => {
+            const keyDelayValue = source.get_value();
+            this.emit('key-delay-changed', keyDelayValue);
         });
         return spinButton;
     }
@@ -510,22 +467,17 @@ const RuleRow = GObject.registerClass({
         }
 
         _eventControllerKey.get_widget().set_label(shortcut);
-        const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
-        let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
-        const ruleValues = oldCloseWindowsRulesObj[this.appDesktopFilePath].value;
         const _currentAcceleratorRule = _eventControllerKey.get_widget()._rule;
         let order = _currentAcceleratorRule.order;
-        ruleValues[order] = {
-            shortcut: shortcut,
-            keyval: keyval,
-            keycode: keycode,
-            state: state,
+        this.emit('accelerator-updated', order, CloseWindowsRule.GdkShortcuts.new({
+            shortcut,
+            keyval,
+            keycode,
+            state,
             controlRightPressed: _eventControllerKey._controlRightPressed,
             shiftRightPressed: _eventControllerKey._shiftRightPressed,
-            order: order
-        };
-        const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
-        this._settings.set_string('close-windows-rules', newCloseWindowsRules);
+            order
+        }));
 
         return Gdk.EVENT_STOP;
     }
@@ -545,12 +497,7 @@ const RuleRow = GObject.registerClass({
         }
 
         const order =_rule.order;
-        const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
-        let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
-        const ruleValues = oldCloseWindowsRulesObj[this.appDesktopFilePath].value;
-        delete ruleValues[order];
-        const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
-        this._settings.set_string('close-windows-rules', newCloseWindowsRules);
+        this.emit('accelerator-deleted', order);
     }
 
     _removeAcceleratorButtons(currentWidgetRemoved) {
@@ -616,6 +563,97 @@ const RuleRow = GObject.registerClass({
         return this._ruleDetail.enabled;
     }
 
+});
+
+const RuleRowByApp = GObject.registerClass({
+    Properties: {
+        'app-name': GObject.ParamSpec.string(
+            'app-name', 'The application name', 'The application name',
+            GObject.ParamFlags.READABLE,
+            ''
+        ),
+        'app-id': GObject.ParamSpec.string(
+            'app-id',
+            'The application id',
+            'The .desktop file name of an app',
+            GObject.ParamFlags.READABLE,
+            ''
+        ),
+        'app-desktop-file-path': GObject.ParamSpec.string(
+            'app-desktop-file-path',
+            'The app desktop file path',
+            'The .desktop file name of an app',
+            GObject.ParamFlags.READABLE,
+            ''
+        ),
+        
+    },
+}, class RuleRowByApp extends RuleRow {
+    _init(appInfo, ruleDetail) {
+        super._init(ruleDetail);
+        this._appInfo = appInfo;
+
+        const icon = new Gtk.Image({
+            gicon: appInfo.get_icon(),
+            pixel_size: 32,
+        });
+        icon.get_style_context().add_class('icon-dropshadow');
+        icon.set_tooltip_text(appInfo.get_display_name());
+        this.boxLeft.insert_child_after(icon, this._enabledCheckButton);
+
+        const label = new Gtk.Label({
+            label: appInfo.get_display_name(),
+            halign: Gtk.Align.START,
+            hexpand: true,
+            // Make sure that text align left
+            xalign: 0,
+            width_chars: 20,
+            max_width_chars: 20,
+            ellipsize: Pango.EllipsizeMode.END,
+        });
+        label.set_tooltip_text(appInfo.get_display_name());
+        this.boxLeft.insert_child_after(label, icon);
+
+        this.connect('notify::enabled', (source, enabled) => {
+            source.activate_action('rules.update', new GLib.Variant('a{sv}', {
+                appDesktopFilePath: GLib.Variant.new_string(source.appDesktopFilePath),
+                enabled: GLib.Variant.new_boolean(source._enabledCheckButton.get_active()),
+                // value: source.value,
+            }))
+        });
+        this.connect('key-delay-changed', (source, keyDelayValue) => {
+            const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
+            let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
+            oldCloseWindowsRulesObj[source.appDesktopFilePath].keyDelay = keyDelayValue;
+            const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
+            this._settings.set_string('close-windows-rules', newCloseWindowsRules);
+        });
+        this.connect('accelerator-updated', (source, order, newRule) => {
+            const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
+            let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
+            const ruleValues = oldCloseWindowsRulesObj[source.appDesktopFilePath].value;
+            ruleValues[order] = newRule;
+            const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
+            this._settings.set_string('close-windows-rules', newCloseWindowsRules);
+        });
+        this.connect('accelerator-deleted', (source, order) => {
+            const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
+            let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
+            const ruleValues = oldCloseWindowsRulesObj[source.appDesktopFilePath].value;
+            delete ruleValues[order];
+            const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
+            this._settings.set_string('close-windows-rules', newCloseWindowsRules);
+        });
+        this.connect('row-deleted', source => {
+            const removedAppDesktopFilePath = source.appDesktopFilePath;
+            const oldCloseWindowsRules = this._settings.get_string('close-windows-rules');
+            let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
+            delete oldCloseWindowsRulesObj[removedAppDesktopFilePath];
+            const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
+            this._settings.set_string('close-windows-rules', newCloseWindowsRules);
+        });
+    }
+
     get appName() {
         return this._appInfo.get_name();
     }
@@ -649,8 +687,8 @@ const AwsmNewRuleRow = GObject.registerClass(
         }
     });
 
-const AwsmNewRuleDialog = GObject.registerClass(
-    class AwsmNewRuleDialog extends Gtk.AppChooserDialog {
+const AwsmNewRuleByAppDialog = GObject.registerClass(
+    class AwsmNewRuleByAppDialog extends Gtk.AppChooserDialog {
         _init(parent) {
             super._init({
                 transient_for: parent,
