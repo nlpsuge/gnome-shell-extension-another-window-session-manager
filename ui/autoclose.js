@@ -85,7 +85,7 @@ var Autoclose = GObject.registerClass(
             EndSessionDialog.EndSessionDialog.prototype.OpenAsync = function (parameters, invocation) {
                 try {
                     if (this._openingByAWSM) {
-                        that._log.debug(`EndSessionDialog is already opening, ignore...`);
+                        that._log.debug(`EndSessionDialog is already opening by AWSM, ignore...`);
                         return;
                     }
     

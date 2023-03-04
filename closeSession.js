@@ -37,10 +37,10 @@ var CloseSession = class {
     }
 
     /**
-     * 
+     *
      * @param {boolean} workspacePersistent Whether to make the workspaces persistent or not
      * @param {int} workspace               The workspace index to close, starting from 0.
-     *                                      Pass `-1` to close the current workspace, 
+     *                                      Pass `-1` to close the current workspace,
      *                                      `null` or `undefined` to close all windows on all workspaces.
      * @returns {hasRunningApps: the number of the current running apps}
      */
@@ -59,10 +59,13 @@ var CloseSession = class {
             if (workspacePersistent) this._updateWorkspacePersistent(true);
 
             let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules(workspaceIndex);
-            for(const app of running_apps_closing_by_rules) {
-                await this._tryCloseAppsByRules(app);
+            if (running_apps_closing_by_rules.length) {
+                await this._startYdotoold();
+                for(const app of running_apps_closing_by_rules) {
+                    await this._tryCloseAppsByRules(app);
+                }
             }
-            
+
             let promises = [];
             for (const app of new_running_apps) {
                 const promise = new Promise((resolve, reject) => {
@@ -123,7 +126,7 @@ var CloseSession = class {
      * * If the `app` has multiple windows, only delete those windows that their type are dialog (See UiHelper.isDialog(window))
      *   * If the `app` is in the whitelist, which means the app can close safely, delete all its windows.
      * * If a window can not close, leave it open.
-     * 
+     *
      * @param {Shell.App} app 
      * @returns true if this `app` is closed, otherwise return false which means it still has unclosed windows
      */
@@ -135,7 +138,7 @@ var CloseSession = class {
             if (app.get_n_windows() > 1) {
                 const appInWhitelist = this.whitelist.includes(app.get_id());
                 let windows = this._sortWindows(app);
-                
+
                 const windowsOnWorkspace = this._listWindowsOnWorkspace(workspaceIndex);
                 if (windowsOnWorkspace) {
                     windows = windows.filter(w => windowsOnWorkspace.includes(w));
@@ -343,14 +346,11 @@ var CloseSession = class {
             
             this._log.info(`Closing ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
             
-            await this._startYdotoold();
             this._activateAndFocusWindow(app);
             await SubprocessUtils.trySpawn(cmd, 
                 (output) => {
                     this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
                 }, (output) => {
-                    // TODO ydotool.service might be inactive due to any reason, we can try to start the service first and send the shortcuts again before notifying the the below failure to users
-                    // In Fedora, start it via systemctl --user status ydotool.service
                     const msg = `Failed to send keys to close ${app.get_name()} via ydotool`;
                     this._log.error(new Error(`${msg}. output: ${output}`));
                     global.notify_error(`${msg}`, `${output}.`);
@@ -358,12 +358,13 @@ var CloseSession = class {
             );
         } catch (e) {
             this._log.error(e);
-        }    
+        }
     }
 
     async _startYdotoold() {
         try {
             return new Promise((resolve, reject) => {
+                Log.Log.getDefault().debug('Starting ydotool.service');
                 // Shell.util_start_systemd_unit only has been promisified since gnome 3.38
                 let startSystemdUnitMethod = Shell.util_start_systemd_unit;
                 if (Shell._original_util_start_systemd_unit) {
@@ -373,14 +374,15 @@ var CloseSession = class {
                 null,
                 (source, asyncResult) => {
                     try {
-                        Shell.util_start_systemd_unit_finish(asyncResult);   
-                        resolve(true);
+                        const started = Shell.util_start_systemd_unit_finish(asyncResult);
+                        Log.Log.getDefault().debug(`Finished to start ydotool.service. Started: ${started}`);
+                        resolve(started);
                     } catch (error) {
-                        Log.Log.getDefault().error(error);
+                        Log.Log.getDefault().error(error, 'Failed to start ydotool.service');
                         reject(false);
                     }
                 });
-            });   
+            });
         } catch (error) {
             Log.Log.getDefault().error(error);
         }
