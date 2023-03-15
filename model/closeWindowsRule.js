@@ -3,9 +3,9 @@
 const { GObject } = imports.gi;
 
 var CloseWindowsRuleBase = class {
+    category; // string. Applications, Keywords
     type; // string, rule type, such as 'shortcut'
     value; // GdkShortcuts, order and the rule pairs, such as "{1: 'Ctrl+Q}'".
-    appName; // string, such as 'Firefox'
     // wm_class; // string
     // wm_class_instance; // string
     enabled; // boolean
@@ -13,15 +13,21 @@ var CloseWindowsRuleBase = class {
 } 
 
 var CloseWindowsRuleByKeyword = class extends CloseWindowsRuleBase {
-    keyword; // string
+    id; // int. just like the id in MySQL. Used to update or delete rows.
+    keyword; // string. Can be any string
     compareWith; // string. title, wm_class, wm_class_instance, app name...
     // enableRegex; // int. 0, 1
     method; // string. endsWith, includes, startsWith. 
+
+    static new(param) {
+        return Object.assign(new CloseWindowsRuleByKeyword(), param);
+    }
 }
 
 var CloseWindowsRuleByApp = class extends CloseWindowsRuleBase {
     appId; // string, such as 'firefox.desktop'
     appDesktopFilePath; // string, such as '/usr/share/applications/firefox.desktop'
+    appName; // string, such as 'Firefox'
 }
 
 /**

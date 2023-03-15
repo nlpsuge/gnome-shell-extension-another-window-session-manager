@@ -187,7 +187,19 @@ Send keys to close the application gracefully with multiple windows.
 
 As of version 34, AWSM also uses `libgtop2` to query process information, just like `ps`. The cost of calling `ps` is very high, so I'm planing to remove this entirely.
 
-In `Fedora`, install it via `dnf install libgtop2`, while in `Pop!_OS 22.04`, you can install `gir1.2-gtop-2.0` as the suggestion of https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/69#issuecomment-1423117200 
+To install it:
+
+* Fedora and derivatives:
+`dnf install libgtop2`
+
+* Debian, Ubuntu and derivatives:
+`apt install gir1.2-gtop-2.0 libgtop2-dev`
+
+* Pop!_OS 22.04
+you can install `gir1.2-gtop-2.0` as the suggestion of https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/69#issuecomment-1423117200 
+
+* Arch and derivatives:
+`pacman -S libgtop`
 
 # Known issues
 
@@ -219,7 +231,7 @@ Note that I've marked `backups` as a reserved word, so you can't use it as a ses
 
 # TODO
 1. - Close open windows
-     - [ ] Close all windows on the current workspace. Who needs this feature? Hand up.🙋
+     - [ ] Close all windows on the current workspace. (WIP, see https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/pull/71)
 1. - Save open windows
      - [x] Save open windows 
 1. - Restore saved open windows
