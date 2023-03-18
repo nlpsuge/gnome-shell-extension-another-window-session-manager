@@ -28,6 +28,10 @@ var CloseWindowsRuleByApp = class extends CloseWindowsRuleBase {
     appId; // string, such as 'firefox.desktop'
     appDesktopFilePath; // string, such as '/usr/share/applications/firefox.desktop'
     appName; // string, such as 'Firefox'
+
+    static new(param) {
+        return Object.assign(new CloseWindowsRuleByApp(), param);
+    }
 }
 
 /**
