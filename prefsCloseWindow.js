@@ -220,41 +220,6 @@ var UICloseWindows = GObject.registerClass(
             });
         }
 
-        _syncKeywordRules(listBox, settingName, keyName) {
-            const oldRules = this._getRuleRows(listBox, keyName);
-            const newRulesStr = this._settings.get_string(settingName);
-            const newRules = JSON.parse(newRulesStr);
-
-            this._settings.block_signal_handler(this._keywordRulesChangedId);
-
-            oldRules.forEach(r => {
-                listBox.remove(r);
-            });
-
-            const ids = Object.keys(newRules);
-            for(let i = 0; i < ids.length; i++) {
-                const id = ids[i];
-                const rule = newRules[id];
-                const newRuleRow = new RuleRowByKeyword(rule);
-                listBox.insert(newRuleRow, i);
-            }
-
-            // const removed = oldRules.filter((oldRuleDetail) => {
-            //     let matched = false;
-            //     for (const p in newRules) {
-            //         const newRuleDetail = newRules[p];
-            //         if (newRuleDetail[id] === oldRuleDetail[id]) {
-            //             matched = true;
-            //         }
-            //     }
-            //     return !matched;
-            // });
-
-            // removed.forEach(r => listBox.remove(r));
-
-            this._settings.unblock_signal_handler(this._keywordRulesChangedId);
-        }
-
     });
 
 const RuleRow = GObject.registerClass({
@@ -400,18 +365,6 @@ const RuleRow = GObject.registerClass({
                 dropDown.set_selected(i);
         }
         const factory = dropDown.get_factory();
-        // factory.connect('setup', (factory, listItem) => {
-        //     const label = new Gtk.Label({
-        //         xalign: 0, // Align left
-        //         width_chars: Math.max(...dropDownValues.map(v => GLib.utf8_strlen(v, -1))),
-        //     });
-        //     listItem.set_child(label);
-        // });
-        // factory.connect('bind', (factory, listItem) => {
-        //     const label = listItem.get_child();
-        //     const item = listItem.get_item();
-        //     label.set_text(item.get_string());
-        // });
         factory.connect('bind', (factory, listItem) => {
             const box = listItem.get_child();
             const label = box.get_first_child();
