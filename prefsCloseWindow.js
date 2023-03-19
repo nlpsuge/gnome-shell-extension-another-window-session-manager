@@ -823,8 +823,9 @@ const RuleRowByKeyword = GObject.registerClass({
         });
         const compareWithDropDown = this._newCompareWithDropDown();
         const methodDropDown = this._newMethodDropDown();
-        const keywordEntry = this._newKeywordEntry();
-        
+        const [keywordEntryBox, keywordEntry, chooseButton] = this._newKeywordEntry();
+        // const chooseWindowButton = this._newChooseWindowButton();
+
         this._keywordEntry = keywordEntry;
         this._compareWithDropDown = compareWithDropDown;
         this._methodDropDown = methodDropDown;
@@ -832,7 +833,8 @@ const RuleRowByKeyword = GObject.registerClass({
         this.boxLeft.insert_child_after(icon, this._enabledCheckButton);
         this.boxLeft.insert_child_after(compareWithDropDown, icon);
         this.boxLeft.insert_child_after(methodDropDown, compareWithDropDown);
-        this.boxLeft.insert_child_after(keywordEntry, methodDropDown);
+        this.boxLeft.insert_child_after(keywordEntryBox, methodDropDown);
+        // this.boxLeft.insert_child_after(chooseWindowButton, keywordEntry);
 
         this.connect('keyword-edit-complete', (source, keywordEntry) => {
             this.updateRule('close-windows-rules-by-keyword', 'id', 'keyword', keywordEntry.get_text());
@@ -946,7 +948,55 @@ const RuleRowByKeyword = GObject.registerClass({
         keywordEntry.connect('changed', (source) => {
             this.emit('keyword-changed', source);
         });
-        return keywordEntry;
+
+        // const image = new Gtk.Image({
+        //     file: IconFinder.findPath('choose-window-symbolic.svg'),
+        // });
+        const chooseButton = new Gtk.Button({
+            icon_name: 'find-location-symbolic',
+            // label: 'Pick...',
+            tooltip_text: 'Choose a window to fill the entry based on the current setting',
+        });
+
+        const box = this._newBox({
+            spacing: 0,
+            hexpand: true,
+            halign: Gtk.Align.START,
+        });
+            
+        box.append(keywordEntry);
+        box.append(chooseButton);
+        
+        this._updateStyle(keywordEntry, 
+            `entry {
+                border-top-right-radius: 0px;
+                border-bottom-right-radius: 0px;
+            }`);
+        this._updateStyle(chooseButton, 
+            // Use .text-button if the button displays a label; Use .image-button if it displays an image
+            `.image-button {
+                padding-left: 0px;
+                padding-right: 6px;
+                border-top-left-radius: 0px;
+                border-bottom-left-radius: 0px;
+            }`); 
+
+        return [box, keywordEntry, chooseButton];
+    }
+
+    _updateStyle(widget, css) {
+        const cssProvider = new Gtk.CssProvider();
+        cssProvider.load_from_data(css);
+        widget.get_style_context().add_provider(cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+    }
+
+    _newChooseWindowButton() {
+        const button = new Gtk.Button({
+            // css_name: 'entry',
+            child: Gtk.Image.new_from_gicon(IconFinder.find('choose-window-symbolic.svg')),
+            tooltip_text: 'Choose a window to fill the entry based on the current setting',
+        });
+        return button;
     }
 
     _completeEditKeyword() {

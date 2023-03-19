@@ -11,3 +11,5 @@
 [toggle-off-symbolic.svg modified based on toggle-off.svg](https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/data/theme/toggle-off.svg)
 
 [toggle-on-symbolic.svg modified based on toggle-on.svg](https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/main/data/theme/toggle-on.svg)
+
+[choose-window-symbolic.svg](https://iconduck.com/icons/230732/choose-your-profession)
