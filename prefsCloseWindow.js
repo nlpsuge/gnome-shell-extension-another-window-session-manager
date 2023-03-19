@@ -697,16 +697,21 @@ const RuleRowByApp = GObject.registerClass({
         const appInfo = Gio.DesktopAppInfo.new_from_filename(ruleDetail.appDesktopFilePath)
         this._appInfo = appInfo;
 
+        let displayName
+        = appInfo
+        ? appInfo.get_display_name()
+        : `${ruleDetail.appDesktopFilePath} does't have app info. You may want to add this rule to 'Keywords'.`;
+
         const icon = new Gtk.Image({
-            gicon: appInfo.get_icon(),
+            gicon: appInfo ? appInfo.get_icon() : IconFinder.find('empty-symbolic.svg'),
             pixel_size: 32,
         });
         icon.get_style_context().add_class('icon-dropshadow');
-        icon.set_tooltip_text(appInfo.get_display_name());
+        icon.set_tooltip_text(displayName);
         this.boxLeft.insert_child_after(icon, this._enabledCheckButton);
 
         const label = new Gtk.Label({
-            label: appInfo.get_display_name(),
+            label: displayName,
             halign: Gtk.Align.START,
             hexpand: true,
             // Make sure that text align left
@@ -715,7 +720,14 @@ const RuleRowByApp = GObject.registerClass({
             max_width_chars: 20,
             ellipsize: Pango.EllipsizeMode.END,
         });
-        label.set_tooltip_text(appInfo.get_display_name());
+        label.set_tooltip_text(displayName);
+        if (!appInfo) {
+            const cssProvider = new Gtk.CssProvider();
+            cssProvider.load_from_data(
+                "label { color: red; }");
+            label.get_style_context().add_provider(cssProvider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+        }
         this.boxLeft.insert_child_after(label, icon);
 
         this.connect('notify::enabled', (source) => {
@@ -752,15 +764,15 @@ const RuleRowByApp = GObject.registerClass({
     }
 
     get appName() {
-        return this._appInfo.get_name();
+        return this._appInfo ? this._appInfo.get_name() : null;
     }
 
     get appId() {
-        return this._appInfo.get_id();
+        return this._appInfo ? this._appInfo.get_id() : null;
     }
 
     get appDesktopFilePath() {
-        return this._appInfo.get_filename();
+        return this._ruleDetail.appDesktopFilePath;
     }
 
 });
