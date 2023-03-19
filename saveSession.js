@@ -339,7 +339,7 @@ var SaveSession = class {
             }
             const iconString = runningShellApp.get_icon().to_string()
             const argument = {
-                appName: appName,
+                appName,
                 commandLine: cmdStr,
                 icon: iconString ? iconString : '',
                 wmClass: metaWindow.get_wm_class(),

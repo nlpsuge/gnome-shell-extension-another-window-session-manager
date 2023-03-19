@@ -15,9 +15,9 @@ var CloseWindowsRuleBase = class {
 var CloseWindowsRuleByKeyword = class extends CloseWindowsRuleBase {
     id; // int. just like the id in MySQL. Used to update or delete rows.
     keyword; // string. Can be any string
-    compareWith; // string. title, wm_class, wm_class_instance, app name...
+    compareWith; // string. title, wm_class, wm_class_instance, app_name...
     // enableRegex; // int. 0, 1
-    method; // string. endsWith, includes, startsWith. 
+    method; // string. endsWith, includes, startsWith, equals, regex. 
 
     static new(param) {
         return Object.assign(new CloseWindowsRuleByKeyword(), param);

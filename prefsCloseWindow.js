@@ -952,7 +952,9 @@ const RuleRowByKeyword = GObject.registerClass({
         let comboBoxValues = [
             ['Includes', 'includes'],
             ['Ends with', 'endsWith'],
-            ['Starts with', 'startsWith']
+            ['Starts with', 'startsWith'],
+            ['Equals', 'equals'],
+            ['RegExp', 'regex']
         ];
         return this._newDropDown(comboBoxValues, this._ruleDetail.method);
     }
