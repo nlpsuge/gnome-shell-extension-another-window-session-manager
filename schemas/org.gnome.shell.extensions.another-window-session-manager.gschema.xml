@@ -30,6 +30,13 @@
       Rules that are used to close applications
       </description>
     </key>
+    <key name="close-windows-rules-by-keyword" type="s">
+      <default>'{}'</default>
+      <summary>Rules that are used to close applications by keyword</summary>
+      <description>
+      Rules that are used to close applications by keyword
+      </description>
+    </key>
     <key name='autorestore-sessions' type="s">
       <default>''</default>
       <summary>Session(s) restored on startup</summary>

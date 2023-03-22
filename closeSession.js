@@ -12,6 +12,7 @@ const Log = Me.imports.utils.log;
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const SubprocessUtils = Me.imports.utils.subprocessUtils;
 const DateUtils = Me.imports.utils.dateUtils;
+const Function = Me.imports.utils.function;
 
 const Constants = Me.imports.constants;
 
@@ -42,16 +43,24 @@ var CloseSession = class {
 
             if (workspacePersistent) this._updateWorkspacePersistent(true);
 
-            let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules();
-            if (running_apps_closing_by_rules.length) {
+            let [newRunningApps, runningAppsClosingByAppRules, runningAppsClosingByKeywordRules] = 
+                this._getRunningAppsClosingByRules();
+            if (runningAppsClosingByAppRules.length || runningAppsClosingByKeywordRules.length) {
                 await this._startYdotoold();
-                for(const app of running_apps_closing_by_rules) {
-                    await this._tryCloseAppsByRules(app);
+
+                for(const [app, rules] of runningAppsClosingByAppRules) {
+                    app._rulesAWSM = rules;
+                    await this._tryCloseAppsByRules(app).finally(() => delete app._rulesAWSM);
+                }
+
+                for(const [app, rules] of runningAppsClosingByKeywordRules) {
+                    app._rulesAWSM = rules;
+                    await this._tryCloseAppsByRules(app).finally(() => delete app._rulesAWSM);
                 }
             }
             
             let promises = [];
-            for (const app of new_running_apps) {
+            for (const app of newRunningApps) {
                 const promise = new Promise((resolve, reject) => {
                     this._log.info(`Closing ${app.get_name()}`);
                     this._closeOneApp(app).then(([closed, reason]) => {
@@ -221,10 +230,7 @@ var CloseSession = class {
                 return;
             }
 
-            const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
-            const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
-            const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
-
+            const rules = app._rulesAWSM;
             if (rules?.type === 'shortcut') {
                 let keycodesSegments = [];
                 let shortcutsOriginal = [];
@@ -315,11 +321,9 @@ var CloseSession = class {
 
     async _activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal) {
         try {
-            const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
-            const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
-            const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
+            const rules = app._rulesAWSM;
             const keyDelay = rules?.keyDelay;
-            const cmd = ['ydotool', 'key', '--key-delay', !keyDelay ? '0' : keyDelay + ''].concat(linuxKeyCodes);
+            const cmd = ['ydotool', 'key', '--key-delay', keyDelay ? keyDelay + '' : '0'].concat(linuxKeyCodes);
             const cmdStr = cmd.join(' ');
             
             this._log.info(`Closing ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
@@ -371,21 +375,66 @@ var CloseSession = class {
             return [[], this._defaultAppSystem.get_running()];
         }
 
-        let running_apps_closing_by_rules = [];
-        let new_running_apps = [];
+        const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
+        const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
+
+        const closeWindowsRulesKeyword = this._prefsUtils.getSettingString('close-windows-rules-by-keyword');
+        const closeWindowsRulesObjKeyword = JSON.parse(closeWindowsRulesKeyword);
+
+        let runningAppsClosingByAppRules = [];
+        let runningAppsClosingByKeywordRules = [];
+        let newRunningApps = [];
         let running_apps = this._defaultAppSystem.get_running();
         for (const app of running_apps) {
-            const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
-            const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
+            let matched = false;
+
             const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
-            if (!rules || !rules.enabled || !rules.value) {
-                new_running_apps.push(app);
-            } else {
-                running_apps_closing_by_rules.push(app);
+            if (rules && rules.enabled && rules.value) {
+                matched = true;
+                runningAppsClosingByAppRules.push([app, rules]);
+            }
+
+            for (const id in closeWindowsRulesObjKeyword) {
+                const rules = closeWindowsRulesObjKeyword[id];
+                const {id_, enabled, value, keyword, compareWith, method} = rules;
+                if (!enabled || !value) continue;
+
+                if (compareWith === 'app_name') {
+                    let compareWithValue = app.get_name();
+                    matched = this._ruleMatched(compareWithValue, method, keyword);
+                    if (matched) {
+                        runningAppsClosingByKeywordRules.push([app, rules]);
+                    }
+                } else {
+                    for (const window of app.get_windows()) {
+                        let compareWithValue = Function.callFunc(window, Meta.Window.prototype[`get_${compareWith}`]);
+                        matched = this._ruleMatched(compareWithValue, method, keyword);
+                        if (matched) {
+                            runningAppsClosingByKeywordRules.push([app, rules]);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!matched) {
+                newRunningApps.push(app);
             }
         }
 
-        return [running_apps_closing_by_rules, new_running_apps];
+        return [newRunningApps, runningAppsClosingByAppRules, runningAppsClosingByKeywordRules];
+    }
+
+    _ruleMatched(compareWithValue, method, keyword) {
+        let matched = false;
+        if (method === 'regex') {
+            matched = new RegExp(keyword).test(compareWithValue);
+        } else if (method === 'equals') {
+            matched = keyword === compareWithValue;
+        } else {
+            matched = Function.callFunc(compareWithValue, String.prototype[method], keyword);
+        }
+        return matched;
     }
 
     _activateAndFocusWindow(app) {
@@ -393,6 +442,7 @@ var CloseSession = class {
         const topLevelWindow = windows[windows.length - 1];
         if (topLevelWindow) {
             this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
+            // TODO Maybe need to connect a `activate` signal, await it to finish and then send keys to the window
             Main.activateWindow(topLevelWindow, DateUtils.get_current_time());
         }
     }

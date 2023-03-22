@@ -204,7 +204,7 @@ var OpenWindowsTracker = class {
     _overrideMetaRestart() {
         const that = this;
         _meta_restart = Meta.restart;
-        if (GnomeVersion.isOlderThan43()) {
+        if (GnomeVersion.isLessThan43()) {
             Meta.restart = function (message) {
                 that._meta_is_restarting = true;
                 _meta_restart(message);
