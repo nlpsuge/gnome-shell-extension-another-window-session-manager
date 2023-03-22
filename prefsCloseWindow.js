@@ -962,10 +962,13 @@ const RuleRowByKeyword = GObject.registerClass({
             spacing: 0,
             hexpand: true,
             halign: Gtk.Align.START,
+            margin_top: 0,
+            margin_bottom: 0,
         });
             
         box.append(keywordEntry);
-        box.append(chooseButton);
+        // TODO Pick a window to fetch infos according to current rule settings
+        // box.append(chooseButton);
         
         this._updateStyle(keywordEntry, 
             `entry {
@@ -980,6 +983,11 @@ const RuleRowByKeyword = GObject.registerClass({
                 border-top-left-radius: 0px;
                 border-bottom-left-radius: 0px;
             }`); 
+
+        // TODO Pick a window to fetch infos according to current rule settings
+        // chooseButton.connect('clicked', (source, pickedWidget) => {
+            
+        // });
 
         return [box, keywordEntry, chooseButton];
     }
@@ -1007,15 +1015,16 @@ const RuleRowByKeyword = GObject.registerClass({
         if (prefsDialogWindow) prefsDialogWindow.set_focus(null);
         this._keywordEntry.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY, 'document-edit-symbolic');
         this._keywordEntry.set_icon_tooltip_text(Gtk.EntryIconPosition.SECONDARY, 'Edit the entry');
+        this._keywordEntry.set_tooltip_text(this._keywordEntry.get_text());
         this.emit('keyword-edit-complete', this._keywordEntry);
     }
 
     _newMethodDropDown() {
         let comboBoxValues = [
-            ['Includes', 'includes'],
-            ['Ends with', 'endsWith'],
-            ['Starts with', 'startsWith'],
             ['Equals', 'equals'],
+            ['Includes', 'includes'],
+            ['Starts with', 'startsWith'],
+            ['Ends with', 'endsWith'],
             ['RegExp', 'regex']
         ];
         return this._newDropDown(comboBoxValues, this._ruleDetail.method);
@@ -1023,10 +1032,10 @@ const RuleRowByKeyword = GObject.registerClass({
 
     _newCompareWithDropDown() {
         let comboBoxValues = [
-            ['Window title', 'title'],
             ['wm class', 'wm_class'],
             ['wm class instance', 'wm_class_instance'],
             ['Application name', 'app_name'],
+            ['Window title', 'title'],
         ];
         return this._newDropDown(comboBoxValues, this._ruleDetail.compareWith);
     }

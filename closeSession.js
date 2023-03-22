@@ -406,13 +406,14 @@ var CloseSession = class {
                         runningAppsClosingByKeywordRules.push([app, rules]);
                     }
                 } else {
-                    app.get_windows().forEach((window) => {
+                    for (const window of app.get_windows()) {
                         let compareWithValue = Function.callFunc(window, Meta.Window.prototype[`get_${compareWith}`]);
                         matched = this._ruleMatched(compareWithValue, method, keyword);
                         if (matched) {
                             runningAppsClosingByKeywordRules.push([app, rules]);
+                            break;
                         }
-                    });
+                    }
                 }
             }
 

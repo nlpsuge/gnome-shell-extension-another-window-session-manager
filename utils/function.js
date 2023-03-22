@@ -4,7 +4,10 @@
 var callFunc = function (thisObj, func, param) {
     try {
         if (!(param instanceof Array)) {
-            return func.call(thisObj, param);
+            if (param) {
+                return func.call(thisObj, param);
+            }
+            return func.call(thisObj);
         }
         return func.call(thisObj, ...param);
     } catch (error) {
