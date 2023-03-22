@@ -52,6 +52,14 @@
       <description>
       </description>
     </key>
+    <key name='enable-save-session-notification' type="b">
+      <default>true</default>
+      <summary>
+      Show a notification when users click buttons on the popup menu to save a session.
+      </summary>
+      <description>
+      </description>
+    </key>
     <key name='enable-restore-previous-session' type="b">
       <default>false</default>
       <summary>Enable to Restore previous apps and windows at startup</summary>

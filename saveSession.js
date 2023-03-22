@@ -18,6 +18,7 @@ const Log = Me.imports.utils.log;
 const MetaWindowUtils = Me.imports.utils.metaWindowUtils;
 const CommonError = Me.imports.utils.CommonError;
 const SubprocessUtils = Me.imports.utils.subprocessUtils;
+const PrefsUtils = Me.imports.utils.prefsUtils;
 
 
 var SaveSession = class {
@@ -33,6 +34,9 @@ var SaveSession = class {
             flags: (Gio.SubprocessFlags.STDOUT_PIPE |
                     Gio.SubprocessFlags.STDERR_PIPE)});
         this._defaultAppSystem = Shell.AppSystem.get_default();
+
+        this._prefsUtils = new PrefsUtils.PrefsUtils();
+        this._settings = this._prefsUtils.getSettings();
 
         this._sourceIds = [];
     }
@@ -452,7 +456,7 @@ var SaveSession = class {
                             if (success) {
                                 const savedMsg = `Session ${sessionConfig.session_name} saved to ${sessionFile.get_path()}!`;
                                 Log.Log.getDefault().info(`${savedMsg}`);
-                                if (this._notifyUser) {
+                                if (this._notifyUser && this._settings.get_boolean('enable-save-session-notification')) {
                                     Main.notify(`Another Window Session Manager`, savedMsg);
                                 }
                                 resolve(success);

@@ -59,6 +59,13 @@ const Prefs = GObject.registerClass(
             );
 
             this._settings.bind(
+                'enable-save-session-notification',
+                this.save_session_notification_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
                 'enable-autorestore-sessions',
                 this.restore_at_startup_switch,
                 'active',
@@ -178,6 +185,8 @@ const Prefs = GObject.registerClass(
             this.notebook = this._builder.get_object('prefs_notebook');
 
             this.debugging_mode_switch = this._builder.get_object('debugging_mode_switch');
+
+            this.save_session_notification_switch = this._builder.get_object('save_session_notification_switch');
 
             this.restore_session_interval_spinbutton = this._builder.get_object('restore_session_interval_spinbutton');
             this.timer_on_the_autostart_dialog_spinbutton = this._builder.get_object('timer_on_the_autostart_dialog_spinbutton');
