@@ -192,11 +192,8 @@ To install it:
 * Fedora and derivatives:
 `dnf install libgtop2`
 
-* Debian, Ubuntu and derivatives:
+* Debian, Ubuntu, Pop!_OS, and derivatives:
 `apt install gir1.2-gtop-2.0 libgtop2-dev`
-
-* Pop!_OS 22.04
-you can install `gir1.2-gtop-2.0` as the suggestion of https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/69#issuecomment-1423117200 
 
 * Arch and derivatives:
 `pacman -S libgtop`
