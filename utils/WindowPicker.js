@@ -44,7 +44,7 @@ var WindowPickerServiceProvider = class WindowPickerServiceProvider {
     lookingGlass.open();
     lookingGlass.hide();
 
-    const inspector = new LookingGlass.Inspector(Main.createLookingGlass());
+    const inspector = new MyInspector(Main.createLookingGlass());
     
     // Release the global grab, so that we can move around freely (specially, free to use Ctrl+`
     // to switch windows) and pick a window that is on another workspace.
@@ -96,6 +96,9 @@ var WindowPickerServiceProvider = class WindowPickerServiceProvider {
       // Restore the global grab to prevent the error 'incorrect pop' thrown by LookingGlass.close/Main.popModal(this._grab)
       lookingGlass._grab = Main.pushModal(lookingGlass, { actionMode: Shell.ActionMode.LOOKING_GLASS });
       lookingGlass.close();
+    });
+
+    inspector.connect('WindowPickCancelled', () => {
       this._dbus.emit_signal('WindowPickCancelled', null);
     });
   }
@@ -112,3 +115,21 @@ var WindowPickerServiceProvider = class WindowPickerServiceProvider {
     this._dbus.unexport();
   }
 };
+
+var MyInspector = GObject.registerClass({
+  Signals: {
+    'WindowPickCancelled': {}
+  }
+}, class MyInspector extends LookingGlass.Inspector {
+  _init(lookingGlass) {
+    super._init(lookingGlass);
+  }
+
+  _onKeyPressEvent(actor, event) {
+    if (event.get_key_symbol() === Clutter.KEY_Escape) {
+      this.emit('WindowPickCancelled');
+      this._close();
+    }
+    return Clutter.EVENT_STOP;
+  }
+});
