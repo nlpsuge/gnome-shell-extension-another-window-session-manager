@@ -967,8 +967,7 @@ const RuleRowByKeyword = GObject.registerClass({
         });
             
         box.append(keywordEntry);
-        // TODO Pick a window to fetch infos according to current rule settings
-        // box.append(chooseButton);
+        box.append(chooseButton);
         
         this._updateStyle(keywordEntry, 
             `entry {
@@ -984,12 +983,70 @@ const RuleRowByKeyword = GObject.registerClass({
                 border-bottom-left-radius: 0px;
             }`); 
 
-        // TODO Pick a window to fetch infos according to current rule settings
-        // chooseButton.connect('clicked', (source, pickedWidget) => {
-            
-        // });
+        // Pick a window to fetch application and window infos according to the current rule setting
+        chooseButton.connect('clicked', (source, pickedWidget) => {
+            if (this._dbusConnection) {
+                // Unsubscribe the existing PickWindow DBus service, just in case of modifying another entry.
+                Gio.DBus.session.signal_unsubscribe(this._dbusConnection);
+                this._dbusConnection = null;
+            }
+
+            Gio.DBus.session.call(
+                'org.gnome.Shell',
+                '/org/gnome/shell/extensions/awsm',
+                'org.gnome.Shell.Extensions.awsm.PickWindow', 'PickWindow',
+                null, null, Gio.DBusCallFlags.NO_AUTO_START, -1, null, null);
+
+            this._dbusConnection = this._subscribeSignal('WindowPicked', (conn, sender, obj_path, iface, signal, results) => {
+                // Unsubscribe the PickWindow DBus service, it's really no necessary to keep the subscription all the time
+                Gio.DBus.session.signal_unsubscribe(this._dbusConnection);
+                this._dbusConnection = null;
+
+                this._unfocus(this._keywordEntry);
+
+                const resultsArray = results.recursiveUnpack();
+                // Pick nothing, so we ignore this pick
+                if(!resultsArray.length) {
+                    return;
+                }
+
+                const [appName, wmClass, wmClassInstance, title] = resultsArray;
+                let entryValue = '';
+                switch (this.compareWith) {
+                    case 'wm_class':
+                        entryValue = wmClass;
+                        break;
+                    case 'wm_class_instance':
+                        entryValue = wmClassInstance;
+                        break;
+                    case 'app_name':
+                        entryValue = appName;
+                        break;
+                    case 'title':
+                        entryValue = title;
+                        break;
+                    default:
+                        break;
+                }
+
+                this._keywordEntry.set_text(entryValue);
+                this._keywordEntry.set_tooltip_text(this._keywordEntry.get_text());
+                this.emit('keyword-edit-complete', this._keywordEntry);
+            });
+        });
+
+        this._subscribeSignal('WindowPickCancelled', () => this._unfocus(this._keywordEntry));
 
         return [box, keywordEntry, chooseButton];
+    }
+
+    _subscribeSignal(signalName, callback) {
+        const dbusConnection = Gio.DBus.session.signal_subscribe(
+            'org.gnome.Shell', 'org.gnome.Shell.Extensions.awsm.PickWindow', 
+            signalName,
+            '/org/gnome/shell/extensions/awsm', null, Gio.DBusSignalFlags.NONE, 
+            callback);
+        return dbusConnection;
     }
 
     _updateStyle(widget, css) {
@@ -1010,13 +1067,18 @@ const RuleRowByKeyword = GObject.registerClass({
     _completeEditKeyword() {
         this._keywordEntry.set_can_focus(false);
         this._keywordEntry.set_editable(false);
-        // Pass `null` to unfocus the entry
-        const prefsDialogWindow = this._keywordEntry.get_root();
-        if (prefsDialogWindow) prefsDialogWindow.set_focus(null);
+        this._unfocus(this._keywordEntry);
         this._keywordEntry.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY, 'document-edit-symbolic');
         this._keywordEntry.set_icon_tooltip_text(Gtk.EntryIconPosition.SECONDARY, 'Edit the entry');
         this._keywordEntry.set_tooltip_text(this._keywordEntry.get_text());
         this.emit('keyword-edit-complete', this._keywordEntry);
+    }
+
+    _unfocus(widget) {
+        const prefsDialogWindow = widget.get_root();
+        if (prefsDialogWindow)
+            // Pass `null` to unfocus the entry
+            prefsDialogWindow.set_focus(null);
     }
 
     _newMethodDropDown() {
