@@ -12,6 +12,12 @@ const Log = Me.imports.utils.log;
 const GnomeVersion = Me.imports.utils.gnomeVersion;
 const IconFinder = Me.imports.utils.iconFinder;
 
+const PrefsWindowPickableEntry = Me.imports.prefsWindowPickableEntry;
+const PrefsWidgets = Me.imports.prefsWidgets;
+const PrefsCloseWhitelist = Me.imports.prefsCloseWhitelist;
+const PrefsColumnView = Me.imports.prefsColumnView;
+
+
 // const _ = ExtensionUtils.gettext;
 
 /**
@@ -26,6 +32,8 @@ var UICloseWindows = GObject.registerClass(
             this._log = new Log.Log();
 
             this._builder = builder;
+            this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
+
             this._prefsUtils = new PrefsUtils.PrefsUtils();
             this._settings = this._prefsUtils.getSettings();
 
@@ -34,8 +42,6 @@ var UICloseWindows = GObject.registerClass(
         }
 
         init() {
-            this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
-
             const close_by_rules_multi_grid2 = this._builder.get_object('close_by_rules_multi_grid2');
             const close_by_rules_list_box = this._builder.get_object('close_by_rules_list_box');
             // Remove GtkScrolledWindow on Gnome 42
@@ -45,8 +51,69 @@ var UICloseWindows = GObject.registerClass(
                 close_by_rules_multi_grid2.attach(close_by_rules_list_box, 0, 0, 1, 1);
             }
             
+            this._initAppRules();
+            this._initKeywordRules();
+            this._initWhitelist();
+
+        }
+
+        _initWhitelist() {
+            const settingKey = 'close-windows-whitelist';
+            const close_windows_whitelist_listbox = this._builder.get_object('close_windows_whitelist_listbox');
+            close_windows_whitelist_listbox.set_header_func((currentRow, beforeRow, data) => {
+                this._setHeader(currentRow, beforeRow, data, 'Whitelist', {margin_start: 0});
+            });
+
+            const whitelistColumnView = new PrefsColumnView.WhitelistColumnView();
+            const addWhitelist = new AwsmNewRuleRow();
+            close_windows_whitelist_listbox.append(whitelistColumnView);
+            close_windows_whitelist_listbox.append(addWhitelist);
+
+            addWhitelist.connect('clicked', (source) => {
+                const oldCloseWindowsWhitelist = this._settings.get_string(settingKey);
+                const newId = Math.max(...Object.keys(oldCloseWindowsWhitelist)) + 1;
+
+                const closeWindowsWhitelist = CloseWindowsRule.CloseWindowsWhitelist.new({
+                    id: newId,
+                    enabled: false,
+                    method: 'equals',
+                    enableWhenCloseWindows: false,
+                    enableWhenLogout: false,
+                });
+
+                let oldWhitelist = JSON.parse(oldCloseWindowsWhitelist);
+                oldWhitelist[newId] = closeWindowsWhitelist;
+                const newWhitelist = JSON.stringify(oldWhitelist);
+                this._settings.set_string(settingKey, newWhitelist);
+            });
+
+            this._changedId = this._settings.connect(
+                `changed::${settingKey}`,
+                (settings) => {
+                    try {
+                        this._settings.block_signal_handler(this._changedId);
+                        this._syncColumnView(whitelistColumnView, CloseWindowsRule.CloseWindowsWhitelist, settingKey);
+                    } finally {
+                        this._settings.unblock_signal_handler(this._changedId);
+                    }
+                });
+            this._syncColumnView(whitelistColumnView, CloseWindowsRule.CloseWindowsWhitelist, settingKey);
+        }
+
+        _syncColumnView(columnView, obj, settingName) {
+            const newRules = JSON.parse(this._settings.get_string(settingName));
+            let datalist = [];
+            for (const key in newRules) {
+                const data = Object.assign(new obj(), newRules[key])
+                datalist.push(data);
+            }
+            columnView.updateView(datalist);
+        }
+
+        _initAppRules() {
+            const close_by_rules_list_box = this._builder.get_object('close_by_rules_list_box');
             close_by_rules_list_box.set_header_func((currentRow, beforeRow, data) => {
-                this._setHeader(currentRow, beforeRow, data, 'Applications')
+                this._setHeader(currentRow, beforeRow, data, 'Applications');
             });
             const addApp = new AwsmNewRuleRow();
             close_by_rules_list_box.append(addApp);
@@ -74,7 +141,10 @@ var UICloseWindows = GObject.registerClass(
                     }
                 });
             this._sync(close_by_rules_list_box, RuleRowByApp, 'close-windows-rules', 'appDesktopFilePath');
+        }
 
+        _initKeywordRules() {
+            const close_by_rules_multi_grid2 = this._builder.get_object('close_by_rules_multi_grid2');
             const close_by_rules_by_keyword_list_box = new Gtk.ListBox({
                 hexpand: true,
                 vexpand: true,
@@ -82,7 +152,7 @@ var UICloseWindows = GObject.registerClass(
             });
             close_by_rules_multi_grid2.attach(close_by_rules_by_keyword_list_box, 0, 1, 1, 1);
             close_by_rules_by_keyword_list_box.set_header_func((currentRow, beforeRow, data) => {
-                this._setHeader(currentRow, beforeRow, data, 'Keywords')
+                this._setHeader(currentRow, beforeRow, data, 'Keywords');
             });
             const addKeyword = new AwsmNewRuleRow();
             close_by_rules_by_keyword_list_box.append(addKeyword);
@@ -107,32 +177,34 @@ var UICloseWindows = GObject.registerClass(
                 this._settings.set_string('close-windows-rules-by-keyword', newCloseWindowsRules);
             });
 
-            this._keywordRulesChangedId = this._settings.connect(
+            this._changedId = this._settings.connect(
                 'changed::close-windows-rules-by-keyword',
                 (settings) => {
                     try {
-                        this._settings.block_signal_handler(this._keywordRulesChangedId);
+                        this._settings.block_signal_handler(this._changedId);
                         this._sync(close_by_rules_by_keyword_list_box, RuleRowByKeyword, 'close-windows-rules-by-keyword', 'id');
                     } finally {
-                        this._settings.unblock_signal_handler(this._keywordRulesChangedId);
+                        this._settings.unblock_signal_handler(this._changedId);
                     }
                 });
             this._sync(close_by_rules_by_keyword_list_box, RuleRowByKeyword, 'close-windows-rules-by-keyword', 'id');
         }
 
-        _setHeader(currentRow, beforeRow, data, category) {
+        _setHeader(currentRow, beforeRow, data, headerName, labelProperties) {
             const header = currentRow.get_header();
             if (header === null && beforeRow === null) {
                 const boxVertical = new Gtk.Box({orientation: Gtk.Orientation.VERTICAL});
-                // box.append(new Gtk.Separator({orientation: Gtk.Orientation.HORIZONTAL}));
-                boxVertical.append(new Gtk.Label({
+                const label = new Gtk.Label({
                     xalign: 0, // align left
                     margin_top: 12,
                     margin_bottom: 6,
                     margin_start: 12,
                     use_markup: true,
-                    label: `<b>${category}</b>`
-                }));
+                    label: `<b>${headerName}</b>`
+                });
+                if (labelProperties) 
+                    Object.assign(label, labelProperties);
+                boxVertical.append(label);
                 boxVertical.append(new Gtk.Separator({orientation: Gtk.Orientation.HORIZONTAL}));
                 boxVertical._isHeaderAWSM = true;
                 currentRow.set_header(boxVertical);
@@ -199,7 +271,7 @@ var UICloseWindows = GObject.registerClass(
                     // Update existing rules (no use currently)
                 } else {
                     // Insert new rules
-                    const newRuleRow = new obj(ruleDetail);
+                    const newRuleRow = new obj(ruleDetail, settingName);
                     listBox.insert(newRuleRow, index);
                 }
             }
@@ -222,6 +294,63 @@ var UICloseWindows = GObject.registerClass(
 
     });
 
+const Row = GObject.registerClass({
+    Signals: {
+        'row-deleted': {
+            param_types: []
+        },
+    },
+    Properties: {
+        'enabled': GObject.ParamSpec.boolean(
+            'enabled', 'enabled', 'enabled',
+            GObject.ParamFlags.READWRITE,
+            false
+        ),
+    }
+}, class Row extends Gtk.ListBoxRow {
+    
+    _init(detail, params) {
+        super._init({
+            activatable: false,
+        });
+
+        Object.assign(this, params);
+
+        this.detail = detail;
+
+        this._enabledCheckButton = new Gtk.CheckButton({
+            active: detail.enabled,
+        })
+        
+        // `flags` contains GObject.BindingFlags.BIDIRECTIONAL so we don't need to set `enable` manually
+        this.bind_property('enabled',
+            this._enabledCheckButton, 'active',
+            GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL);
+    }
+
+    _newRemoveButton() {
+        const box = PrefsWidgets.newRemoveButton();
+        box.connect('clicked', () => {
+            this.emit('row-deleted');
+        });
+        return box;
+    }
+
+    updateRow(settingName, keyName, propertyName, value) {
+        const oldCloseWindowsRules = this._settings.get_string(settingName);
+        let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
+        const key = this[keyName];
+        const rule = oldCloseWindowsRulesObj[key];
+        rule[propertyName] = value;
+        const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
+        this._settings.set_string(settingName, newCloseWindowsRules);
+    }
+
+    get enabled() {
+        return this.detail.enabled;
+    }
+});
+
 const RuleRow = GObject.registerClass({
     Signals: {
         'accelerator-updated': {
@@ -230,19 +359,11 @@ const RuleRow = GObject.registerClass({
         'accelerator-deleted': {
             param_types: [GObject.TYPE_INT]
         },
-        'row-deleted': {
-            param_types: []
-        },
         'key-delay-changed': {
             param_types: [GObject.TYPE_INT]
         }
     },
     Properties: {
-        'enabled': GObject.ParamSpec.boolean(
-            'enabled', 'enabled', 'enabled',
-            GObject.ParamFlags.READWRITE,
-            false
-        ),
         'type': GObject.ParamSpec.string(
             'type', 'type', 'type',
             GObject.ParamFlags.READWRITE,
@@ -256,7 +377,7 @@ const RuleRow = GObject.registerClass({
             GObject.ParamFlags.READWRITE),
         
     },
-}, class RuleRow extends Gtk.ListBoxRow {
+}, class RuleRow extends Row {
     _init(ruleDetail) {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
@@ -276,8 +397,7 @@ const RuleRow = GObject.registerClass({
             halign: Gtk.Align.END
         });
 
-        super._init({
-            activatable: false,
+        super._init(ruleDetail, {
             // TODO
             // value: GLib.Variant.new_strv(ruleDetail.value),
             child: ruleRowBox,
@@ -286,33 +406,12 @@ const RuleRow = GObject.registerClass({
 
         this._rendererAccelBox = null;
 
-        this._enabledCheckButton = new Gtk.CheckButton({
-            active: ruleDetail.enabled,
-        })
-        // `flags` contains GObject.BindingFlags.BIDIRECTIONAL so we don't need to set `enable` manually
-        this.bind_property('enabled',
-            this._enabledCheckButton, 'active',
-            GObject.BindingFlags.SYNC_CREATE | GObject.BindingFlags.BIDIRECTIONAL);
         boxLeft.append(this._enabledCheckButton);
-
         boxLeft.append(this._newShortcutDropDown());
-
         boxLeft.append(this._newDelaySpinButton());
 
         this._append_accel(boxRight);
-
-        const buttonRemove = new Gtk.Button({
-            icon_name: 'edit-delete-symbolic',
-        });
-        buttonRemove.connect('clicked', () => {
-            this.emit('row-deleted');
-        });
-        const boxRemoveButton = this._newBox({
-            hexpand: true,
-            halign: Gtk.Align.START
-        });
-        boxRemoveButton.append(buttonRemove);
-        boxRight.append(boxRemoveButton);
+        boxRight.append(this._newRemoveButton());
 
         ruleRowBox.append(boxLeft);
         ruleRowBox.append(boxRight);
@@ -357,23 +456,7 @@ const RuleRow = GObject.registerClass({
     }
 
     _newDropDown(values, activeValue) {
-        const dropDownValues = values.map(cv => cv[1]);
-        const dropDown = Gtk.DropDown.new_from_strings(dropDownValues);
-        dropDown.set_valign(Gtk.Align.BASELINE);
-        for (let i = 0; i < dropDownValues.length; i++) {
-            if (dropDownValues[i] === activeValue)
-                dropDown.set_selected(i);
-        }
-        const factory = dropDown.get_factory();
-        factory.connect('bind', (factory, listItem) => {
-            const box = listItem.get_child();
-            const label = box.get_first_child();
-            const widthChars = Math.max(...dropDownValues.map(
-                // GLib.utf8_strlen(v, -1) causes right margin between the label and box is too large, so -2 to reduce this margin
-                v => GLib.utf8_strlen(v, -1) - 2));
-            label.set_width_chars(widthChars);
-        });
-        return dropDown;
+        return PrefsWidgets._newDropDown(values, activeValue);
     }
 
     _newComboBox(comboBoxValues, activeValue) {
@@ -404,15 +487,7 @@ const RuleRow = GObject.registerClass({
     }
 
     _newBox(properties) {
-        const box = new Gtk.Box({
-            spacing: 6,
-            margin_top: 6,
-            margin_bottom: 6,
-            margin_start: 6,
-            margin_end: 6,
-        })
-        Object.assign(box, properties);
-        return box;
+        return PrefsWidgets._newBox(properties);
     }
 
     _append_accel(parentWidget) {
@@ -652,17 +727,7 @@ const RuleRow = GObject.registerClass({
     }
 
     updateRule(settingName, keyName, propertyName, value) {
-        const oldCloseWindowsRules = this._settings.get_string(settingName);
-        let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
-        const key = this[keyName];
-        const rule = oldCloseWindowsRulesObj[key];
-        rule[propertyName] = value;
-        const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
-        this._settings.set_string(settingName, newCloseWindowsRules);
-    }
-
-    get enabled() {
-        return this._ruleDetail.enabled;
+        this.updateRow(settingName, keyName, propertyName, value);
     }
 
 });
@@ -823,18 +888,22 @@ const RuleRowByKeyword = GObject.registerClass({
         });
         const compareWithDropDown = this._newCompareWithDropDown();
         const methodDropDown = this._newMethodDropDown();
-        const [keywordEntryBox, keywordEntry, chooseButton] = this._newKeywordEntry();
-        // const chooseWindowButton = this._newChooseWindowButton();
+        const pickableEntry = new PrefsWindowPickableEntry.WindowPickableEntry({
+            text: ruleDetail.keyword ? ruleDetail.keyword : '',
+            tooltip_text: ruleDetail.keyword ? ruleDetail.keyword : 'A string that is used to match windows or apps',
+            pickConditionFunc: (() => {
+                return this._compareWithDropDown.get_selected_item().get_string();
+            }).bind(this)
+        });
 
-        this._keywordEntry = keywordEntry;
+        this._keywordEntry = pickableEntry.entry;
         this._compareWithDropDown = compareWithDropDown;
         this._methodDropDown = methodDropDown;
 
         this.boxLeft.insert_child_after(icon, this._enabledCheckButton);
         this.boxLeft.insert_child_after(compareWithDropDown, icon);
         this.boxLeft.insert_child_after(methodDropDown, compareWithDropDown);
-        this.boxLeft.insert_child_after(keywordEntryBox, methodDropDown);
-        // this.boxLeft.insert_child_after(chooseWindowButton, keywordEntry);
+        this.boxLeft.insert_child_after(pickableEntry, methodDropDown);
 
         this.connect('keyword-edit-complete', (source, keywordEntry) => {
             this.updateRule('close-windows-rules-by-keyword', 'id', 'keyword', keywordEntry.get_text());
@@ -881,206 +950,6 @@ const RuleRowByKeyword = GObject.registerClass({
         });
     }
 
-    _newKeywordEntry() {
-        const keyword = this._ruleDetail.keyword ? this._ruleDetail.keyword : '';
-        const keywordEntry = new Gtk.Entry({
-            text: keyword,
-            editable: false,
-            can_focus: false,
-            focus_on_click: false,
-            halign: Gtk.Align.START,
-            hexpand: true,
-            // Make sure that text align left
-            xalign: 0,
-            width_chars: 20,
-            max_width_chars: 20,
-            // ellipsize: Pango.EllipsizeMode.END,
-        });
-        keywordEntry.set_tooltip_text(keyword ? keyword : 'A string that is used to match windows');
-        // keywordEntry.set_placeholder_text('A string that is used to match windows');
-        keywordEntry.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY, 'document-edit-symbolic');
-        keywordEntry.set_icon_tooltip_text(Gtk.EntryIconPosition.SECONDARY, 'Edit the entry');
-        keywordEntry.set_icon_activatable(Gtk.EntryIconPosition.SECONDARY, true);
-        const iconPressId = keywordEntry.connect('icon-press', (source, icon_pos) => {
-            if (icon_pos !== Gtk.EntryIconPosition.SECONDARY)
-                return;
-
-            if (source._showSaveIconAWSM) {
-                delete source._showSaveIconAWSM;
-                this._completeEditKeyword();
-                if (this._prefsDialogCloseRequestId) {
-                    const prefsDialogWindow = this._keywordEntry.get_root();
-                    if (prefsDialogWindow) prefsDialogWindow.disconnect(this._prefsDialogCloseRequestId);
-                }
-            } else {
-                source.block_signal_handler(iconPressId);
-
-                source.set_can_focus(true);
-                source.set_editable(true);
-                source.grab_focus_without_selecting();
-                // -1 put the cursor to the end
-                source.set_position(-1);
-
-                source.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY, 'emblem-ok-symbolic');
-                source.set_icon_tooltip_text(Gtk.EntryIconPosition.SECONDARY, 'Complete editing');
-                source._showSaveIconAWSM = true;
-
-                // Save the entry when we close the prefs dialog window
-                const prefsDialogWindow = this._keywordEntry.get_root();
-                if (prefsDialogWindow) {
-                    this._prefsDialogCloseRequestId = prefsDialogWindow.connect('close-request', () => {
-                        this.updateRule('close-windows-rules-by-keyword', 'id', 'keyword', this._keywordEntry.get_text());
-                        prefsDialogWindow.disconnect(this._prefsDialogCloseRequestId);
-                    });
-                }
-                source.unblock_signal_handler(iconPressId);
-            }
-        });
-        // Accept Enter key to complete the editing
-        keywordEntry.connect('activate', () => {
-            this._completeEditKeyword();
-        });
-        let keywordEntryController = Gtk.EventControllerFocus.new();
-        keywordEntry.add_controller(keywordEntryController);
-        keywordEntryController.connect('leave', (source) => {
-            this._completeEditKeyword();
-        });
-        keywordEntry.connect('changed', (source) => {
-            this.emit('keyword-changed', source);
-        });
-
-        // const image = new Gtk.Image({
-        //     file: IconFinder.findPath('choose-window-symbolic.svg'),
-        // });
-        const chooseButton = new Gtk.Button({
-            icon_name: 'find-location-symbolic',
-            // label: 'Pick...',
-            tooltip_text: 'Choose a window to fill the entry based on the current setting',
-        });
-
-        const box = this._newBox({
-            spacing: 0,
-            hexpand: true,
-            halign: Gtk.Align.START,
-            margin_top: 0,
-            margin_bottom: 0,
-        });
-            
-        box.append(keywordEntry);
-        box.append(chooseButton);
-        
-        this._updateStyle(keywordEntry, 
-            `entry {
-                border-top-right-radius: 0px;
-                border-bottom-right-radius: 0px;
-            }`);
-        this._updateStyle(chooseButton, 
-            // Use .text-button if the button displays a label; Use .image-button if it displays an image
-            `.image-button {
-                padding-left: 0px;
-                padding-right: 6px;
-                border-top-left-radius: 0px;
-                border-bottom-left-radius: 0px;
-            }`); 
-
-        // Pick a window to fetch application and window infos according to the current rule setting
-        chooseButton.connect('clicked', (source, pickedWidget) => {
-            if (this._dbusConnection) {
-                // Unsubscribe the existing PickWindow DBus service, just in case of modifying another entry.
-                Gio.DBus.session.signal_unsubscribe(this._dbusConnection);
-                this._dbusConnection = null;
-            }
-
-            Gio.DBus.session.call(
-                'org.gnome.Shell',
-                '/org/gnome/shell/extensions/awsm',
-                'org.gnome.Shell.Extensions.awsm.PickWindow', 'PickWindow',
-                null, null, Gio.DBusCallFlags.NO_AUTO_START, -1, null, null);
-
-            this._dbusConnection = this._subscribeSignal('WindowPicked', (conn, sender, obj_path, iface, signal, results) => {
-                // Unsubscribe the PickWindow DBus service, it's really no necessary to keep the subscription all the time
-                Gio.DBus.session.signal_unsubscribe(this._dbusConnection);
-                this._dbusConnection = null;
-
-                this._unfocus(this._keywordEntry);
-
-                const resultsArray = results.recursiveUnpack();
-                // Pick nothing, so we ignore this pick
-                if(!resultsArray.length) {
-                    return;
-                }
-
-                const [appName, wmClass, wmClassInstance, title] = resultsArray;
-                let entryValue = '';
-                switch (this.compareWith) {
-                    case 'wm_class':
-                        entryValue = wmClass;
-                        break;
-                    case 'wm_class_instance':
-                        entryValue = wmClassInstance;
-                        break;
-                    case 'app_name':
-                        entryValue = appName;
-                        break;
-                    case 'title':
-                        entryValue = title;
-                        break;
-                    default:
-                        break;
-                }
-
-                this._keywordEntry.set_text(entryValue);
-                this._keywordEntry.set_tooltip_text(this._keywordEntry.get_text());
-                this.emit('keyword-edit-complete', this._keywordEntry);
-            });
-        });
-
-        this._subscribeSignal('WindowPickCancelled', () => this._unfocus(this._keywordEntry));
-
-        return [box, keywordEntry, chooseButton];
-    }
-
-    _subscribeSignal(signalName, callback) {
-        const dbusConnection = Gio.DBus.session.signal_subscribe(
-            'org.gnome.Shell', 'org.gnome.Shell.Extensions.awsm.PickWindow', 
-            signalName,
-            '/org/gnome/shell/extensions/awsm', null, Gio.DBusSignalFlags.NONE, 
-            callback);
-        return dbusConnection;
-    }
-
-    _updateStyle(widget, css) {
-        const cssProvider = new Gtk.CssProvider();
-        cssProvider.load_from_data(css);
-        widget.get_style_context().add_provider(cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-    }
-
-    _newChooseWindowButton() {
-        const button = new Gtk.Button({
-            // css_name: 'entry',
-            child: Gtk.Image.new_from_gicon(IconFinder.find('choose-window-symbolic.svg')),
-            tooltip_text: 'Choose a window to fill the entry based on the current setting',
-        });
-        return button;
-    }
-
-    _completeEditKeyword() {
-        this._keywordEntry.set_can_focus(false);
-        this._keywordEntry.set_editable(false);
-        this._unfocus(this._keywordEntry);
-        this._keywordEntry.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY, 'document-edit-symbolic');
-        this._keywordEntry.set_icon_tooltip_text(Gtk.EntryIconPosition.SECONDARY, 'Edit the entry');
-        this._keywordEntry.set_tooltip_text(this._keywordEntry.get_text());
-        this.emit('keyword-edit-complete', this._keywordEntry);
-    }
-
-    _unfocus(widget) {
-        const prefsDialogWindow = widget.get_root();
-        if (prefsDialogWindow)
-            // Pass `null` to unfocus the entry
-            prefsDialogWindow.set_focus(null);
-    }
-
     _newMethodDropDown() {
         let comboBoxValues = [
             ['Equals', 'equals'],
@@ -1108,6 +977,162 @@ const RuleRowByKeyword = GObject.registerClass({
     
     get keyword() {
         return this._keywordEntry.get_text();
+    }
+
+    get compareWith() {
+        return this._compareWithDropDown.get_selected_item().get_string();
+    }
+
+    get method() {
+        return this._methodDropDown.get_selected_item().get_string();
+    }
+
+});
+
+const WhitelistRow = GObject.registerClass({
+    Signals: {}, 
+    Properties: {
+        'id': GObject.ParamSpec.int(
+            'id', 'id', 'just like the id in MySQL. Used to update or delete rows.',
+            GObject.ParamFlags.READABLE,
+            ''
+        ),
+        'name': GObject.ParamSpec.string(
+            'name', 'name', 'name',
+            GObject.ParamFlags.READABLE,
+            ''
+        ),
+        'compare-with': GObject.ParamSpec.string(
+            'compare-with',
+            'compare with',
+            'Use keyword to compared with title, wm_class, wm_class_instance, app name etc',
+            GObject.ParamFlags.READABLE,
+            ''
+        ),
+        'method': GObject.ParamSpec.string(
+            'method',
+            'method',
+            'The way to compare the keyword with title etc',
+            GObject.ParamFlags.READABLE,
+            ''
+        ),
+    },
+}, class WhitelistRow extends Row {
+    _init(detail, settingKey) {
+        super._init(detail, {halign: Gtk.Align.START});
+
+        this._prefsUtils = new PrefsUtils.PrefsUtils();
+        this._settings = this._prefsUtils.getSettings();
+
+        this.boxLeft = PrefsWidgets._newBox({
+            hexpand: true,
+            halign: Gtk.Align.START
+        });
+
+        const icon = new Gtk.Image({
+            gicon: IconFinder.find('empty-symbolic.svg'),
+            pixel_size: 32,
+        });
+        const compareWithDropDown = this._newCompareWithDropDown();
+        const methodDropDown = this._newMethodDropDown();
+        const nameEntry = new PrefsWindowPickableEntry.WindowPickableEntry({
+            text: detail.name ? detail.name : '',
+            tooltip_text: detail.name ? detail.name : 'A string that is used to match windows or apps',
+            pickConditionFunc: (() => {
+                return this._compareWithDropDown.get_selected_item().get_string();
+            }).bind(this)
+        });
+        
+        const enableWhenCloseWindows = PrefsWidgets.newLabelSwitch(
+            'Close windows',
+            'Enable or disable when close windows from the popup menu',
+            detail.enableWhenCloseWindows
+        );
+        const enableWhenLogout = PrefsWidgets.newLabelSwitch(
+            'Log Out, Reboot, Power Off',
+            'Enable or disable when Log Out, Reboot, Power Off via this extension',
+            detail.enableWhenLogout
+        );
+
+        compareWithDropDown.hide();
+        methodDropDown.hide();
+
+        this._compareWithDropDown = compareWithDropDown;
+        this._methodDropDown = methodDropDown;
+        this._enableWhenCloseWindows = enableWhenCloseWindows;
+        this._enableWhenLogout = enableWhenLogout;
+        this._nameEntry = nameEntry;
+
+        this.boxLeft.append(this._enabledCheckButton);
+        this.boxLeft.append(icon);
+        this.boxLeft.append(compareWithDropDown);
+        this.boxLeft.append(methodDropDown);
+        this.boxLeft.append(nameEntry);
+        this.boxLeft.append(enableWhenCloseWindows);
+        this.boxLeft.append(enableWhenLogout);
+
+        this.boxLeft.append(this._newRemoveButton());
+        this.set_child(this.boxLeft);
+
+        enableWhenCloseWindows.connect('active', (source, active, switcher) => {
+            this.updateRow(settingKey, 'id', 'enableWhenCloseWindows', active);
+        });
+
+        enableWhenLogout.connect('active', (source, active, switcher) => {
+            this.updateRow(settingKey, 'id', 'enableWhenLogout', active);
+        });
+        nameEntry.connect('entry-edit-complete', (source, entry) => {
+            this.updateRow(settingKey, 'id', 'name', entry.get_text());
+        });
+        compareWithDropDown.connect('notify::selected-item', (source) => {
+            const selectedItem = source.get_selected_item().get_string();
+            this.updateRow(settingKey, 'id', 'compareWith', selectedItem);
+        });
+
+        methodDropDown.connect('notify::selected-item', (source) => {
+            const selectedItem = source.get_selected_item().get_string();
+            this.updateRow(settingKey, 'id', 'method', selectedItem);
+        });
+
+        this.connect('notify::enabled', (source, enabled) => {
+            enabled = source._enabledCheckButton.get_active();
+            this.updateRow(settingKey, 'id', 'enabled', enabled);
+        });
+        this.connect('row-deleted', source => {
+            const oldCloseWindowsRules = this._settings.get_string(settingKey);
+            let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
+            delete oldCloseWindowsRulesObj[source.id];
+            const newCloseWindowsRules = JSON.stringify(oldCloseWindowsRulesObj);
+            this._settings.set_string(settingKey, newCloseWindowsRules);
+        });
+    }
+
+    _newMethodDropDown() {
+        let comboBoxValues = [
+            ['Equals', 'equals'],
+            ['Includes', 'includes'],
+            ['Starts with', 'startsWith'],
+            ['Ends with', 'endsWith'],
+            ['RegExp', 'regex']
+        ];
+        return PrefsWidgets._newDropDown(comboBoxValues, this.detail.method);
+    }
+
+    _newCompareWithDropDown() { 
+        let comboBoxValues = [
+            ['wm class', 'wm_class'],
+            ['wm class instance', 'wm_class_instance'],
+            ['Window title', 'title'],
+        ];
+        return PrefsWidgets._newDropDown(comboBoxValues, this.detail.compareWith);
+    }
+
+    get id() {
+        return this.detail.id;
+    }
+    
+    get name() {
+        return this.detail.name;
     }
 
     get compareWith() {

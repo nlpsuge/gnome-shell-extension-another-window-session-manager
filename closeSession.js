@@ -531,18 +531,6 @@ var CloseSession = class {
         }
     }
 
-    _skip_multiple_windows(shellApp) {
-        if (shellApp.get_n_windows() > 1 && this._skip_app_with_multiple_windows) {
-            const app_id = shellApp.get_id();
-            if (this.whitelist.includes(app_id)) {
-                this._log.debug(`${shellApp.get_name()} (${app_id}) in the whitelist. Closing it anyway.`);
-                return false;
-            }
-            return true;
-        }
-        return false;
-    }
-
     destroy() {
         if (this._defaultAppSystem) {
             this._defaultAppSystem = null;

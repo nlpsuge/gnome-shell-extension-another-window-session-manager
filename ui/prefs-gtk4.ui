@@ -173,32 +173,14 @@
                     </layout>
                   </object>
                 </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
               </object>
             </child>
+            <child>
+                <object class="GtkListBox" id="close_windows_whitelist_listbox">
+                  <child>
+                  </child>
+                </object>
+              </child>
           </object>
         </property>
         <property name="tab">

@@ -266,7 +266,7 @@ const Prefs = GObject.registerClass(
             } else {
                 this._log.error(new Error(`Failed to create folder: ${autostart_restore_desktop_file_path_parent}`));
             }
-        }        
+        }
     }
 );
 
