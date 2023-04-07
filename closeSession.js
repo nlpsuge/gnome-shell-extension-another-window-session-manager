@@ -18,9 +18,15 @@ const Constants = Me.imports.constants;
 
 const UiHelper = Me.imports.ui.uiHelper;
 
+var flags = {
+    closeWindows: 1 << 0,
+    logoff:       1 << 1,
+};
+
+var allFlags = flags.closeWindows | flags.logoff;
 
 var CloseSession = class {
-    constructor() {
+    constructor(flags) {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
@@ -32,9 +38,7 @@ var CloseSession = class {
             flags: (Gio.SubprocessFlags.STDOUT_PIPE |
                     Gio.SubprocessFlags.STDERR_PIPE)});
 
-        // TODO Put into Settings
-        // All apps in the whitelist should be closed safely, no worrying about lost data
-        this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'smplayer.desktop'];
+        this.flags = flags ? flags : allFlags;
     }
 
     async closeWindows(workspacePersistent) {
@@ -129,18 +133,24 @@ var CloseSession = class {
         let reason;
         try {
             if (app.get_n_windows() > 1) {
-                const appInWhitelist = this.whitelist.includes(app.get_id());
+                const whitelistString = this._settings.get_string('close-windows-whitelist');
+                const whitelist = JSON.parse(whitelistString);
+
                 let windows = this._sortWindows(app);
                 for (let i = windows.length - 1; i >= 0; i--) {
                     let window = windows[i];
-                    if (!window.can_close()) {
+                    const isInWhitelist = this._isInWhitelist(whitelist, window);
+                    if (isInWhitelist) {
+                        Log.Log.getDefault().info(`${app.get_name()} is in the whitelist`);
+                    }
+                    if (!window.can_close() && !isInWhitelist) {
                         closed = false;
                         reason = 'it has unclosable window(s)';
                         continue;
                     }
     
                     if (UiHelper.isDialog(window) 
-                        || appInWhitelist 
+                        || isInWhitelist
                         || !this._skip_app_with_multiple_windows)
                     {
                         closed = await this._deleteWindow(app, window);
@@ -170,6 +180,27 @@ var CloseSession = class {
         }
 
         return [closed, reason];
+    }
+
+    _isInWhitelist(whitelist, window) {
+        for (const id in whitelist) {
+            const row = whitelist[id];
+            const {
+                id_, enabled, name, compareWith, method, 
+                enableWhenCloseWindows, enableWhenLogout
+            } = row;
+            if (!enabled || !name) continue;
+
+            let compareWithValue = Function.callFunc(window, Meta.Window.prototype[`get_${compareWith}`]);
+            const matched = this._ruleMatched(compareWithValue, method, name);
+            if (matched) {
+                let _flags = 0;
+                if (enableWhenCloseWindows)     _flags = _flags | flags.closeWindows;
+                if (enableWhenLogout)           _flags = _flags | flags.logoff;
+                return true && (this.flags & _flags);
+            }
+        }
+        return false;
     }
 
     _deleteWindow(app, metaWindow) {

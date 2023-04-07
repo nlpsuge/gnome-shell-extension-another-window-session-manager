@@ -14,7 +14,6 @@ const IconFinder = Me.imports.utils.iconFinder;
 
 const PrefsWindowPickableEntry = Me.imports.prefsWindowPickableEntry;
 const PrefsWidgets = Me.imports.prefsWidgets;
-const PrefsCloseWhitelist = Me.imports.prefsCloseWhitelist;
 const PrefsColumnView = Me.imports.prefsColumnView;
 
 
@@ -77,6 +76,7 @@ var UICloseWindows = GObject.registerClass(
                     id: newId,
                     enabled: false,
                     method: 'equals',
+                    compareWith: 'wm_class',
                     enableWhenCloseWindows: false,
                     enableWhenLogout: false,
                 });
@@ -200,9 +200,10 @@ var UICloseWindows = GObject.registerClass(
                     margin_bottom: 6,
                     margin_start: 12,
                     use_markup: true,
-                    label: `<b>${headerName}</b>`
+                    label: `<b>${headerName}</b>`,
+                    tooltip_text: 'Apps in the whitelist will be closed even they has multiple windows'
                 });
-                if (labelProperties) 
+                if (labelProperties)
                     Object.assign(label, labelProperties);
                 boxVertical.append(label);
                 boxVertical.append(new Gtk.Separator({orientation: Gtk.Orientation.HORIZONTAL}));

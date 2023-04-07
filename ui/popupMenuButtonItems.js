@@ -108,7 +108,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         
         this.closingLabel;
 
-        this.closeSession = new CloseSession.CloseSession();
+        this.closeSession = new CloseSession.CloseSession(CloseSession.flags.closeWindows);
 
         this._createButton(iconSymbolic);
         this.addIconDescription('Close open windows');

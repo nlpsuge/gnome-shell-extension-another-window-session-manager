@@ -39,7 +39,7 @@ class SessionItemButtons extends GObject.Object {
         // TODO Nullify created object?
         this._saveSession = new SaveSession.SaveSession(true);
         this._moveSession = new MoveSession.MoveSession();
-        this._closeSession = new CloseSession.CloseSession();
+        this._closeSession = new CloseSession.CloseSession(CloseSession.flags.closeWindows);
 
         this._settings = new PrefsUtils.PrefsUtils().getSettings();
     }

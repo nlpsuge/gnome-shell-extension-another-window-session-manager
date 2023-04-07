@@ -157,7 +157,7 @@ var Autoclose = GObject.registerClass(
                             },
                             () => {
                                 that._retryIdleId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
-                                    const closeSession = new CloseSession.CloseSession();
+                                    const closeSession = new CloseSession.CloseSession(CloseSession.flags.logoff);
                                     closeSession.closeWindows(true);
                                     that._retryIdleId = null;
                                     return GLib.SOURCE_REMOVE;
@@ -178,7 +178,7 @@ var Autoclose = GObject.registerClass(
                     that._runningApplicationListWindow.open();
 
                     that._runningApplicationListWindow.updateRunningPids()
-                    const closeSession = new CloseSession.CloseSession();
+                    const closeSession = new CloseSession.CloseSession(CloseSession.flags.logoff);
                     closeSession.closeWindows(true)
                         .then((result) => {
                             try {
