@@ -848,9 +848,6 @@ const RuleRowByKeyword = GObject.registerClass({
         'keyword-changed': {
             param_types: [Gtk.Entry]
         },
-        'keyword-edit-complete': {
-            param_types: [Gtk.Entry]
-        },
     }, 
     Properties: {
         'id': GObject.ParamSpec.int(
@@ -906,7 +903,7 @@ const RuleRowByKeyword = GObject.registerClass({
         this.boxLeft.insert_child_after(methodDropDown, compareWithDropDown);
         this.boxLeft.insert_child_after(pickableEntry, methodDropDown);
 
-        this.connect('keyword-edit-complete', (source, keywordEntry) => {
+        pickableEntry.connect('entry-edit-complete', (source, keywordEntry) => {
             this.updateRule('close-windows-rules-by-keyword', 'id', 'keyword', keywordEntry.get_text());
         });
         compareWithDropDown.connect('notify::selected-item', (source) => {
