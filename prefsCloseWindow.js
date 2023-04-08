@@ -541,12 +541,7 @@ const RuleRow = GObject.registerClass({
 
         const frame = new Gtk.Frame();
         frame.set_child(box);
-        const cssProvider = new Gtk.CssProvider();
-        cssProvider.load_from_data(
-            "frame { border-style: dashed; }");
-        frame.get_style_context().add_provider(cssProvider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-
+        PrefsWidgets.updateStyle(frame, 'frame { border-style: dashed; }');
         parentWidget.append(frame);
     }
 
@@ -788,11 +783,7 @@ const RuleRowByApp = GObject.registerClass({
         });
         label.set_tooltip_text(displayName);
         if (!appInfo) {
-            const cssProvider = new Gtk.CssProvider();
-            cssProvider.load_from_data(
-                "label { color: red; }");
-            label.get_style_context().add_provider(cssProvider,
-                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            PrefsWidgets.updateStyle(label, 'label { color: red; }');
         }
         this.boxLeft.insert_child_after(label, icon);
 
@@ -880,10 +871,6 @@ const RuleRowByKeyword = GObject.registerClass({
     _init(ruleDetail) {
         super._init(ruleDetail);
 
-        const icon = new Gtk.Image({
-            gicon: IconFinder.find('empty-symbolic.svg'),
-            pixel_size: 32,
-        });
         const compareWithDropDown = this._newCompareWithDropDown();
         const methodDropDown = this._newMethodDropDown();
         const pickableEntry = new PrefsWindowPickableEntry.WindowPickableEntry({
@@ -898,8 +885,7 @@ const RuleRowByKeyword = GObject.registerClass({
         this._compareWithDropDown = compareWithDropDown;
         this._methodDropDown = methodDropDown;
 
-        this.boxLeft.insert_child_after(icon, this._enabledCheckButton);
-        this.boxLeft.insert_child_after(compareWithDropDown, icon);
+        this.boxLeft.insert_child_after(compareWithDropDown, this._enabledCheckButton);
         this.boxLeft.insert_child_after(methodDropDown, compareWithDropDown);
         this.boxLeft.insert_child_after(pickableEntry, methodDropDown);
 

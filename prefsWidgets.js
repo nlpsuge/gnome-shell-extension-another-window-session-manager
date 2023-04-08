@@ -2,6 +2,12 @@
 
 const { Gtk, GLib, GObject } = imports.gi;
 
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+
+const GnomeVersion = Me.imports.utils.gnomeVersion;
+
+
 var boxProperties = {
     spacing: 0,
     margin_start: 6,
@@ -43,7 +49,11 @@ var newLabelSwitch = function(text, tooltipText, active) {
 
 var updateStyle = function(widget, css) {
     const cssProvider = new Gtk.CssProvider();
-    cssProvider.load_from_data(css);
+    if (GnomeVersion.isLessThan44()) {
+        cssProvider.load_from_data(css);
+    } else {
+        cssProvider.load_from_data(css, -1);
+    }
     widget.get_style_context().add_provider(cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
 
