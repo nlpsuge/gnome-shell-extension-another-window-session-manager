@@ -37,6 +37,15 @@
       Rules that are used to close applications by keyword
       </description>
     </key>
+    <key name="close-windows-whitelist" type="s">
+      <default>'{}'</default>
+      <summary>
+      A whitelist that contains apps or windwows that can be closed safely, 
+      even they have multiple windows.
+      </summary>
+      <description>
+      </description>
+    </key>
     <key name='autorestore-sessions' type="s">
       <default>''</default>
       <summary>Session(s) restored on startup</summary>

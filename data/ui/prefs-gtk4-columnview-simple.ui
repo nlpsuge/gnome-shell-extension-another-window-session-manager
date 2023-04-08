@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <template class="AwsmColumnViewSimple" parent="GtkBox">
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <style>
+          <class name="view"/>
+        </style>
+        <child>
+          <object class="GtkColumnView" id="list">
+            <property name="show-column-separators">true</property>
+            <style>
+              <class name="data-table"/>
+              <class name="list"/>
+            </style>
+            <child>
+              <object class="GtkColumnViewColumn" id="enabled">
+                <property name="title" translatable="yes">Enabled</property>
+                <property name="factory">
+                  <object class="GtkSignalListItemFactory">
+                    <signal name="setup" handler="setup_enabled_cb"/>
+                    <signal name="bind" handler="bind_enabled_cb"/>
+                  </object>
+                </property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkColumnViewColumn" id="operation">
+                <property name="title" translatable="yes">Operation</property>
+                <property name="expand">0</property>
+                <property name="factory">
+                  <object class="GtkSignalListItemFactory">
+                    <signal name="setup" handler="setup_operation_cb"/>
+                    <signal name="bind" handler="bind_operation_cb"/>
+                  </object>
+                </property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </template>
+</interface>

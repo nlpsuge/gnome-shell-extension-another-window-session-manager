@@ -2,6 +2,22 @@
 
 const { GObject } = imports.gi;
 
+
+var CloseWindowsWhitelist = GObject.registerClass({
+}, class CloseWindowsWhitelist extends GObject.Object {
+    id; // int. just like the id in MySQL. Used to update or delete rows.
+    name; // string. Can be any string
+    compareWith; // string. title, wm_class, wm_class_instance, app_name...
+    method; // string. equals
+    enabled; // boolean
+    enableWhenCloseWindows; // boolean
+    enableWhenLogout; // boolean
+
+    static new(param) {
+        return Object.assign(new CloseWindowsWhitelist(), param);
+    }
+});
+
 var CloseWindowsRuleBase = class {
     category; // string. Applications, Keywords
     type; // string, rule type, such as 'shortcut'

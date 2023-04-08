@@ -99,13 +99,16 @@ sudo dnf install ydotool
 
 #Check the permission of `/dev/uinput`, if it's `crw-rw----+`, you can skip step 2
 # 2. Get permission to access to `/dev/uinput` as the normal user
-sudo touch /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
-sudo echo '# See:
-     # https://github.com/ValveSoftware/steam-devices/blob/master/60-steam-input.rules 
-     # https://github.com/ReimuNotMoe/ydotool/issues/25
+sudo touch /etc/udev/rules.d/60-awsm-ydotool-uinput.
+# Here we use `tee`, not redirect(>), to avoid `warning: An error occurred while redirecting file '/etc/udev/rules.d/60-awsm-ydotool-uinput.rules' open: Permission denied`
+# See: https://www.shellhacks.com/sudo-echo-to-file-permission-denied/
+echo '# See:
+# https://github.com/ValveSoftware/steam-devices/blob/master/60-steam-input.rules 
+# https://github.com/ReimuNotMoe/ydotool/issues/25
 
-     # ydotool udev write access
-     KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' > /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
+# ydotool udev write access
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' | sudo tee --append /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
+cat /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
 #Remove executable permission (a.k.a. x)
 sudo chmod 644 /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
 
@@ -200,6 +203,14 @@ To install it:
 
 * Arch and derivatives:
 `pacman -S libgtop`
+
+# Developing guidance
+
+To compile the `data/org.gnome.shell.extensions.another-window-session-manager.gresource.xml`, use the bellow command:
+```shell
+cd root_of_this_project
+glib-compile-resources --sourcedir="data" --generate data/org.gnome.shell.extensions.another-window-session-manager.gresource.xml
+```
 
 # Known issues
 
