@@ -205,14 +205,6 @@ To install it:
 * Arch and derivatives:
 `pacman -S libgtop`
 
-# Developing guidance
-
-To compile the `data/org.gnome.shell.extensions.another-window-session-manager.gresource.xml`, use the bellow command:
-```shell
-cd root_of_this_project
-glib-compile-resources --sourcedir="data" --generate data/org.gnome.shell.extensions.another-window-session-manager.gresource.xml
-```
-
 # Known issues
 
 1. On both X11 and Wayland, if click restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) continually during the process of restoring, the window size and position may can't be restored, and it may restore many instances of an application. **As a workaround, click the restore button (<img src=icons/restore-symbolic.svg width="14" height="14">) only once until all apps are restored.**

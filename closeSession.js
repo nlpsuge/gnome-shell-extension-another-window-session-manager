@@ -517,7 +517,7 @@ var CloseSession = class {
             // This happens when clicking the logout button but the system doesn't respond at all,
             // and in this case the endSessionDialog still emits the 'ConfirmedLogout' signal so the windows-mapping will be wiped out. 
             // I'm not sure why the system doesn't respond at all but still emits 'ConfirmedLogout' signal.
-            // FYI: The logout progress could be delayed or blocked due to some reasons like maybe a application are still writing data to the disk etc. 
+            // FYI: The logout progress could be delayed or blocked due to some reasons like maybe some applications are still writing data to the disk etc.
             if (!xidObj) {
                 const windowStableSequence1 = w1.get_stable_sequence();
                 const windowStableSequence2 = w2.get_stable_sequence();
