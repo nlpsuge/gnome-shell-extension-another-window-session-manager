@@ -391,7 +391,9 @@ var CloseSession = class {
                         Log.Log.getDefault().debug(`Finished to start ydotool.service. Started: ${started}`);
                         resolve(started);
                     } catch (error) {
-                        Log.Log.getDefault().error(error, 'Failed to start ydotool.service');
+                        const msg = 'Failed to start ydotool.service';
+                        Log.Log.getDefault().error(error, msg);
+                        global.notify_error(`${msg}`, `${error ? error.message : ''}`);
                         reject(false);
                     }
                 });

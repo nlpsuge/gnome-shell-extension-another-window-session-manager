@@ -77,8 +77,8 @@ var UICloseWindows = GObject.registerClass(
                     enabled: false,
                     method: 'equals',
                     compareWith: 'wm_class',
-                    enableWhenCloseWindows: false,
-                    enableWhenLogout: false,
+                    enableWhenCloseWindows: true,
+                    enableWhenLogout: true,
                 });
 
                 let oldWhitelist = JSON.parse(oldCloseWindowsWhitelist);
@@ -167,8 +167,8 @@ var UICloseWindows = GObject.registerClass(
                     value: {},
                     enabled: false,
                     keyDelay: 0,
-                    compareWith: 'title',
-                    method: 'includes'
+                    compareWith: 'wm_class',
+                    method: 'equals'
                 });
 
                 let oldCloseWindowsRulesObj = JSON.parse(oldCloseWindowsRules);
