@@ -18,13 +18,13 @@ const Log = Me.imports.utils.log;
 const MetaWindowUtils = Me.imports.utils.metaWindowUtils;
 const CommonError = Me.imports.utils.CommonError;
 const SubprocessUtils = Me.imports.utils.subprocessUtils;
+const PrefsUtils = Me.imports.utils.prefsUtils;
 
 
 var SaveSession = class {
 
     constructor(notifyUser=true) {
-        this.notifyUser = notifyUser;
-
+        this._notifyUser = notifyUser;
         this._log = new Log.Log();
 
         this._saveSessionIdleId = null;
@@ -34,6 +34,9 @@ var SaveSession = class {
             flags: (Gio.SubprocessFlags.STDOUT_PIPE |
                     Gio.SubprocessFlags.STDERR_PIPE)});
         this._defaultAppSystem = Shell.AppSystem.get_default();
+
+        this._prefsUtils = new PrefsUtils.PrefsUtils();
+        this._settings = this._prefsUtils.getSettings();
 
         this._sourceIds = [];
     }
@@ -340,7 +343,7 @@ var SaveSession = class {
             }
             const iconString = runningShellApp.get_icon().to_string()
             const argument = {
-                appName: appName,
+                appName,
                 commandLine: cmdStr,
                 icon: iconString ? iconString : '',
                 wmClass: metaWindow.get_wm_class(),
@@ -451,10 +454,11 @@ var SaveSession = class {
                         try {
                             success = sessionFile.replace_contents_finish(asyncResult);
                             if (success) {
-                                const savedMsg = `Session saved to ${sessionFile.get_path()}!`;
-                                this._log.info(savedMsg);
-                                if (this.notifyUser)
-                                    Main.notify(`Session saved to ${sessionConfig.session_name}`, savedMsg);
+                                const savedMsg = `Session ${sessionConfig.session_name} saved to ${sessionFile.get_path()}!`;
+                                Log.Log.getDefault().info(`${savedMsg}`);
+                                if (this._notifyUser && this._settings.get_boolean('enable-save-session-notification')) {
+                                    Main.notify(`Another Window Session Manager`, savedMsg);
+                                }
                                 resolve(success);
                                 return;
                             }

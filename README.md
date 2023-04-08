@@ -90,39 +90,46 @@ Please note that currently if this option is enabled, it modifies the Gnome Shel
 
 ### How to make `Close by rules` work
 
+To make this feature work, you need to install [ydotool](https://github.com/ReimuNotMoe/ydotool):
+
 ```bash
 # 1. Install `ydotool` using the package manager and make sure the version is greater than v1.0.0
 sudo dnf install ydotool
-#Or install it from the source code: https://github.com/ReimuNotMoe/ydotool 
+#Or install it from the source code: https://github.com/ReimuNotMoe/ydotool
 
 #Check the permission of `/dev/uinput`, if it's `crw-rw----+`, you can skip step 2
 # 2. Get permission to access to `/dev/uinput` as the normal user
 sudo touch /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
-sudo echo '# See:
-     # https://github.com/ValveSoftware/steam-devices/blob/master/60-steam-input.rules 
-     # https://github.com/ReimuNotMoe/ydotool/issues/25
+# Here we use `tee`, not redirect(>), to avoid `warning: An error occurred while redirecting file '/etc/udev/rules.d/60-awsm-ydotool-uinput.rules' open: Permission denied`
+# See: https://www.shellhacks.com/sudo-echo-to-file-permission-denied/
+echo '# See:
+  # https://github.com/ValveSoftware/steam-devices/blob/master/60-steam-input.rules 
+  # https://github.com/ReimuNotMoe/ydotool/issues/25
 
-     # ydotool udev write access
-     KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' > /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
+  # ydotool udev write access
+  KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' | sudo tee --append /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
+
+cat /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
 #Remove executable permission (a.k.a. x)
 sudo chmod 644 /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
 
 # 3. Copy ydotool.service to /usr/lib/systemd/user, so `systemctl --user enable ydotool.service` can work
 sudo cp /usr/lib/systemd/system/ydotool.service /usr/lib/systemd/user
-# 4. Autostart the ydotoold service under the normal user
-systemctl --user enable ydotool.service
-
+# 4. Start the ydotoold service under the normal user
+systemctl --user start ydotool.service
+# 5. Check if ydotoold service is working. The word `hello` should print on the terminal, if not you might need to reboot the system or try to relogin your account. 
+ydotool type 'hello'
 
 ## misc. ##
 
 # Check if the ydotoold service is running, if not it can be started by the folowing cmd
 systemctl --user status ydotool.service
-# Start the ydotoold service under the normal user
-systemctl --user start ydotool.service
 
 # Check if ydotool is working. the word `hello` should print on the terminal, if not you might need to reboot the system or try to relogin your account. 
 ydotool type 'hello'
 ```
+
+Note that it's no necessary to run `systemctl --user enable ydotool.service`, because this extension starts `ydotool.service` every time while you use it to close windows.
 
 Feel free to fill an issue if `ydotool` does not work under normal user, you may also want to do that in [its git issue area](https://github.com/ReimuNotMoe/ydotool/issues)
 
@@ -187,7 +194,24 @@ Send keys to close the application gracefully with multiple windows.
 
 As of version 34, AWSM also uses `libgtop2` to query process information, just like `ps`. The cost of calling `ps` is very high, so I'm planing to remove this entirely.
 
-In `Fedora`, install it via `dnf install libgtop2`, while in `Pop!_OS 22.04`, you can install `gir1.2-gtop-2.0` as the suggestion of https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/69#issuecomment-1423117200 
+To install it:
+
+* Fedora and derivatives:
+`dnf install libgtop2`
+
+* Debian, Ubuntu, Pop!_OS, and derivatives:
+`apt install gir1.2-gtop-2.0 libgtop2-dev`
+
+* Arch and derivatives:
+`pacman -S libgtop`
+
+# Developing guidance
+
+To compile the `data/org.gnome.shell.extensions.another-window-session-manager.gresource.xml`, use the bellow command:
+```shell
+cd root_of_this_project
+glib-compile-resources --sourcedir="data" --generate data/org.gnome.shell.extensions.another-window-session-manager.gresource.xml
+```
 
 # Known issues
 
@@ -219,7 +243,7 @@ Note that I've marked `backups` as a reserved word, so you can't use it as a ses
 
 # TODO
 1. - Close open windows
-     - [ ] Close all windows on the current workspace. Who needs this feature? Hand up.🙋
+     - [ ] Close all windows on the current workspace. (WIP, see https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/pull/71)
 1. - Save open windows
      - [x] Save open windows 
 1. - Restore saved open windows

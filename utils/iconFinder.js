@@ -14,3 +14,12 @@ function find(iconName) {
     return Gio.ThemedIcon.new_from_names([iconName]);
     
 }
+
+function findPath(iconName) {
+    let iconPath = `${Me.path}/icons/${iconName}`;
+    if (GLib.file_test(iconPath, GLib.FileTest.EXISTS)) {
+        return iconPath;
+    }
+
+    return null;
+}

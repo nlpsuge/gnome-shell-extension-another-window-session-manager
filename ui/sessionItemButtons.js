@@ -37,17 +37,15 @@ class SessionItemButtons extends GObject.Object {
         this.sessionItem = sessionItem;
 
         // TODO Nullify created object?
-        this._saveSession = new SaveSession.SaveSession();
+        this._saveSession = new SaveSession.SaveSession(true);
         this._moveSession = new MoveSession.MoveSession();
-        this._closeSession = new CloseSession.CloseSession();
+        this._closeSession = new CloseSession.CloseSession(CloseSession.flags.closeWindows);
 
         this._settings = new PrefsUtils.PrefsUtils().getSettings();
     }
 
     addButtons() {
         this._addTags();
-        
-        this._addSeparator();
 
         const saveButton = this._addButton('save-symbolic.svg');
         new Tooltip.Tooltip({
@@ -177,6 +175,8 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _addTags() {
+        if (!Log.Log.getDefault().isDebug()) return;
+
         // TODO Make the modification time align left
 
         let button = new St.Button({
@@ -189,6 +189,7 @@ class SessionItemButtons extends GObject.Object {
         }
         this.sessionItem.actor.add_child(button);
 
+        this._addSeparator();
     }
 
     _addSeparator() {
@@ -236,7 +237,7 @@ class SessionItemButtons extends GObject.Object {
         // The below bug is fixed in Gnome 42.
         // Leave Overview if we are in Overview to reduce or fix `Bug in window manager: Workspace does not exist to index!` in mutter
         // See: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134, which has been merged into Gnome 42
-        if (GnomeVersion.isOlderThan42() && Main.overview.visible) {
+        if (GnomeVersion.isLessThan42() && Main.overview.visible) {
             Main.overview.toggle();
         }
     }

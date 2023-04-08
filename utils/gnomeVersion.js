@@ -6,12 +6,14 @@ const Config = imports.misc.config;
 const GNOME_VERSION = parseFloat(Config.PACKAGE_VERSION);
 
 
-function isOlderThan42() {
-    return GNOME_VERSION < 42;
+function isLessThan44() {
+    return GNOME_VERSION < 44;
 }
 
-function isOlderThan43() {
+function isLessThan43() {
     return GNOME_VERSION < 43;
 }
 
-
+function isLessThan42() {
+    return GNOME_VERSION < 42;
+}

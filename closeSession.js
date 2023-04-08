@@ -12,14 +12,21 @@ const Log = Me.imports.utils.log;
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const SubprocessUtils = Me.imports.utils.subprocessUtils;
 const DateUtils = Me.imports.utils.dateUtils;
+const Function = Me.imports.utils.function;
 
 const Constants = Me.imports.constants;
 
 const UiHelper = Me.imports.ui.uiHelper;
 
+var flags = {
+    closeWindows: 1 << 0,
+    logoff:       1 << 1,
+};
+
+var allFlags = flags.closeWindows | flags.logoff;
 
 var CloseSession = class {
-    constructor() {
+    constructor(flags) {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
@@ -31,9 +38,7 @@ var CloseSession = class {
             flags: (Gio.SubprocessFlags.STDOUT_PIPE |
                     Gio.SubprocessFlags.STDERR_PIPE)});
 
-        // TODO Put into Settings
-        // All apps in the whitelist should be closed safely, no worrying about lost data
-        this.whitelist = ['org.gnome.Terminal.desktop', 'org.gnome.Nautilus.desktop', 'smplayer.desktop'];
+        this.flags = flags ? flags : allFlags;
     }
 
     /**
@@ -57,13 +62,24 @@ var CloseSession = class {
                 }
             }
 
-            let [running_apps_closing_by_rules, new_running_apps] = this._getRunningAppsClosingByRules(app);
-            for(const app of running_apps_closing_by_rules) {
-                await this._tryCloseAppByRules(app);
+            let [newRunningApps, runningAppsClosingByAppRules, runningAppsClosingByKeywordRules] =
+                this._getRunningAppsClosingByRules();
+            if (runningAppsClosingByAppRules.length || runningAppsClosingByKeywordRules.length) {
+                await this._startYdotoold();
+
+                for(const [app, rules] of runningAppsClosingByAppRules) {
+                    app._rulesAWSM = rules;
+                    await this._tryCloseAppByRules(app).finally(() => delete app._rulesAWSM);
+                }
+
+                for(const [app, rules] of runningAppsClosingByKeywordRules) {
+                    app._rulesAWSM = rules;
+                    await this._tryCloseAppByRules(app).finally(() => delete app._rulesAWSM);
+                }
             }
 
             let promises = [];
-            for (const app of new_running_apps) {
+            for (const app of newRunningApps) {
                 const promise = new Promise((resolve, reject) => {
                     this._log.info(`Closing ${app.get_name()}`);
                     this._closeOneApp(app)
@@ -123,9 +139,7 @@ var CloseSession = class {
      * * If the `app` has multiple windows, only delete those windows that their type are dialog (See UiHelper.isDialog(window))
      *   * If the `app` is in the whitelist, which means the app can close safely, delete all its windows.
      * * If a window can not close, leave it open.
-     * 
-     * TODO Call an explicit "app.quit" action first?
-     * 
+     *
      * @param {Shell.App} app 
      * @returns true if this `app` is closed, otherwise return false which means it still has unclosed windows
      */
@@ -135,18 +149,24 @@ var CloseSession = class {
         let reason;
         try {
             if (app.get_n_windows() > 1) {
-                const appInWhitelist = this.whitelist.includes(app.get_id());
+                const whitelistString = this._settings.get_string('close-windows-whitelist');
+                const whitelist = JSON.parse(whitelistString);
+
                 let windows = this._sortWindows(app);
                 for (let i = windows.length - 1; i >= 0; i--) {
                     let window = windows[i];
-                    if (!window.can_close()) {
+                    const isInWhitelist = this._isInWhitelist(whitelist, window);
+                    if (isInWhitelist) {
+                        Log.Log.getDefault().info(`${app.get_name()} is in the whitelist`);
+                    }
+                    if (!window.can_close() && !isInWhitelist) {
                         closed = false;
                         reason = 'it has unclosable window(s)';
                         continue;
                     }
     
                     if (UiHelper.isDialog(window) 
-                        || appInWhitelist 
+                        || isInWhitelist
                         || !this._skip_app_with_multiple_windows)
                     {
                         closed = await this._deleteWindow(app, window);
@@ -176,6 +196,27 @@ var CloseSession = class {
         }
 
         return [closed, reason];
+    }
+
+    _isInWhitelist(whitelist, window) {
+        for (const id in whitelist) {
+            const row = whitelist[id];
+            const {
+                id_, enabled, name, compareWith, method,
+                enableWhenCloseWindows, enableWhenLogout
+            } = row;
+            if (!enabled || !name) continue;
+
+            let compareWithValue = Function.callFunc(window, Meta.Window.prototype[`get_${compareWith}`]);
+            const matched = this._ruleMatched(compareWithValue, method, name);
+            if (matched) {
+                let _flags = 0;
+                if (enableWhenCloseWindows)     _flags = _flags | flags.closeWindows;
+                if (enableWhenLogout)           _flags = _flags | flags.logoff;
+                return true && (this.flags & _flags);
+            }
+        }
+        return false;
     }
 
     _deleteWindow(app, metaWindow) {
@@ -236,10 +277,7 @@ var CloseSession = class {
                 return;
             }
 
-            const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
-            const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
-            const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
-
+            const rules = app._rulesAWSM;
             if (rules?.type === 'shortcut') {
                 let keycodesSegments = [];
                 let shortcutsOriginal = [];
@@ -330,11 +368,9 @@ var CloseSession = class {
 
     async _activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal) {
         try {
-            const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
-            const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
-            const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
+            const rules = app._rulesAWSM;
             const keyDelay = rules?.keyDelay;
-            const cmd = ['ydotool', 'key', '--key-delay', !keyDelay ? '0' : keyDelay + ''].concat(linuxKeyCodes);
+            const cmd = ['ydotool', 'key', '--key-delay', keyDelay ? keyDelay + '' : '0'].concat(linuxKeyCodes);
             const cmdStr = cmd.join(' ');
             
             this._log.info(`Closing ${app.get_name()} by sending: ${cmdStr} (${shortcutsOriginal.join(' ')})`);
@@ -344,8 +380,6 @@ var CloseSession = class {
                 (output) => {
                     this._log.info(`Succeed to send keys to close the windows of the previous app ${app.get_name()}. output: ${output}`);
                 }, (output) => {
-                    // TODO ydotool.service might be inactive due to any reason, we can try to start the service first and send the shortcuts before notifying the the below failure to users
-                    // In Fedora, start it via systemctl --user status ydotool.service
                     const msg = `Failed to send keys to close ${app.get_name()} via ydotool`;
                     this._log.error(new Error(`${msg}. output: ${output}`));
                     global.notify_error(`${msg}`, `${output}.`);
@@ -354,7 +388,35 @@ var CloseSession = class {
         } catch (e) {
             this._log.error(e);
         }
-        
+    }
+
+    async _startYdotoold() {
+        try {
+            return new Promise((resolve, reject) => {
+                Log.Log.getDefault().debug('Starting ydotool.service');
+                // Shell.util_start_systemd_unit only has been promisified since gnome 3.38
+                let startSystemdUnitMethod = Shell.util_start_systemd_unit;
+                if (Shell._original_util_start_systemd_unit) {
+                    startSystemdUnitMethod = Shell._original_util_start_systemd_unit;
+                }
+                startSystemdUnitMethod('ydotool.service', 'replace',
+                null,
+                (source, asyncResult) => {
+                    try {
+                        const started = Shell.util_start_systemd_unit_finish(asyncResult);
+                        Log.Log.getDefault().debug(`Finished to start ydotool.service. Started: ${started}`);
+                        resolve(started);
+                    } catch (error) {
+                        const msg = 'Failed to start ydotool.service';
+                        Log.Log.getDefault().error(error, msg);
+                        global.notify_error(`${msg}`, `${error ? error.message : ''}`);
+                        reject(false);
+                    }
+                });
+            });
+        } catch (error) {
+            Log.Log.getDefault().error(error);
+        }
     }
 
     _getRunningAppsClosingByRules(app) {
@@ -362,21 +424,66 @@ var CloseSession = class {
             return [[], this._defaultAppSystem.get_running()];
         }
 
-        let running_apps_closing_by_rules = [];
-        let new_running_apps = [];
+        const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
+        const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
+
+        const closeWindowsRulesKeyword = this._prefsUtils.getSettingString('close-windows-rules-by-keyword');
+        const closeWindowsRulesObjKeyword = JSON.parse(closeWindowsRulesKeyword);
+
+        let runningAppsClosingByAppRules = [];
+        let runningAppsClosingByKeywordRules = [];
+        let newRunningApps = [];
         let running_apps = app ? [app] : this._defaultAppSystem.get_running();
         for (const app of running_apps) {
-            const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
-            const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
+            let matched = false;
+
             const rules = closeWindowsRulesObj[app.get_app_info()?.get_filename()];
-            if (!rules || !rules.enabled || !rules.value) {
-                new_running_apps.push(app);
-            } else {
-                running_apps_closing_by_rules.push(app);
+            if (rules && rules.enabled && rules.value) {
+                matched = true;
+                runningAppsClosingByAppRules.push([app, rules]);
+            }
+
+            for (const id in closeWindowsRulesObjKeyword) {
+                const rules = closeWindowsRulesObjKeyword[id];
+                const {id_, enabled, value, keyword, compareWith, method} = rules;
+                if (!enabled || !value) continue;
+
+                if (compareWith === 'app_name') {
+                    let compareWithValue = app.get_name();
+                    matched = this._ruleMatched(compareWithValue, method, keyword);
+                    if (matched) {
+                        runningAppsClosingByKeywordRules.push([app, rules]);
+                    }
+                } else {
+                    for (const window of app.get_windows()) {
+                        let compareWithValue = Function.callFunc(window, Meta.Window.prototype[`get_${compareWith}`]);
+                        matched = this._ruleMatched(compareWithValue, method, keyword);
+                        if (matched) {
+                            runningAppsClosingByKeywordRules.push([app, rules]);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!matched) {
+                newRunningApps.push(app);
             }
         }
 
-        return [running_apps_closing_by_rules, new_running_apps];
+        return [newRunningApps, runningAppsClosingByAppRules, runningAppsClosingByKeywordRules];
+    }
+
+    _ruleMatched(compareWithValue, method, keyword) {
+        let matched = false;
+        if (method === 'regex') {
+            matched = new RegExp(keyword).test(compareWithValue);
+        } else if (method === 'equals') {
+            matched = keyword === compareWithValue;
+        } else {
+            matched = Function.callFunc(compareWithValue, String.prototype[method], keyword);
+        }
+        return matched;
     }
 
     _activateAndFocusWindow(app) {
@@ -384,6 +491,7 @@ var CloseSession = class {
         const topLevelWindow = windows[windows.length - 1];
         if (topLevelWindow) {
             this._log.info(`Activating the running window ${topLevelWindow.get_title()} of ${app.get_name()}`);
+            // TODO Maybe need to connect a `activate` signal, await it to finish and then send keys to the window
             Main.activateWindow(topLevelWindow, DateUtils.get_current_time());
         }
     }
@@ -470,18 +578,6 @@ var CloseSession = class {
         if (diff < 0) {
             return -1;
         }
-    }
-
-    _skip_multiple_windows(shellApp) {
-        if (shellApp.get_n_windows() > 1 && this._skip_app_with_multiple_windows) {
-            const app_id = shellApp.get_id();
-            if (this.whitelist.includes(app_id)) {
-                this._log.debug(`${shellApp.get_name()} (${app_id}) in the whitelist. Closing it anyway.`);
-                return false;
-            }
-            return true;
-        }
-        return false;
     }
 
     destroy() {

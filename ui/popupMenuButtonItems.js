@@ -110,7 +110,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         
         this.closingLabel;
 
-        this.closeSession = new CloseSession.CloseSession();
+        this.closeSession = new CloseSession.CloseSession(CloseSession.flags.closeWindows);
 
         this._createButton(iconSymbolic);
         this.addIconDescription('Close open windows');
@@ -237,7 +237,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this._addYesAndNoButtons();
 
         this._log = new Log.Log();
-        this._saveSession = new SaveSession.SaveSession();
+        this._saveSession = new SaveSession.SaveSession(true);
 
         this._timeline = this.createTimeLine();
 

@@ -11,6 +11,7 @@ const Indicator = Me.imports.indicator;
 const Autostart = Me.imports.ui.autostart;
 const Autoclose = Me.imports.ui.autoclose;
 const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
+const WindowPicker = Me.imports.utils.WindowPicker;
 
 Me.imports.utils.string;
 
@@ -20,6 +21,7 @@ let _indicator;
 let _autostartServiceProvider;
 let _openWindowsTracker;
 let _autoclose;
+let _windowPickerServiceProvider;
 
 function enable() {
     _indicator = new Indicator.AwsIndicator();
@@ -31,6 +33,9 @@ function enable() {
 
     _openWindowsTracker = new OpenWindowsTracker.OpenWindowsTracker();
     _autoclose = new Autoclose.Autoclose();
+
+    _windowPickerServiceProvider = new WindowPicker.WindowPickerServiceProvider();
+    _windowPickerServiceProvider.enable();
 }
 
 function disable() {
@@ -57,6 +62,11 @@ function disable() {
     }
 
     Log.Log.destroyDefault();
+
+    if (_windowPickerServiceProvider) {
+        _windowPickerServiceProvider.destroy();
+        _windowPickerServiceProvider = null;
+    }
 
 }
 

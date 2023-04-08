@@ -35,6 +35,22 @@
       Rules that are used to close applications
       </description>
     </key>
+    <key name="close-windows-rules-by-keyword" type="s">
+      <default>'{}'</default>
+      <summary>Rules that are used to close applications by keyword</summary>
+      <description>
+      Rules that are used to close applications by keyword
+      </description>
+    </key>
+    <key name="close-windows-whitelist" type="s">
+      <default>'{}'</default>
+      <summary>
+      A whitelist that contains apps or windwows that can be closed safely, 
+      even they have multiple windows.
+      </summary>
+      <description>
+      </description>
+    </key>
     <key name='autorestore-sessions' type="s">
       <default>''</default>
       <summary>Session(s) restored on startup</summary>
@@ -46,6 +62,14 @@
       <summary>
       Enable to close running apps and windows while Logout, Reboot and Shutdown
       via endSessionDialog.
+      </summary>
+      <description>
+      </description>
+    </key>
+    <key name='enable-save-session-notification' type="b">
+      <default>true</default>
+      <summary>
+      Show a notification when users click buttons on the popup menu to save a session.
       </summary>
       <description>
       </description>

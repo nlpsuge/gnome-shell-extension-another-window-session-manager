@@ -45,127 +45,119 @@
           <object class="GtkBox">
             <property name="orientation">vertical</property>
             <child>
-              <object class="GtkListBoxRow" id="auto_close_session_multi_row">
-                <property name="focusable">1</property>
-                <property name="child">
-                  <object class="GtkGrid" id="auto_close_session_multi_grid1">
-                    <property name="margin-top">12</property>
-                    <property name="margin-bottom">12</property>
-                    <property name="row-spacing">6</property>
-                    <property name="column-spacing">32</property>
-                    <child>
-                      <object class="GtkLabel" id="auto_close_session_multi_label">
-                        <property name="hexpand">1</property>
-                        <property name="label" translatable="yes">Auto close session</property>
-                        <property name="use-markup">1</property>
-                        <property name="xalign">0</property>
-                        <layout>
-                          <property name="column">0</property>
-                          <property name="row">0</property>
-                        </layout>
+              <object class="GtkListBox">
+                <child>
+                  <object class="GtkListBoxRow" id="auto_close_session_multi_row">
+                    <property name="focusable">1</property>
+                    <property name="child">
+                      <object class="GtkGrid" id="auto_close_session_multi_grid1">
+                        <property name="margin-top">12</property>
+                        <property name="margin-bottom">12</property>
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">32</property>
+                        <child>
+                          <object class="GtkLabel" id="auto_close_session_multi_label">
+                            <property name="hexpand">1</property>
+                            <property name="label" translatable="yes">Auto close session</property>
+                            <property name="use-markup">1</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">0</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSwitch" id="auto_close_session_switch">
+                            <property name="focusable">1</property>
+                            <property name="halign">end</property>
+                            <property name="valign">center</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">0</property>
+                              <property name="row-span">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="auto_close_session_multi_label_description">
+                            <property name="hexpand">1</property>
+                            <property name="label" translatable="yes">Enable to close running apps and windows while Logout, Reboot and Shutdown via endSessionDialog.</property>
+                            <property name="wrap">True</property>
+                            <property name="use-markup">1</property>
+                            <property name="xalign">0</property>
+                            <style>
+                              <class name="dim-label"/>
+                            </style>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
                       </object>
-                    </child>
-                    <child>
-                      <object class="GtkSwitch" id="auto_close_session_switch">
-                        <property name="focusable">1</property>
-                        <property name="halign">end</property>
-                        <property name="valign">center</property>
-                        <layout>
-                          <property name="column">1</property>
-                          <property name="row">0</property>
-                          <property name="row-span">2</property>
-                        </layout>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkLabel" id="auto_close_session_multi_label_description">
-                        <property name="hexpand">1</property>
-                        <property name="label" translatable="yes">Enable to close running apps and windows while Logout, Reboot and Shutdown via endSessionDialog.</property>
-                        <property name="wrap">True</property>
-                        <property name="use-markup">1</property>
-                        <property name="xalign">0</property>
-                        <style>
-                          <class name="dim-label"/>
-                        </style>
-                        <layout>
-                          <property name="column">0</property>
-                          <property name="row">1</property>
-                        </layout>
-                      </object>
-                    </child>
-                    <child>
-                      <placeholder/>
-                    </child>
+                    </property>
                   </object>
-                </property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkListBoxRow" id="close_by_rules_multi_row">
-                <property name="focusable">1</property>
-                <property name="child">
-                  <object class="GtkGrid" id="close_by_rules_multi_grid1">
-                    <property name="margin-top">12</property>
-                    <property name="margin-bottom">12</property>
-                    <property name="row-spacing">6</property>
-                    <property name="column-spacing">32</property>
-                    <child>
-                      <object class="GtkLabel" id="close_by_rules_multi_label">
-                        <property name="hexpand">1</property>
-                        <property name="label" translatable="yes">Close by rules</property>
-                        <property name="use-markup">1</property>
-                        <property name="xalign">0</property>
-                        <layout>
-                          <property name="column">0</property>
-                          <property name="row">0</property>
-                        </layout>
+                </child>
+                <child>
+                  <object class="GtkListBoxRow" id="close_by_rules_multi_row">
+                    <property name="focusable">1</property>
+                    <property name="child">
+                      <object class="GtkGrid" id="close_by_rules_multi_grid1">
+                        <property name="margin-top">12</property>
+                        <property name="margin-bottom">12</property>
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">32</property>
+                        <child>
+                          <object class="GtkLabel" id="close_by_rules_multi_label">
+                            <property name="hexpand">1</property>
+                            <property name="label" translatable="yes">Close by rules</property>
+                            <property name="use-markup">1</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">0</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSwitch" id="close_by_rules_switch">
+                            <property name="focusable">1</property>
+                            <property name="halign">end</property>
+                            <property name="valign">center</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">0</property>
+                              <property name="row-span">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel" id="close_by_rules_multi_label_description">
+                            <property name="hexpand">1</property>
+                            <property name="label" translatable="yes">To make this feature work, see: &lt;a href='https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work'&gt;How to make `Close by rules` work&lt;/a&gt;</property>
+                            <property name="wrap">True</property>
+                            <property name="use-markup">1</property>
+                            <property name="xalign">0</property>
+                            <style>
+                              <class name="dim-label"/>
+                            </style>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <placeholder/>
+                        </child>
                       </object>
-                    </child>
-                    <child>
-                      <object class="GtkSwitch" id="close_by_rules_switch">
-                        <property name="focusable">1</property>
-                        <property name="halign">end</property>
-                        <property name="valign">center</property>
-                        <layout>
-                          <property name="column">1</property>
-                          <property name="row">0</property>
-                          <property name="row-span">2</property>
-                        </layout>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkLabel" id="close_by_rules_multi_label_description">
-                        <property name="hexpand">1</property>
-                        <property name="label" translatable="yes">To make this feature work, see: &lt;a href='https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work'&gt;How to make `Close by rules` work&lt;/a&gt;</property>
-                        <property name="wrap">True</property>
-                        <property name="use-markup">1</property>
-                        <property name="xalign">0</property>
-                        <style>
-                          <class name="dim-label"/>
-                        </style>
-                        <layout>
-                          <property name="column">0</property>
-                          <property name="row">1</property>
-                        </layout>
-                      </object>
-                    </child>
-                    <child>
-                      <placeholder/>
-                    </child>
-                    <child>
-                      <placeholder/>
-                    </child>
-                    <child>
-                      <placeholder/>
-                    </child>
-                    <child>
-                      <placeholder/>
-                    </child>
-                    <child>
-                      <placeholder/>
-                    </child>
+                    </property>
                   </object>
-                </property>
+                </child>
               </object>
             </child>
             <child>
@@ -195,32 +187,14 @@
                     </layout>
                   </object>
                 </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
               </object>
             </child>
+            <child>
+                <object class="GtkListBox" id="close_windows_whitelist_listbox">
+                  <child>
+                  </child>
+                </object>
+              </child>
           </object>
         </property>
         <property name="tab">
@@ -237,15 +211,66 @@
           <object class="GtkBox">
             <property name="orientation">vertical</property>
             <child>
-              <object class="GtkFrame" id="save_window_frame">
+              <object class="GtkFrame" id="save_session_notification_frame">
+                <property name="margin-top">30</property>
                 <property name="child">
-                  <object class="GtkLabel">
-                    <property name="label" translatable="yes">Nothing here, yet</property>
+                  <object class="GtkListBox">
+                    <child>
+                      <object class="GtkListBoxRow">
+                        <property name="focusable">1</property>
+                        <property name="child">
+                          <object class="GtkGrid">
+                            <property name="margin-bottom">12</property>
+                            <property name="row-spacing">6</property>
+                            <property name="column-spacing">32</property>
+                            <child>
+                              <object class="GtkLabel" id="save_session_notification_label">
+                                <property name="hexpand">1</property>
+                                <property name="label" translatable="yes">Session is saved notification</property>
+                                <property name="use-markup">1</property>
+                                <property name="xalign">0</property>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">0</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkSwitch" id="save_session_notification_switch">
+                                <property name="focusable">1</property>
+                                <property name="active">1</property>
+                                <property name="halign">end</property>
+                                <property name="valign">center</property>
+                                <property name="hexpand">1</property>
+                                <layout>
+                                  <property name="column">1</property>
+                                  <property name="row">0</property>
+                                  <property name="row-span">2</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="hexpand">1</property>
+                                <property name="label" translatable="yes">Show a notification when users click buttons on the popup menu to save a session.</property>
+                                <property name="wrap">True</property>
+                                <property name="use-markup">1</property>
+                                <property name="xalign">0</property>
+                                <style>
+                                  <class name="dim-label"/>
+                                </style>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">1</property>
+                                </layout>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </child>
                   </object>
                 </property>
-                <child type="label_item">
-                  <placeholder/>
-                </child>
               </object>
             </child>
           </object>
@@ -454,7 +479,6 @@
                             </layout>
                           </object>
                         </child>
-                        
                         <child>
                           <object class="GtkLabel" id="timer_on_the_autostart_dialog_multi_label">
                             <property name="hexpand">1</property>
