@@ -7,8 +7,8 @@ const Me = ExtensionUtils.getCurrentExtension();
 const Log = Me.imports.utils.log;
 
 var default_sessionName = 'defaultSession';
-var home_dir = GLib.get_home_dir();
-var user_config = GLib.build_filenamev([home_dir, '.config']);
+var data_dir = GLib.get_user_data_dir();
+var user_config = GLib.get_user_config_dir();
 // This extension can restore `xsm`'s session file, 
 // but desktop_file_id is missing in that file, so can't move them. Will be fixed in the future.
 var config_path_base = GLib.build_filenamev([user_config, 'another-window-session-manager']);
@@ -22,7 +22,7 @@ var desktop_template_path_restore_at_autostart = GLib.build_filenamev([Me.path, 
 var desktop_template_path_restore_previous_at_autostart = GLib.build_filenamev([Me.path, '/template/_awsm-restore-previous-session.desktop']);
 var desktop_template_launch_app_shell_script = GLib.build_filenamev([Me.path, '/template/launch-app.sh']);
 
-var desktop_file_store_path_base = GLib.build_filenamev([home_dir, '/.local/share/applications']);
+var desktop_file_store_path_base = GLib.build_filenamev([data_dir, '/applications']);
 var desktop_file_store_path = `${desktop_file_store_path_base}/__another-window-session-manager`;
 
 var recently_closed_session_name = 'Recently Closed Session';
@@ -34,8 +34,8 @@ var current_session_path = `${config_path_base}/currentSession`;
 var current_session_summary_name = 'summary.json';
 var current_session_summary_path = GLib.build_filenamev([current_session_path, 'summary.json']);
 
-var autostart_restore_desktop_file_path = GLib.build_filenamev([home_dir, '/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop']);
-var autostart_restore_previous_desktop_file_path = GLib.build_filenamev([home_dir, '/.config/autostart/_awsm-restore-previous-session.desktop']);
+var autostart_restore_desktop_file_path = GLib.build_filenamev([user_config, '/autostart/_gnome-shell-extension-another-window-session-manager.desktop']);
+var autostart_restore_previous_desktop_file_path = GLib.build_filenamev([user_config, '/autostart/_awsm-restore-previous-session.desktop']);
 
 var desktop_template_path_ydotool_uinput_rules = GLib.build_filenamev([Me.path, '/template/60-awsm-ydotool-uinput.rules']);
 var system_udev_rules_path_ydotool_uinput_rules = '/etc/udev/rules.d/60-awsm-ydotool-uinput.rules';
