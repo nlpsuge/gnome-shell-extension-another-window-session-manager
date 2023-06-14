@@ -483,12 +483,16 @@ var RunningApplicationListWindow = GObject.registerClass({
         }
 
         _setInitialKeyFocus(actor) {
-            this._initialKeyFocus?.disconnectObject(this);
+            if (this._initialKeyFocus && this._initialKeyFocusDestroyId) {
+                this._initialKeyFocus.disconnect(this._initialKeyFocusDestroyId);
+            }
 
             this._initialKeyFocus = actor;
 
-            actor.connectObject('destroy',
-                () => (this._initialKeyFocus = null), this);
+            this._initialKeyFocusDestroyId = actor.connect('destroy', () => {
+                this._initialKeyFocus = null;
+                this._initialKeyFocusDestroyId = 0;
+            });
         }
 
         open() {
