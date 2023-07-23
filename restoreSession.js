@@ -142,27 +142,41 @@ var RestoreSession = class {
         try {
             this._log.info(`Restoring the previous session from ${FileUtils.current_session_path}`);
 
-            const ignoringPaths = [GLib.build_filenamev([FileUtils.current_session_path, 'null'])];
+            const ignoringParentFolders = [
+                GLib.build_filenamev([FileUtils.current_session_path, 'null']),
+            ];
+            const ignoringFilePaths = [
+                GLib.build_filenamev([FileUtils.current_session_path, 'summary.json'])
+            ];
             FileUtils.listAllSessions(FileUtils.current_session_path, true, (file, info) => {
                 const contentType = info.get_content_type();
-                if (contentType === 'application/json' && !ignoringPaths.includes(file.get_parent().get_path())) {
-                    file.load_contents_async(
-                        null, 
-                        (file, asyncResult) => {
-                            const [success, contents, _] = file.load_contents_finish(asyncResult);
-                            if (!success) {
-                                return;
-                            }
-                            const sessionConfig = FileUtils.getJsonObj(contents);
-                            this._restoreOneSession(sessionConfig).then(([launched, running]) => {
-                                if (removeAfterRestore && launched && !running) {
-                                    const path = file.get_path();
-                                    this._log.debug(`Restored ${sessionConfig.window_title}(${sessionConfig.app_name}), cleaning ${path}`);
-                                    FileUtils.removeFile(path);
-                                }
-                            }).catch(e => this._log.error(e));
-                        });
+                if (contentType !== 'application/json') {
+                    return;
                 }
+                if (ignoringParentFolders.includes(file.get_parent().get_path())) {
+                    return;
+                }
+                if (ignoringFilePaths.includes(file.get_path())) {
+                    return;
+                }
+                file.load_contents_async(
+                    null,
+                    (file, asyncResult) => {
+                        const [success, contents, _] = file.load_contents_finish(asyncResult);
+                        if (!success) {
+                            return;
+                        }
+                        const sessionConfig = FileUtils.getJsonObj(contents);
+                        sessionConfig._file_path = file.get_path();
+                        this._restoreOneSession(sessionConfig).then(([launched, running]) => {
+                            if (removeAfterRestore && launched && !running) {
+                                const path = file.get_path();
+                                this._log.debug(`Restored ${sessionConfig.window_title}(${sessionConfig.app_name}), cleaning ${path}`);
+                                FileUtils.removeFile(path);
+                            }
+                        }).catch(e => this._log.error(e));
+                    });
+
             });
         } catch (error) {
             this._log.error(error);
@@ -267,8 +281,9 @@ var RestoreSession = class {
                                         this._log.info(`${app_name} is running, skipping`)
                                     } else {
                                         const msg = `Failed to launch ${app_name} via command line`;
-                                        this._log.error(`${msg}. output: ${stderr}`);
-                                        global.notify_error(`${msg}`, `${stderr}.`);
+                                        let errorDetail = `Can't restore this app from ${session_config_object._file_path}: ${stderr}.`;
+                                        this._log.error(`${msg}. output: ${errorDetail}`);
+                                        global.notify_error(`${msg}`, errorDetail);
                                     }
                                     resolve([launched, running]);
                                 }
@@ -279,8 +294,9 @@ var RestoreSession = class {
                     } else {
                         // TODO try to launch via app_info by searching the app name?
                         let errorMsg = `Failed to launch ${app_name} via command line`;
-                        this._log.error(errorMsg, `Invalid command line: ${cmd}`);
-                        global.notify_error(errorMsg, `Invalid command line: ${cmd}`);
+                        let errorDetail = `Can't restore this app from ${session_config_object._file_path}: Invalid command line: ${cmd}.`;
+                        this._log.error(errorMsg, errorDetail);
+                        global.notify_error(errorMsg, errorDetail);
                         resolve([launched, running]);
                     }
                 }
