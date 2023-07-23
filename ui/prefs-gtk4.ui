@@ -177,6 +177,7 @@
             </child>
             <child>
                 <object class="GtkListBox" id="close_windows_whitelist_listbox">
+                  <property name="vexpand">True</property>
                   <child>
                   </child>
                 </object>
