@@ -147,41 +147,33 @@
               </object>
             </child>
             <child>
-              <object class="GtkGrid" id="close_by_rules_multi_grid2">
-                <property name="margin-top">12</property>
-                <property name="margin-bottom">12</property>
-                <property name="row-spacing">6</property>
-                <property name="column-spacing">32</property>
+              <object class="GtkBox">
+                <property name="orientation">vertical</property>
                 <child>
-                  <object class="GtkScrolledWindow" id="close_rule_listbox_scrolledwindow">
-                    <property name="focusable">1</property>
-                    <property name="child">
-                      <object class="GtkViewport" id="close_rule_listbox_viewport">
-                        <property name="child">
-                          <object class="GtkListBox" id="close_by_rules_list_box">
-                            <property name="hexpand">True</property>
-                            <property name="vexpand">True</property>
-                            <property name="show-separators">True</property>
-                            
-                          </object>
-                        </property>
-                      </object>
-                    </property>
-                    <layout>
-                      <property name="column">0</property>
-                      <property name="row">1</property>
-                    </layout>
+                  <object class="GtkListBox" id="close_by_rules_applications_list_box">
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <property name="show-separators">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkListBox" id="close_by_rules_keywords_list_box">
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <property name="show-separators">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkListBox" id="close_windows_whitelist_listbox">
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <property name="show-separators">True</property>
+                    <child>
+                    </child>
                   </object>
                 </child>
               </object>
             </child>
-            <child>
-                <object class="GtkListBox" id="close_windows_whitelist_listbox">
-                  <property name="vexpand">True</property>
-                  <child>
-                  </child>
-                </object>
-              </child>
           </object>
         </property>
         <property name="tab">
