@@ -11,6 +11,9 @@ const Main         = imports.ui.main;
 const LookingGlass = imports.ui.lookingGlass;
 const Me           = imports.misc.extensionUtils.getCurrentExtension();
 
+const GnomeVersion = Me.imports.utils.gnomeVersion;
+
+
 // Based on the WindowPicker.js from Burn-My-Windows. 
 // I modified and enhanced it, so it can be used in my case 
 // properly for the Another Window Session Manager extension.
@@ -46,9 +49,14 @@ var WindowPickerServiceProvider = class WindowPickerServiceProvider {
 
     const inspector = new MyInspector(Main.createLookingGlass());
     
+    // Compatibility: gnome shell 41.x does not have the variable `_grab` in lookingGlass.LookingGlass
     // Release the global grab, so that we can move around freely (specially, free to use Ctrl+`
     // to switch windows) and pick a window that is on another workspace.
-    Main.popModal(lookingGlass._grab);
+    if (GnomeVersion.isLessThan42()) {
+      // Main.popModal(lookingGlass._entry);
+    } else {
+      Main.popModal(lookingGlass._grab);
+    }
 
     inspector.connect('target', (me, target, x, y) => {
       // Remove border effect when window is picked.
@@ -91,11 +99,16 @@ var WindowPickerServiceProvider = class WindowPickerServiceProvider {
       this._dbus.emit_signal('WindowPicked', variant);
     });
 
-    // Close LookingGlass when we're done.
+    // Close LookingGlass and release the grab when the picking is finished.
     inspector.connect('closed', () => {
-      // Restore the global grab to prevent the error 'incorrect pop' thrown by LookingGlass.close/Main.popModal(this._grab)
-      lookingGlass._grab = Main.pushModal(lookingGlass, { actionMode: Shell.ActionMode.LOOKING_GLASS });
-      lookingGlass.close();
+      if (GnomeVersion.isLessThan42()) {
+        // Main.pushModal(lookingGlass._entry, { actionMode: Shell.ActionMode.LOOKING_GLASS });
+        lookingGlass.close();
+      } else {
+        // Restore the global grab to prevent the error 'incorrect pop' thrown by LookingGlass.close/Main.popModal(this._grab)
+        lookingGlass._grab = Main.pushModal(lookingGlass, { actionMode: Shell.ActionMode.LOOKING_GLASS });
+        lookingGlass.close();
+      }
     });
 
     inspector.connect('WindowPickCancelled', () => {
