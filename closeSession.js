@@ -407,7 +407,7 @@ var CloseSession = class {
 
     _getRunningAppsClosingByRules() {
         if (!this._settings.get_boolean('enable-close-by-rules')) {
-            return [[], this._defaultAppSystem.get_running()];
+            return [this._defaultAppSystem.get_running(), [], []];
         }
 
         const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
