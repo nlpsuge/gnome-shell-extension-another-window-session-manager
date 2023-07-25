@@ -41,15 +41,6 @@ var UICloseWindows = GObject.registerClass(
         }
 
         init() {
-            const close_by_rules_multi_grid2 = this._builder.get_object('close_by_rules_multi_grid2');
-            const close_by_rules_list_box = this._builder.get_object('close_by_rules_list_box');
-            // Remove GtkScrolledWindow on Gnome 42
-            // See: https://gjs.guide/extensions/upgrading/gnome-shell-42.html#gtk-scrolledwindow
-            if (!GnomeVersion.isLessThan42()) {
-                close_by_rules_list_box.unparent();
-                close_by_rules_multi_grid2.attach(close_by_rules_list_box, 0, 0, 1, 1);
-            }
-            
             this._initAppRules();
             this._initKeywordRules();
             this._initWhitelist();
@@ -111,7 +102,7 @@ var UICloseWindows = GObject.registerClass(
         }
 
         _initAppRules() {
-            const close_by_rules_list_box = this._builder.get_object('close_by_rules_list_box');
+            const close_by_rules_list_box = this._builder.get_object('close_by_rules_applications_list_box');
             close_by_rules_list_box.set_header_func((currentRow, beforeRow, data) => {
                 this._setHeader(currentRow, beforeRow, data, 'Applications');
             });
@@ -144,13 +135,7 @@ var UICloseWindows = GObject.registerClass(
         }
 
         _initKeywordRules() {
-            const close_by_rules_multi_grid2 = this._builder.get_object('close_by_rules_multi_grid2');
-            const close_by_rules_by_keyword_list_box = new Gtk.ListBox({
-                hexpand: true,
-                vexpand: true,
-                show_separators: true,
-            });
-            close_by_rules_multi_grid2.attach(close_by_rules_by_keyword_list_box, 0, 1, 1, 1);
+            const close_by_rules_by_keyword_list_box = this._builder.get_object('close_by_rules_keywords_list_box');
             close_by_rules_by_keyword_list_box.set_header_func((currentRow, beforeRow, data) => {
                 this._setHeader(currentRow, beforeRow, data, 'Keywords');
             });

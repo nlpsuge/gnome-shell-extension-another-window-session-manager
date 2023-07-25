@@ -391,10 +391,12 @@ var CloseSession = class {
                         Log.Log.getDefault().debug(`Finished to start ydotool.service. Started: ${started}`);
                         resolve(started);
                     } catch (error) {
+                        const additionalInfo = 'Please make sure `ydotool` is installed and set up properly, see https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work for more instruction';
                         const msg = 'Failed to start ydotool.service';
-                        Log.Log.getDefault().error(error, msg);
-                        global.notify_error(`${msg}`, `${error ? error.message : ''}`);
-                        reject(false);
+                        Log.Log.getDefault().error(error, `${msg} ${additionalInfo}`);
+                        global.notify_error(`${msg}`, `${error ? error.message : ''} ${additionalInfo}`);
+                        // `ydotool` might not be available, which can't stop AWSM continue to close the rest of apps
+                        resolve(false);
                     }
                 });
             });   
@@ -405,7 +407,7 @@ var CloseSession = class {
 
     _getRunningAppsClosingByRules() {
         if (!this._settings.get_boolean('enable-close-by-rules')) {
-            return [[], this._defaultAppSystem.get_running()];
+            return [this._defaultAppSystem.get_running(), [], []];
         }
 
         const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');

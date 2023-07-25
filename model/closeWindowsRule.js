@@ -2,6 +2,9 @@
 
 const { GObject } = imports.gi;
 
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+const CloseWindowsRule = Me.imports.model.closeWindowsRule;
 
 var CloseWindowsWhitelist = GObject.registerClass({
 }, class CloseWindowsWhitelist extends GObject.Object {
@@ -14,7 +17,7 @@ var CloseWindowsWhitelist = GObject.registerClass({
     enableWhenLogout; // boolean
 
     static new(param) {
-        return Object.assign(new CloseWindowsWhitelist(), param);
+        return Object.assign(new CloseWindowsRule.CloseWindowsWhitelist(), param);
     }
 });
 
@@ -36,7 +39,7 @@ var CloseWindowsRuleByKeyword = class extends CloseWindowsRuleBase {
     method; // string. endsWith, includes, startsWith, equals, regex. 
 
     static new(param) {
-        return Object.assign(new CloseWindowsRuleByKeyword(), param);
+        return Object.assign(new CloseWindowsRule.CloseWindowsRuleByKeyword(), param);
     }
 }
 
@@ -46,7 +49,7 @@ var CloseWindowsRuleByApp = class extends CloseWindowsRuleBase {
     appName; // string, such as 'Firefox'
 
     static new(param) {
-        return Object.assign(new CloseWindowsRuleByApp(), param);
+        return Object.assign(new CloseWindowsRule.CloseWindowsRuleByApp(), param);
     }
 }
 
@@ -83,6 +86,6 @@ var GdkShortcuts = GObject.registerClass({
     shiftRightPressed;
 
     static new(param) {
-        return Object.assign(new GdkShortcuts(), param);
+        return Object.assign(new CloseWindowsRule.GdkShortcuts(), param);
     }
 });

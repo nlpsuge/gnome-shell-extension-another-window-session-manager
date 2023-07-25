@@ -6,6 +6,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const FileUtils = Me.imports.utils.fileUtils;
 const Log = Me.imports.utils.log;
+const GnomeVersion = Me.imports.utils.gnomeVersion;
 
 Me.imports.utils.string;
 
@@ -296,6 +297,17 @@ const BuilderScope = GObject.registerClass({
 
 function buildPrefsWidget() {
     const settings = new Prefs();
+
+    if (GnomeVersion.isLessThan42()) {
+        const scroll = new Gtk.ScrolledWindow({ 
+            vexpand: true, 
+            hexpand: true,
+            hscrollbar_policy: Gtk.PolicyType.NEVER,
+            vscrollbar_policy: Gtk.PolicyType.AUTOMATIC
+        });
+        scroll.set_child(settings.notebook);
+        return scroll;
+    }
     return settings.notebook;
 }
 
