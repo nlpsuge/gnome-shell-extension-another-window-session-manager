@@ -178,7 +178,13 @@ var WindowPickableEntry = GObject.registerClass({
             });
         });
 
-        this._subscribeSignal('WindowPickCancelled', () => this._unfocus(entry));
+        this._subscribeSignal('WindowPickCancelled', () => {
+            // Unsubscribe the PickWindow DBus service, it's really no necessary to keep the subscription all the time
+            Gio.DBus.session.signal_unsubscribe(this._dbusConnection);
+            this._dbusConnection = null;
+            
+            this._unfocus(entry);
+        });
     }
 
     _subscribeSignal(signalName, callback) {
