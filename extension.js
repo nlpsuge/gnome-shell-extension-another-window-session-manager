@@ -12,6 +12,8 @@ const Autostart = Me.imports.ui.autostart;
 const Autoclose = Me.imports.ui.autoclose;
 const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
 const WindowPicker = Me.imports.utils.WindowPicker;
+const PrefsUtils = Me.imports.utils.prefsUtils;
+
 
 Me.imports.utils.string;
 
@@ -22,10 +24,13 @@ let _autostartServiceProvider;
 let _openWindowsTracker;
 let _autoclose;
 let _windowPickerServiceProvider;
+let _settingUtils;
 
 function enable() {
-    _indicator = new Indicator.AwsIndicator();
-    Main.panel.addToStatusArea('Another Window Session Manager', _indicator);
+    _settingUtils = new PrefsUtils.PrefsUtils();
+
+    _settingUtils.getSettings().connect('changed::show-indicator', () => showOrHideIndicator());
+    showOrHideIndicator();
 
     _autostartServiceProvider = new Autostart.AutostartServiceProvider();
     
@@ -38,11 +43,31 @@ function enable() {
     _windowPickerServiceProvider.enable();
 }
 
-function disable() {
+function showOrHideIndicator() {
+    if (_settingUtils.getSettings().get_boolean('show-indicator')) {
+        if (!_indicator) {
+            _indicator = new Indicator.AwsIndicator();
+            Main.panel.addToStatusArea('Another Window Session Manager', _indicator);
+        }
+    } else {
+        hideIndicator();
+    }
+}
+
+function hideIndicator() {
     if (_indicator) {
         _indicator.destroy();
         _indicator = null;
     }
+}
+
+function disable() {
+    if (_settingUtils) {
+        _settingUtils.run_dispose();
+        _settingUtils = null;
+    }
+
+    hideIndicator();
 
     if (_autostartServiceProvider) {
         _autostartServiceProvider.disable();

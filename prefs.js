@@ -60,6 +60,13 @@ const Prefs = GObject.registerClass(
             );
 
             this._settings.bind(
+                'show-indicator',
+                this.show_indicator_switch,
+                'active',
+                Gio.SettingsBindFlags.DEFAULT
+            );
+
+            this._settings.bind(
                 'enable-save-session-notification',
                 this.save_session_notification_switch,
                 'active',
@@ -186,6 +193,7 @@ const Prefs = GObject.registerClass(
             this.notebook = this._builder.get_object('prefs_notebook');
 
             this.debugging_mode_switch = this._builder.get_object('debugging_mode_switch');
+            this.show_indicator_switch = this._builder.get_object('show_indicator_switch');
 
             this.save_session_notification_switch = this._builder.get_object('save_session_notification_switch');
 

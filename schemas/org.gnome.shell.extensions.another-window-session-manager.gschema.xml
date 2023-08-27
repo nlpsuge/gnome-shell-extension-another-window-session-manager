@@ -2,14 +2,7 @@
 <schemalist>
   
   <!-- Note that name in the path should be the same as in id-->
-  <schema id="org.gnome.shell.extensions.another-window-session-manager" path="/org/gnome/shell/extensions/another-window-session-manager/">
-    <key name="debugging-mode" type="b">
-      <default>false</default>
-      <summary>Enable or disable the debugging mode</summary>
-      <description>
-      Enable the debugging mode to see what happened, for debugging or issue reporting or development purpose
-      </description>
-    </key>
+  <schema id="org.gnome.shell.extensions.another-window-session-manager" path="/org/gnome/shell/extensions/another-window-session-manager/">    
     <key name='enable-close-by-rules' type='b'>
       <default>true</default>
       <summary>Enable or disable the ability of closing windows by customed rules, such as a shortcut</summary>
@@ -141,6 +134,19 @@
       Only enabled on X11, since Wayand doesn't support restart on fly.
       </description>
     </key>
-    
+    <key name="show-indicator" type="b">
+      <default>true</default>
+      <summary>Show or hide indicator on the panel</summary>
+      <description>
+      </description>
+    </key>
+
+    <key name="debugging-mode" type="b">
+      <default>false</default>
+      <summary>Enable or disable the debugging mode</summary>
+      <description>
+      Enable the debugging mode to see what happened, for debugging or issue reporting or development purpose
+      </description>
+    </key>
   </schema>
 </schemalist>
