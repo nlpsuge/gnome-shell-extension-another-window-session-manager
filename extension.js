@@ -63,7 +63,7 @@ function hideIndicator() {
 
 function disable() {
     if (_settingUtils) {
-        _settingUtils.run_dispose();
+        _settingUtils.destroy();
         _settingUtils = null;
     }
 
