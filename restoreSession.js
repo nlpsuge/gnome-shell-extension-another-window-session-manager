@@ -13,6 +13,7 @@ const Log = Me.imports.utils.log;
 const PrefsUtils = Me.imports.utils.prefsUtils;
 const SubprocessUtils = Me.imports.utils.subprocessUtils;
 const DateUtils = Me.imports.utils.dateUtils;
+const SnapSupport = Me.imports.utils.snapSupport.SnapSupport;
 
 const UiHelper = Me.imports.ui.uiHelper;
 
@@ -190,6 +191,9 @@ var RestoreSession = class {
         try {
             return await new Promise((resolve, reject) => {
                 let desktop_file_id = session_config_object.desktop_file_id;
+                if (!desktop_file_id) {
+                    desktop_file_id = SnapSupport.findOneAppDesktopFileFromCmd(session_config_object.cmd);
+                }
                 const shell_app = desktop_file_id ? this._defaultAppSystem.lookup_app(desktop_file_id) : null;
                 if (shell_app) {
                     const restoringShellAppData = restoringApps.get(shell_app);
