@@ -1,15 +1,13 @@
 'use strict';
 
-const { GObject, St, Clutter, GLib } = imports.gi;
+import GObject from 'gi://GObject';
 
-const PopupMenu = imports.ui.popupMenu;
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as SessionItemButtons from '../ui/sessionItemButtons.js';
 
-const SessionItemButtons = Me.imports.ui.sessionItemButtons;
 
-var SessionItem = GObject.registerClass(
+export const SessionItem = GObject.registerClass(
 class SessionItem extends PopupMenu.PopupMenuItem {
     
     _init(fileInfo, file, indicator) {
@@ -49,7 +47,7 @@ class SessionItem extends PopupMenu.PopupMenuItem {
     
 });
 
-var EmptySessionItem = GObject.registerClass(
+const EmptySessionItem = GObject.registerClass(
 class EmptySessionItem extends PopupMenu.PopupMenuItem {
     
     _init() {

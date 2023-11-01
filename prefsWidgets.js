@@ -1,14 +1,13 @@
 'use strict';
 
-const { Gtk, GLib, GObject } = imports.gi;
+import GObject from 'gi://GObject';
+import Gtk from 'gi://Gtk';
+import GLib from 'gi://GLib';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-const GnomeVersion = Me.imports.utils.gnomeVersion;
+import * as GnomeVersion from './utils/gnomeVersion.js';
 
 
-var boxProperties = {
+export const boxProperties = {
     spacing: 0,
     margin_start: 6,
     margin_end: 6,
@@ -18,7 +17,7 @@ var boxProperties = {
     margin_bottom: 0,
 };
 
-var newColumnViewColumn = function(title, factorySetupFunc, factoryBindFunc) {
+export const newColumnViewColumn = function(title, factorySetupFunc, factoryBindFunc) {
     const factory = new Gtk.SignalListItemFactory();
     const columnViewColumn = new Gtk.ColumnViewColumn({
         title,
@@ -39,15 +38,15 @@ var newColumnViewColumn = function(title, factorySetupFunc, factoryBindFunc) {
     return columnViewColumn;
 }
 
-var newRemoveButton = function() {
+export const newRemoveButton = function() {
     return new BoxRemoveButton();
 }
 
-var newLabelSwitch = function(text, tooltipText, active) {
+export const newLabelSwitch = function(text, tooltipText, active) {
     return new LabelSwitch(text, tooltipText, active);
 }
 
-var updateStyle = function(widget, css) {
+export const updateStyle = function(widget, css) {
     const cssProvider = new Gtk.CssProvider();
     if (GnomeVersion.isLessThan44()) {
         cssProvider.load_from_data(css);
@@ -57,7 +56,7 @@ var updateStyle = function(widget, css) {
     widget.get_style_context().add_provider(cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
 
-var _newBox = function(properties) {
+export const _newBox = function(properties) {
     const box = new Gtk.Box({
         spacing: 6,
         margin_top: 6,
@@ -69,7 +68,7 @@ var _newBox = function(properties) {
     return box;
 }
 
-var _newDropDown = function(values, activeValue) {
+export const _newDropDown = function(values, activeValue) {
     const dropDownValues = values.map(cv => cv[1]);
     const dropDown = Gtk.DropDown.new_from_strings(dropDownValues);
     dropDown.set_valign(Gtk.Align.BASELINE);
@@ -89,7 +88,7 @@ var _newDropDown = function(values, activeValue) {
     return dropDown;
 }
 
-var LabelSwitch = GObject.registerClass({
+export const LabelSwitch = GObject.registerClass({
     Signals: {
         'active': {
             param_types: [GObject.TYPE_BOOLEAN, Gtk.Switch]
@@ -147,7 +146,7 @@ var LabelSwitch = GObject.registerClass({
 
 });
 
-var BoxRemoveButton = GObject.registerClass({
+export const BoxRemoveButton = GObject.registerClass({
     Signals: {'clicked': {}}
 }, class BoxRemoveButton extends Gtk.Box {
 
@@ -170,4 +169,21 @@ var BoxRemoveButton = GObject.registerClass({
     }
 
 });
+
+// TODO This function does not work
+export const addScrolledWindow = function(widget) {
+    const scroll = new Gtk.ScrolledWindow({ 
+        vexpand: true, 
+        hexpand: true,
+        hscrollbar_policy: Gtk.PolicyType.NEVER,
+        vscrollbar_policy: Gtk.PolicyType.AUTOMATIC
+    });
+    
+    const parent = widget.get_parent();
+    widget.unparent();
+    scroll.set_child(widget);
+    // How to add widget to Adw.PreferencesPage. parent is a Adw.PreferencesPage?
+    parent.add_child(scroll);
+
+}
 

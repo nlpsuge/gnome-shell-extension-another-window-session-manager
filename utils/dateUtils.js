@@ -15,6 +15,6 @@
  * 
  * @returns guint32 type timestamp, for example 75176468
  */
-var get_current_time = function() {
+export const get_current_time = function() {
     return global.get_current_time() || global.display.get_current_time_roundtrip();
 }

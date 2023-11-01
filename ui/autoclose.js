@@ -1,37 +1,32 @@
 
 'use strict';
 
-const { Clutter, Gio, GLib, GObject, Meta, Shell, St, Atk, Pango } = imports.gi;
+import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
+import Shell from 'gi://Shell';
+import St from 'gi://St';
+import Atk from 'gi://Atk';
+import Pango from 'gi://Pango';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as CloseSession from '../closeSession.js';
 
-const CloseSession = Me.imports.closeSession;
+import * as EndSessionDialog from 'resource:///org/gnome/shell/ui/endSessionDialog.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as DND from 'resource:///org/gnome/shell/ui/dnd.js';
+import * as Layout from 'resource:///org/gnome/shell/ui/layout.js';
+import * as Dialog from 'resource:///org/gnome/shell/ui/dialog.js';
 
-const EndSessionDialog = imports.ui.endSessionDialog;
-const DND = imports.ui.dnd;
-
-const Gettext = imports.gettext;
-
-const Dialog = imports.ui.dialog;
-const ModalDialog = imports.ui.modalDialog;
-const Layout = imports.ui.layout;
-const Main = imports.ui.main;
-
-const Log = Me.imports.utils.log;
+import * as Log from '../utils/log.js';
 
 let GTop = null;
 try {
-    GTop = imports.gi.GTop;
+    GTop = await import('gi://GTop');
 } catch (e) {
     Log.Log.getDefault().error(e, `GTop is not installed, I highly recommend to install it, so that a process can be closed safely. How to install it? Please visit: https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#dependencies .`);
 }
 
-const PrefsUtils = Me.imports.utils.prefsUtils;
-const FileUtils = Me.imports.utils.fileUtils;
-const SubprocessUtils = Me.imports.utils.subprocessUtils;
-
-const UiHelper = Me.imports.ui.uiHelper;
+import * as PrefsUtils from '../utils/prefsUtils.js';
 
 
 var sessionClosedByUser = false;
@@ -51,7 +46,7 @@ const callFunc = function (thisObj, func, param) {
     }
 }
 
-var State = {
+const State = {
     OPENED: 0,
     CLOSED: 1,
     OPENING: 2,
@@ -62,7 +57,7 @@ var State = {
     CONFIRMED: 7
 };
 
-var Autoclose = GObject.registerClass(
+export const Autoclose = GObject.registerClass(
     class Autoclose extends GObject.Object {
         _init() {
 
@@ -78,6 +73,10 @@ var Autoclose = GObject.registerClass(
         }
 
         _overrideEndSessionDialog() {
+            // Gnome 45.0 does not export EndSessionDialog.EndSessionDialog
+            if (!EndSessionDialog.EndSessionDialog) {
+                return;
+            }
             __confirm = EndSessionDialog.EndSessionDialog.prototype._confirm;
             __init = EndSessionDialog.EndSessionDialog.prototype._init;
             _addButton = EndSessionDialog.EndSessionDialog.prototype.addButton;
@@ -249,7 +248,7 @@ var Autoclose = GObject.registerClass(
 
 
 // Based on dialog.js of gnome-shell
-var RunningApplicationListWindow = GObject.registerClass({
+const RunningApplicationListWindow = GObject.registerClass({
     Signals: { 'opened': {}, 'closed': {} }
 },
     class RunningApplicationListWindow extends St.BoxLayout {

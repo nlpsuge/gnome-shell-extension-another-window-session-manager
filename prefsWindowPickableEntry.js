@@ -1,13 +1,14 @@
 'use strict';
 
-const { Gio, GObject, Gtk, Pango } = imports.gi;
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import Gio from 'gi://Gio';
+import GObject from 'gi://GObject';
+import Gtk from 'gi://Gtk';
+import Pango from 'gi://Pango';
 
-const PrefsWidgets = Me.imports.prefsWidgets;
+import * as PrefsWidgets from './prefsWidgets.js';
 
 
-var WindowPickableEntry = GObject.registerClass({
+export const WindowPickableEntry = GObject.registerClass({
     Signals: {
         'entry-changed': {
             param_types: [Gtk.Entry]

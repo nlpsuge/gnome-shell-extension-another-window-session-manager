@@ -1,6 +1,6 @@
 'use strict';
 
-const { Meta } = imports.gi;
+import Meta from 'gi://Meta';
 
 
 /**
@@ -10,11 +10,11 @@ const { Meta } = imports.gi;
  * 
  * @returns stable window id
  */
-var getStableWindowId = function(metaWindow) {
+export const getStableWindowId = function(metaWindow) {
     return Meta.is_wayland_compositor() ? metaWindow.get_id() : metaWindow.get_description();
 }
 
-var isSurfaceActor = function(clutterActor) {
+export const isSurfaceActor = function(clutterActor) {
     const className = clutterActor.constructor.$gtype.name;
     // Excepted MetaSurfaceActorX11 and MetaSurfaceActorWayland on X11 and Wayland, respectively
     return className.startsWith('MetaSurfaceActor');

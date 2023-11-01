@@ -1,12 +1,11 @@
 'use strict';
 
-const { GObject } = imports.gi;
+import GObject from 'gi://GObject';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const CloseWindowsRule = Me.imports.model.closeWindowsRule;
+import * as CloseWindowsRule from './closeWindowsRule.js';
 
-var CloseWindowsWhitelist = GObject.registerClass({
+
+export const CloseWindowsWhitelist = GObject.registerClass({
 }, class CloseWindowsWhitelist extends GObject.Object {
     id; // int. just like the id in MySQL. Used to update or delete rows.
     name; // string. Can be any string
@@ -21,7 +20,7 @@ var CloseWindowsWhitelist = GObject.registerClass({
     }
 });
 
-var CloseWindowsRuleBase = class {
+export const CloseWindowsRuleBase = class {
     category; // string. Applications, Keywords
     type; // string, rule type, such as 'shortcut'
     value; // GdkShortcuts, order and the rule pairs, such as "{1: 'Ctrl+Q}'".
@@ -31,7 +30,7 @@ var CloseWindowsRuleBase = class {
     keyDelay; // int, for example: `enabydotool key --key-delay 500 29:1 16:1 16:0 29:0`
 } 
 
-var CloseWindowsRuleByKeyword = class extends CloseWindowsRuleBase {
+export const CloseWindowsRuleByKeyword = class extends CloseWindowsRuleBase {
     id; // int. just like the id in MySQL. Used to update or delete rows.
     keyword; // string. Can be any string
     compareWith; // string. title, wm_class, wm_class_instance, app_name...
@@ -43,7 +42,7 @@ var CloseWindowsRuleByKeyword = class extends CloseWindowsRuleBase {
     }
 }
 
-var CloseWindowsRuleByApp = class extends CloseWindowsRuleBase {
+export const CloseWindowsRuleByApp = class extends CloseWindowsRuleBase {
     appId; // string, such as 'firefox.desktop'
     appDesktopFilePath; // string, such as '/usr/share/applications/firefox.desktop'
     appName; // string, such as 'Firefox'
@@ -57,7 +56,7 @@ var CloseWindowsRuleByApp = class extends CloseWindowsRuleBase {
 * See: https://gitlab.gnome.org/GNOME/gtk/blob/d726ecdb5d1ece870585c7be89eb6355b2482544/gdk/gdkenums.h:L73
 * See: https://gitlab.gnome.org/GNOME/gtk/blob/1ce79b29e363e585872901424d3b72041b55e3e4/gtk/gtkeventcontrollerkey.c:L203
 */
-var GdkShortcuts = GObject.registerClass({
+export const GdkShortcuts = GObject.registerClass({
 }, class GdkShortcuts extends GObject.Object{
     /**
      * For example: Ctrl+Q

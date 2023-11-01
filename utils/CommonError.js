@@ -14,7 +14,7 @@
  * @param message 
  * @param options 
  */
-var CommonError = class extends Error{
+export const CommonError = class extends Error{
 
     constructor(message, options = {}) {
         if (!options.cause) {

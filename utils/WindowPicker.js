@@ -5,13 +5,18 @@
 
 'use strict';
 
-const {Clutter, GObject, Gio, GLib, Shell}  = imports.gi;
-const ByteArray    = imports.byteArray;
-const Main         = imports.ui.main;
-const LookingGlass = imports.ui.lookingGlass;
-const Me           = imports.misc.extensionUtils.getCurrentExtension();
+import Clutter from 'gi://Clutter';
+import GObject from 'gi://GObject';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
 
-const GnomeVersion = Me.imports.utils.gnomeVersion;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as LookingGlass from 'resource:///org/gnome/shell/ui/lookingGlass.js';
+
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+
+import * as GnomeVersion from './gnomeVersion.js';
 
 
 // Based on the WindowPicker.js from Burn-My-Windows. 
@@ -26,12 +31,13 @@ const GnomeVersion = Me.imports.utils.gnomeVersion;
 // picking.                                                                             //
 //////////////////////////////////////////////////////////////////////////////////////////
 
-var WindowPickerServiceProvider = class WindowPickerServiceProvider {
+export const WindowPickerServiceProvider = class WindowPickerServiceProvider {
   // ------------------------------------------------------------------------- constructor
 
   constructor() {
-    const iFace = ByteArray.toString(
-      Me.dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.PickWindow.xml').load_contents(null)[1]);
+    let extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
+    const iFace = new TextDecoder().decode(
+      extensionObject.dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.PickWindow.xml').load_contents(null)[1]);
     this._dbus = Gio.DBusExportedObject.wrapJSObject(iFace, this);
   }
 
@@ -129,7 +135,7 @@ var WindowPickerServiceProvider = class WindowPickerServiceProvider {
   }
 };
 
-var MyInspector = GObject.registerClass({
+const MyInspector = GObject.registerClass({
   Signals: {
     'WindowPickCancelled': {}
   }

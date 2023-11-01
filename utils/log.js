@@ -1,12 +1,9 @@
 'use strict';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-const PrefsUtils = Me.imports.utils.prefsUtils;
+import * as PrefsUtils from './prefsUtils.js';
 
 
-var Log = class {
+export const Log = class {
 
     constructor() {
         this._prefsUtils = new PrefsUtils.PrefsUtils();

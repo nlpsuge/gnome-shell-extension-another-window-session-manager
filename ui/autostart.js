@@ -2,46 +2,40 @@
 
 /* exported AutostartServiceProvider, AutostartService, AutostartDialog */
 
-const { Clutter, Gio, GLib, GObject, Meta, Shell, St } = imports.gi;
+import GObject from 'gi://GObject';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Clutter from 'gi://Clutter';
 
-const ByteArray = imports.byteArray;
+import * as EndSessionDialog from 'resource:///org/gnome/shell/ui/endSessionDialog.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-const EndSessionDialog = imports.ui.endSessionDialog;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as Dialog from 'resource:///org/gnome/shell/ui/dialog.js';
+import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
 
-const Gettext = imports.gettext;
+import * as Autoclose from './autoclose.js';
+import * as Log from '../utils/log.js';
+import * as RestoreSession from '../restoreSession.js';
+import * as PrefsUtils from '../utils/prefsUtils.js';
+import * as FileUtils from '../utils/fileUtils.js';
 
-const Main = imports.ui.main;
-const CheckBox = imports.ui.checkBox;
-const Dialog = imports.ui.dialog;
-const ModalDialog = imports.ui.modalDialog;
-
-const Autoclose = Me.imports.ui.autoclose;
-
-const Log = Me.imports.utils.log;
-
-const RestoreSession = Me.imports.restoreSession;
-
-const PrefsUtils = Me.imports.utils.prefsUtils;
-const FileUtils = Me.imports.utils.fileUtils;
-
-const OpenWindowsTracker = Me.imports.openWindowsTracker;
 
 let _requiredToRestorePrevious = false;
 
-
-var AutostartServiceProvider = GObject.registerClass(
+export const AutostartServiceProvider = GObject.registerClass(
     class AutostartServiceProvider extends GObject.Object {
 
         _init() {
             super._init();
 
             this._log = new Log.Log();
-            
-            this._autostartDbusXml = ByteArray.toString(
-                Me.dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.Autostart.xml').load_contents(null)[1]);
+            this._fileUtils = new FileUtils.FileUtils();
+
+            const extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
+            this._autostartDbusXml = new TextDecoder().decode(
+                extensionObject.dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.Autostart.xml').load_contents(null)[1]);
 
             this._autostartService = null;
             this._autostartDbusImpl = null;
@@ -93,7 +87,7 @@ var AutostartServiceProvider = GObject.registerClass(
         }
     });
 
-var AutostartService = GObject.registerClass(
+const AutostartService = GObject.registerClass(
     class AutostartService extends GObject.Object {
 
         _init() {
@@ -225,7 +219,7 @@ var AutostartService = GObject.registerClass(
     });
 
 // Based on endSessionDialog in Gnome shell
-var AutostartDialog = GObject.registerClass(
+const AutostartDialog = GObject.registerClass(
     class AutostartDialog extends ModalDialog.ModalDialog {
 
         _init() {
@@ -283,7 +277,7 @@ var AutostartDialog = GObject.registerClass(
                 return;
                 
             if (this._sessionName) {
-                const [exists, sessionFilePath] = FileUtils.sessionExists(this._sessionName);
+                const [exists, sessionFilePath] = this._fileUtils.sessionExists(this._sessionName);
                 if (exists) {
                     this._startTimer();
                     this._sync();
@@ -304,7 +298,7 @@ var AutostartDialog = GObject.registerClass(
             const displayTime = EndSessionDialog._roundSecondsToInterval(this._totalSecondsToStayOpen,
                                                                          this._secondsLeft,
                                                                          1);
-            const desc = Gettext.ngettext('\'' + this._sessionName + '\' will be restored in %d second',
+            const desc = _.ngettext('\'' + this._sessionName + '\' will be restored in %d second',
                 '\'' + this._sessionName + '\' will be restored in %d seconds', displayTime).format(displayTime);
             this._confirmDialogContent.description = desc;
 

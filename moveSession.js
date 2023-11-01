@@ -1,21 +1,22 @@
 'use strict';
 
-const { Shell, Gio, GLib, Meta } = imports.gi;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
+import Meta from 'gi://Meta';
 
-const Main = imports.ui.main;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as UiHelper from './ui/uiHelper.js';
 
-const UiHelper = Me.imports.ui.uiHelper;
+import * as FileUtils from './utils/fileUtils.js';
+import * as Log from './utils/log.js';
+import * as DateUtils from './utils/dateUtils.js';
 
-const FileUtils = Me.imports.utils.fileUtils;
-const Log = Me.imports.utils.log;
-const DateUtils = Me.imports.utils.dateUtils;
+import {WindowTilingSupport} from './windowTilingSupport.js';
 
-const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
 
-var MoveSession = class {
+export const MoveSession = class {
 
     constructor() {
         this._log = new Log.Log();
@@ -23,6 +24,7 @@ var MoveSession = class {
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
         this._windowTracker = Shell.WindowTracker.get_default();
+        this._fileUtils = new FileUtils.FileUtils();
 
         this._sourceIds = [];
 
@@ -35,7 +37,7 @@ var MoveSession = class {
             sessionName = this.sessionName;
         }
 
-        const sessions_path = FileUtils.get_sessions_path();
+        const sessions_path = this._fileUtils.get_sessions_path();
         const session_file_path = GLib.build_filenamev([sessions_path, sessionName]);
         if (!GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
             logError(new Error(`Session file not found: ${session_file_path}`));
@@ -46,7 +48,7 @@ var MoveSession = class {
         const session_file = Gio.File.new_for_path(session_file_path);
         let [success, contents] = session_file.load_contents(null);
         if (success) {
-            let session_config = FileUtils.getJsonObj(contents);
+            let session_config = this._fileUtils.getJsonObj(contents);
 
             const session_config_objects = session_config.x_session_config_objects;
             if (!session_config_objects) {

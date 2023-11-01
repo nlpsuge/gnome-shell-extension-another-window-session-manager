@@ -1,8 +1,9 @@
 'use strict';
 
-const { Meta } = imports.gi;
+import Meta from 'gi://Meta';
 
-function isDialog(metaWindow) {
+
+export function isDialog(metaWindow) {
     const dialogTypes = [
         // 3
         Meta.WindowType.DIALOG,
@@ -14,7 +15,7 @@ function isDialog(metaWindow) {
         metaWindow.get_transient_for() != null;
 }
 
-function ignoreWindows(metaWindow) {
+export function ignoreWindows(metaWindow) {
     if (isDialog(metaWindow)) {
         return true;
     }

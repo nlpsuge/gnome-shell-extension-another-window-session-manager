@@ -1,25 +1,23 @@
 'use strict';
 
-const { GObject, St, Clutter } = imports.gi;
+import GObject from 'gi://GObject';
+import St from 'gi://St';
+import Clutter from 'gi://Clutter';
 
-const Main = imports.ui.main;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-const PopupMenu = imports.ui.popupMenu;
+import * as SaveSession from '../saveSession.js';
+import * as CloseSession from '../closeSession.js';
+import * as RestoreSession from '../restoreSession.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as FileUtils from '../utils/fileUtils.js';
+import * as Log from '../utils/log.js';
 
-const SaveSession = Me.imports.saveSession;
-const CloseSession = Me.imports.closeSession;
-const RestoreSession = Me.imports.restoreSession;
+import {Button} from './button.js';
 
-const IconFinder = Me.imports.utils.iconFinder;
-const FileUtils = Me.imports.utils.fileUtils;
-const Log = Me.imports.utils.log;
 
-const { Button } = Me.imports.ui.button;
-
-var PopupMenuButtonItems = GObject.registerClass(
+export const PopupMenuButtonItems = GObject.registerClass(
 class PopupMenuButtonItems extends GObject.Object {
 
     _init() {
@@ -39,7 +37,7 @@ class PopupMenuButtonItems extends GObject.Object {
 });
 
 
-var PopupMenuButtonItem = GObject.registerClass(
+const PopupMenuButtonItem = GObject.registerClass(
 class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
 
     _init() {
@@ -99,7 +97,7 @@ class PopupMenuButtonItem extends PopupMenu.PopupMenuItem {
 });
 
 
-var PopupMenuButtonItemClose = GObject.registerClass(
+const PopupMenuButtonItemClose = GObject.registerClass(
 class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 
     _init(iconSymbolic) {
@@ -221,7 +219,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
 });
 
 
-var PopupMenuButtonItemSave = GObject.registerClass(
+const PopupMenuButtonItemSave = GObject.registerClass(
 class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
     _init(iconSymbolic) {
@@ -235,6 +233,8 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this._addYesAndNoButtons();
 
         this._log = new Log.Log();
+        this._fileUtils = new FileUtils.FileUtils();
+
         this._saveSession = new SaveSession.SaveSession(true);
 
         this._timeline = this.createTimeLine();
@@ -375,7 +375,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             return [false, `ERROR: ${sessionName} is a reserved word, can't be used.`];
         }
 
-        if (FileUtils.isDirectory(sessionName)) {
+        if (this._fileUtils.isDirectory(sessionName)) {
             return [false, `ERROR: Can't save windows using '${sessionName}', it's an existing directory!`];
         }
 

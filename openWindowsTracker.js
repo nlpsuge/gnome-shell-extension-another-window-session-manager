@@ -1,42 +1,33 @@
 'use strict';
 
-const { Shell, Meta, Gio, GLib } = imports.gi;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
+import Meta from 'gi://Meta';
 
-const ByteArray = imports.byteArray;
+import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.js';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-const LoginManager = imports.misc.loginManager;
-const SystemActions = imports.misc.systemActions;
+import * as SaveSession from './saveSession.js';
+import * as RestoreSession from './restoreSession.js';
+import * as MoveSession from './moveSession.js';
 
-const EndSessionDialog = imports.ui.endSessionDialog;
+import * as Autoclose from './ui/autoclose.js';
+import * as UiHelper from './ui/uiHelper.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as Log from './utils/log.js';
+import * as PrefsUtils from './utils/prefsUtils.js';
+import * as FileUtils from './utils/fileUtils.js';
+import * as MetaWindowUtils from './utils/metaWindowUtils.js';
+import * as Function from './utils/function.js';
+import * as GnomeVersion from './utils/gnomeVersion.js';
 
-const SaveSession = Me.imports.saveSession;
-const CloseSession = Me.imports.closeSession;
-const RestoreSession = Me.imports.restoreSession;
-const MoveSession = Me.imports.moveSession;
-
-const Autoclose = Me.imports.ui.autoclose;
-const UiHelper = Me.imports.ui.uiHelper;
-
-const Log = Me.imports.utils.log;
-const PrefsUtils = Me.imports.utils.prefsUtils;
-const FileUtils = Me.imports.utils.fileUtils;
-const MetaWindowUtils = Me.imports.utils.metaWindowUtils;
-const Function = Me.imports.utils.function;
-const GnomeVersion = Me.imports.utils.gnomeVersion;
-
-const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
-
-const EndSessionDialogIface = ByteArray.toString(
-    Me.dir.get_child('dbus-interfaces').get_child('org.gnome.SessionManager.EndSessionDialog.xml').load_contents(null)[1]);
-const EndSessionDialogProxy = Gio.DBusProxy.makeProxyWrapper(EndSessionDialogIface);
+import {WindowTilingSupport} from './windowTilingSupport.js';
 
 
 let _meta_restart = null;
 
-var OpenWindowsTracker = class {
+export const OpenWindowsTracker = class {
 
     constructor() {
 
@@ -86,6 +77,7 @@ var OpenWindowsTracker = class {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
+        this._fileUtils = new FileUtils.FileUtils();
 
         this._saveSession = new SaveSession.SaveSession();
         this._moveSession = new MoveSession.MoveSession();
@@ -295,7 +287,7 @@ var OpenWindowsTracker = class {
             return;
         }
 
-        const sessionContent = FileUtils.getJsonObj(contents);
+        const sessionContent = this._fileUtils.getJsonObj(contents);
         Log.Log.getDefault().debug(`Prepare to restore window session from ${sessionFilePath}`);
 
         this._allSavedWindowSessions.push(sessionContent);
@@ -416,7 +408,7 @@ var OpenWindowsTracker = class {
 
         this._log.debug(`${window.get_title()}(${app?.get_name()}) was closed. Cleaning up its saved session files.`);
 
-        FileUtils.removeFile(sessionFilePath);
+        this._fileUtils.removeFile(sessionFilePath);
         this._removeOrphanSessionConfigs(app, sessionDirectory);
     }
 
@@ -434,11 +426,11 @@ var OpenWindowsTracker = class {
                 sessionNames.add(`${MetaWindowUtils.getStableWindowId(metaWindow)}.json`);
             }
 
-            FileUtils.listAllSessions(sessionDirectory, false, (file, info) => {
+            this._fileUtils.listAllSessions(sessionDirectory, false, (file, info) => {
                 const filename = info.get_name();
                 const path = file.get_path();
                 if (!sessionNames.has(filename) && path && GLib.file_test(path, GLib.FileTest.EXISTS)) {
-                    FileUtils.removeFile(path);
+                    this._fileUtils.removeFile(path);
                 }
             });
         } catch (e) {
@@ -455,16 +447,21 @@ var OpenWindowsTracker = class {
         // the app name outside this function. (See: shell-app.c -> shell_app_get_name -> window_backed_app_get_window: g_assert (app->running_state->windows))
         this._log.debug(`${appName} was closed. Cleaning up its saved session files.`);
 
-        FileUtils.removeFile(sessionDirectory, true);
+        this._fileUtils.removeFile(sessionDirectory, true);
 
         const possibleOrphanFolder = `${FileUtils.current_session_path}/${window.get_wm_class_instance()}`;
         if (GLib.file_test(possibleOrphanFolder, GLib.FileTest.EXISTS)) {
             this._log.debug(`Removing orphan session folder ${possibleOrphanFolder}`)
-            FileUtils.removeFile(possibleOrphanFolder, true);
+            this._fileUtils.removeFile(possibleOrphanFolder, true);
         }
     }
 
     _onNameAppearedGnomeShell() {
+        const extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
+        const EndSessionDialogIface = new TextDecoder().decode(
+            extensionObject.dir.get_child('dbus-interfaces').get_child('org.gnome.SessionManager.EndSessionDialog.xml').load_contents(null)[1]);
+        const EndSessionDialogProxy = Gio.DBusProxy.makeProxyWrapper(EndSessionDialogIface);
+
         this._endSessionProxy = new EndSessionDialogProxy(Gio.DBus.session,
             'org.gnome.Shell',
             '/org/gnome/SessionManager/EndSessionDialog',

@@ -1,27 +1,25 @@
 'use strict';
 
-const { Shell, Gio, GLib, Meta } = imports.gi;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
+import Meta from 'gi://Meta';
 
-const Main = imports.ui.main;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-const ByteArray = imports.byteArray;
+import * as SessionConfig from './model/sessionConfig.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as UiHelper from './ui/uiHelper.js';
 
-const SessionConfig = Me.imports.model.sessionConfig;
-
-const UiHelper = Me.imports.ui.uiHelper;
-
-const FileUtils = Me.imports.utils.fileUtils;
-const Log = Me.imports.utils.log;
-const MetaWindowUtils = Me.imports.utils.metaWindowUtils;
-const CommonError = Me.imports.utils.CommonError;
-const SubprocessUtils = Me.imports.utils.subprocessUtils;
-const PrefsUtils = Me.imports.utils.prefsUtils;
+import * as FileUtils from './utils/fileUtils.js';
+import * as Log from './utils/log.js';
+import * as MetaWindowUtils from './utils/metaWindowUtils.js';
+import * as CommonError from './utils/CommonError.js';
+import * as SubprocessUtils from './utils/subprocessUtils.js';
+import * as PrefsUtils from './utils/prefsUtils.js';
 
 
-var SaveSession = class {
+export const SaveSession = class {
 
     constructor(notifyUser) {
         this._notifyUser = notifyUser;
@@ -37,6 +35,7 @@ var SaveSession = class {
 
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
+        this._fileUtils = new FileUtils.FileUtils();
 
         this._sourceIds = [];
     }
@@ -351,7 +350,7 @@ var SaveSession = class {
             };
 
             const desktopFileName = '__' + appName + '.desktop';
-            const desktopFileContent = FileUtils.loadDesktopTemplate(cancellable).fill(argument);
+            const desktopFileContent = this._fileUtils.loadDesktopTemplate(cancellable).fill(argument);
             if (!desktopFileContent) {
                 const errMsg = `Failed to generate a .desktop file ${desktopFileName} using ${JSON.stringify(argument)}`;
                 this._log.error(new Error(errMsg));
@@ -369,14 +368,14 @@ var SaveSession = class {
 
     async backupExistingSessionIfNecessary(sessionName, baseDir) {
 
-        const sessions_path = FileUtils.get_sessions_path();
+        const sessions_path = this._fileUtils.get_sessions_path();
         const session_file_path = GLib.build_filenamev([sessions_path, sessionName]);
         const session_file = Gio.File.new_for_path(session_file_path);
         // Backup first if exists
         if (GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
             this._log.debug(`Backing up existing session ${sessionName}`);
 
-            const session_file_backup_path = FileUtils.get_sessions_backups_path();
+            const session_file_backup_path = this._fileUtils.get_sessions_backups_path();
             const session_file_backup = GLib.build_filenamev([session_file_backup_path, sessionName + '.backup-' + new Date().getTime()]);
             if (GLib.mkdir_with_parents(session_file_backup_path, 0o744) !== 0) {
                 const errMsg = `Cannot save session: ${session_file_path}`;
@@ -417,7 +416,7 @@ var SaveSession = class {
             return Promise.resolve(false);
         }
 
-        const sessions_path = FileUtils.get_sessions_path(baseDir);
+        const sessions_path = this._fileUtils.get_sessions_path(baseDir);
         const session_file_path = GLib.build_filenamev([sessions_path, sessionConfig.session_name]);
         const sessionFile = Gio.File.new_for_path(session_file_path);
 
@@ -443,7 +442,7 @@ var SaveSession = class {
                 // https://gitlab.gnome.org/GNOME/gjs/-/blob/gnome-42/modules/core/overrides/Gio.js#L513
                 // https://gitlab.gnome.org/GNOME/gjs/-/issues/192
                 sessionFile.replace_contents_bytes_async(
-                    ByteArray.fromString(sessionConfigJson),
+                    new TextEncoder().encode(sessionConfigJson),
                     null,
                     false,
                     Gio.FileCreateFlags.REPLACE_DESTINATION,

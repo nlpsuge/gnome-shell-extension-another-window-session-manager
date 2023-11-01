@@ -1,19 +1,16 @@
 'use strict';
 
-const GLib = imports.gi.GLib;
-const Gio = imports.gi.Gio;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-const Log = Me.imports.utils.log;
+import * as Log from './log.js';
 
 const subprocessLauncher = new Gio.SubprocessLauncher({
     flags: (Gio.SubprocessFlags.STDOUT_PIPE |
             Gio.SubprocessFlags.STDERR_PIPE)});
 
 
-async function getProcessInfo(apps /*ShellApp*/, ignoreWindowsCb) {
+export async function getProcessInfo(apps /*ShellApp*/, ignoreWindowsCb) {
     try {
         const pidSet = new Set();
         for (const app of apps) {
@@ -98,7 +95,7 @@ function readOutput(stream, lineBuffer) {
  * subprocess might exit later with failure.
  * 
  */
-var trySpawnCmdstr = function(commandLineString, callBackOnSuccess, callBackOnFailure) {
+export const trySpawnCmdstr = function(commandLineString, callBackOnSuccess, callBackOnFailure) {
     let success_, argv;
 
     try {
@@ -150,7 +147,7 @@ var trySpawnCmdstr = function(commandLineString, callBackOnSuccess, callBackOnFa
  * exits, we cannot get the pid right after the subprocess launches. 
  * So there will be some kind of blocking here. 
  */
-var trySpawnCmdstrWithBlocking = function(commandLineString, callBackOnSuccess, callBackOnFailure) {
+export const trySpawnCmdstrWithBlocking = function(commandLineString, callBackOnSuccess, callBackOnFailure) {
     let success_, argv;
 
     try {
@@ -180,7 +177,7 @@ var trySpawnCmdstrWithBlocking = function(commandLineString, callBackOnSuccess, 
     });
 }
 
-var trySpawn = async function(commandLineArray, callBackOnSuccess, callBackOnFailure) {
+export const trySpawn = async function(commandLineArray, callBackOnSuccess, callBackOnFailure) {
     try {
         return await new Promise((resolve, reject) => {
             trySpawnAsync(commandLineArray,
@@ -210,7 +207,7 @@ var trySpawn = async function(commandLineArray, callBackOnSuccess, callBackOnFai
  * `callBackOnFailure` and `callBackOnFailure`
  * 
  */
-var trySpawnAsync = function(commandLineArray, callBackOnSuccess, callBackOnFailure) {
+export const trySpawnAsync = function(commandLineArray, callBackOnSuccess, callBackOnFailure) {
     try {
         let [, pid, stdin, stdout, stderr] = GLib.spawn_async_with_pipes(
             // Working directory, passing %null to use the parent's
@@ -296,7 +293,7 @@ var trySpawnAsync = function(commandLineArray, callBackOnSuccess, callBackOnFail
  * @param {Gio.Cancellable} [cancellable] - optional cancellable object
  * @returns {Promise<boolean>} - The process success
  */
- async function execCheck(argv, cancellable = null) {
+export async function execCheck(argv, cancellable = null) {
     let cancelId = 0;
     let proc = new Gio.Subprocess({
         argv: argv,

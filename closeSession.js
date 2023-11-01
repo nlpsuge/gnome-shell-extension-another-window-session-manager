@@ -1,31 +1,30 @@
 'use strict';
 
-const { Meta, Shell, Gio, GLib } = imports.gi;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
+import Meta from 'gi://Meta';
 
-const Main = imports.ui.main;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-const Util = imports.misc.util;
+import * as Log from './utils/log.js';
+import * as PrefsUtils from './utils/prefsUtils.js';
+import * as SubprocessUtils from './utils/subprocessUtils.js';
+import * as DateUtils from './utils/dateUtils.js';
+import * as Function from './utils/function.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Log = Me.imports.utils.log;
-const PrefsUtils = Me.imports.utils.prefsUtils;
-const SubprocessUtils = Me.imports.utils.subprocessUtils;
-const DateUtils = Me.imports.utils.dateUtils;
-const Function = Me.imports.utils.function;
+import * as Constants from './constants.js';
 
-const Constants = Me.imports.constants;
+import * as UiHelper from './ui/uiHelper.js';
 
-const UiHelper = Me.imports.ui.uiHelper;
-
-var flags = {
+export const flags = {
     closeWindows: 1 << 0,
     logoff:       1 << 1,
 };
 
-var allFlags = flags.closeWindows | flags.logoff;
+const allFlags = flags.closeWindows | flags.logoff;
 
-var CloseSession = class {
+export const CloseSession = class {
     constructor(flags) {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();

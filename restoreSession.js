@@ -1,30 +1,26 @@
 'use strict';
 
-const { Shell, Gio, GLib } = imports.gi;
-const Util = imports.misc.util;
+import Shell from 'gi://Shell';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
-const { ByteArray } = imports.byteArray;
+import * as FileUtils from './utils/fileUtils.js';
+import * as Log from './utils/log.js';
+import * as PrefsUtils from './utils/prefsUtils.js';
+import * as SubprocessUtils from './utils/subprocessUtils.js';
+import * as DateUtils from './utils/dateUtils.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-const FileUtils = Me.imports.utils.fileUtils;
-const Log = Me.imports.utils.log;
-const PrefsUtils = Me.imports.utils.prefsUtils;
-const SubprocessUtils = Me.imports.utils.subprocessUtils;
-const DateUtils = Me.imports.utils.dateUtils;
-
-const UiHelper = Me.imports.ui.uiHelper;
 
 // All launching apps by Shell.App#launch()
-var restoringApps = new Map();
+export const restoringApps = new Map();
 
-var RestoreSession = class {
+export const RestoreSession = class {
 
     constructor() {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
+        this._fileUtils = new FileUtils.FileUtils();
 
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
@@ -52,7 +48,7 @@ var RestoreSession = class {
      */
     static restoreFromSummary() {
         Log.Log.getDefault().debug(`Prepare to restore summary`);
-        FileUtils.loadSummary().then(([summary, path]) => {
+        this._fileUtils.loadSummary().then(([summary, path]) => {
             Log.Log.getDefault().info(`Restoring summary from ${path}`);
             const savedNWorkspace = summary.n_workspace;
             const workspaceManager = global.workspace_manager;
@@ -72,7 +68,7 @@ var RestoreSession = class {
             sessionName = this.sessionName;
         }
         
-        const sessions_path = FileUtils.get_sessions_path();
+        const sessions_path = this._fileUtils.get_sessions_path();
         const session_file_path = GLib.build_filenamev([sessions_path, sessionName]);
         if (!GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
             logError(new Error(`Session file not found: ${session_file_path}`));
@@ -94,7 +90,7 @@ var RestoreSession = class {
             return;
         }
 
-        let session_config = FileUtils.getJsonObj(contents);
+        let session_config = this._fileUtils.getJsonObj(contents);
         let session_config_objects = session_config.x_session_config_objects;
         if (!(session_config_objects && session_config_objects.length)) {
             this._log.error(new Error(`Session details not found: ${session_file_path}`));
@@ -148,7 +144,7 @@ var RestoreSession = class {
             const ignoringFilePaths = [
                 GLib.build_filenamev([FileUtils.current_session_path, 'summary.json'])
             ];
-            FileUtils.listAllSessions(FileUtils.current_session_path, true, (file, info) => {
+            this._fileUtils.listAllSessions(FileUtils.current_session_path, true, (file, info) => {
                 const contentType = info.get_content_type();
                 if (contentType !== 'application/json') {
                     return;
@@ -166,13 +162,13 @@ var RestoreSession = class {
                         if (!success) {
                             return;
                         }
-                        const sessionConfig = FileUtils.getJsonObj(contents);
+                        const sessionConfig = this._fileUtils.getJsonObj(contents);
                         sessionConfig._file_path = file.get_path();
                         this._restoreOneSession(sessionConfig).then(([launched, running]) => {
                             if (removeAfterRestore && launched && !running) {
                                 const path = file.get_path();
                                 this._log.debug(`Restored ${sessionConfig.window_title}(${sessionConfig.app_name}), cleaning ${path}`);
-                                FileUtils.removeFile(path);
+                                this._fileUtils.removeFile(path);
                             }
                         }).catch(e => this._log.error(e));
                     });
@@ -242,8 +238,8 @@ var RestoreSession = class {
                             }
                         }
 
-                        const launchAppTemplate = FileUtils.desktop_template_launch_app_shell_script;
-                        const launchAppShellScript = FileUtils.loadTemplate(launchAppTemplate).fill({cmdString});
+                        const launchAppTemplate = this._fileUtils.desktop_template_launch_app_shell_script;
+                        const launchAppShellScript = this._fileUtils.loadTemplate(launchAppTemplate).fill({cmdString});
                         this._log.info(`Launching ${app_name} via command line ${cmdString}!`);
                         SubprocessUtils.trySpawnCmdstr(`bash -c '${launchAppShellScript}'`).then(
                             ([success, status, stdoutInputStream, stderrInputStream]) => {

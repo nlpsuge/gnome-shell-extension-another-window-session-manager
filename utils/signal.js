@@ -1,6 +1,7 @@
-const { GObject } = imports.gi;
+import GObject from 'gi://GObject';
 
-var Signal = class {
+
+export const Signal = class {
 
     constructor() {
 
