@@ -31,7 +31,6 @@ export const AutostartServiceProvider = GObject.registerClass(
             super._init();
 
             this._log = new Log.Log();
-            this._fileUtils = new FileUtils.FileUtils();
 
             const extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
             this._autostartDbusXml = new TextDecoder().decode(
@@ -229,6 +228,7 @@ const AutostartDialog = GObject.registerClass(
             });
 
             this._settings = new PrefsUtils.PrefsUtils().getSettings();
+            this._fileUtils = new FileUtils.FileUtils();
 
             this._sessionName = this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
 
@@ -262,7 +262,7 @@ const AutostartDialog = GObject.registerClass(
         }
 
         _confirm() {
-            Autoclose.sessionClosedByUser = false;
+            Autoclose.autocloseObject.sessionClosedByUser = false;
             const _restoreSession = new RestoreSession.RestoreSession();
             _restoreSession.restoreSession(this._sessionName);
         }

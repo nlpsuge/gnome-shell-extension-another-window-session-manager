@@ -100,9 +100,9 @@ class AwsIndicator extends PanelMenu.Button {
             // Install https://extensions.gnome.org/extension/4679/burn-my-windows/ to watch this process.
 
             const shellApp = this._windowTracker.get_window_app(metaWindow);
-            let shellAppData = RestoreSession.restoringApps.get(shellApp);
+            let shellAppData = RestoreSession.restoreSessionObject.restoringApps.get(shellApp);
             if (!shellAppData) {
-                shellAppData = RestoreSession.restoringApps.get(metaWindow.get_pid());
+                shellAppData = RestoreSession.restoreSessionObject.restoringApps.get(metaWindow.get_pid());
             }
 
             if (shellAppData) {
@@ -150,9 +150,9 @@ class AwsIndicator extends PanelMenu.Button {
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> first-frame: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
-            let shellAppData = RestoreSession.restoringApps.get(shellApp);
+            let shellAppData = RestoreSession.restoreSessionObject.restoringApps.get(shellApp);
             if (!shellAppData) {
-                shellAppData = RestoreSession.restoringApps.get(metaWindow.get_pid());
+                shellAppData = RestoreSession.restoreSessionObject.restoringApps.get(metaWindow.get_pid());
             }
             if (!shellAppData) {
                 return;
@@ -184,9 +184,9 @@ class AwsIndicator extends PanelMenu.Button {
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> shown: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
-            let shellAppData = RestoreSession.restoringApps.get(shellApp);
+            let shellAppData = RestoreSession.restoreSessionObject.restoringApps.get(shellApp);
             if (!shellAppData) {
-                shellAppData = RestoreSession.restoringApps.get(metaWindow.get_pid());
+                shellAppData = RestoreSession.restoreSessionObject.restoringApps.get(metaWindow.get_pid());
             }
             if (!shellAppData) {
                 return;
@@ -237,9 +237,9 @@ class AwsIndicator extends PanelMenu.Button {
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> title changed: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
-            let shellAppData = RestoreSession.restoringApps.get(shellApp);
+            let shellAppData = RestoreSession.restoreSessionObject.restoringApps.get(shellApp);
             if (!shellAppData) {
-                shellAppData = RestoreSession.restoringApps.get(metaWindow.get_pid());
+                shellAppData = RestoreSession.restoreSessionObject.restoringApps.get(metaWindow.get_pid());
             }
             if (!shellAppData) {
                 return;

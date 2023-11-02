@@ -162,7 +162,7 @@ export const OpenWindowsTracker = class {
 
         this._overrideSystemActionsPrototypeMap = new Map();
         // TODO Users can click the cancel button of EndSessionDialog, and autoclose.js could also call EndSessionDialog.cancel() function，
-        // I don't know how to distinguish them, therefor set `Autoclose.sessionClosedByUser` to false in cancelled signal will not work.
+        // I don't know how to distinguish them, therefor set `Autoclose.autocloseObject.sessionClosedByUser` to false in cancelled signal will not work.
         // this._overrideSystemActions();
     }
 
@@ -171,10 +171,10 @@ export const OpenWindowsTracker = class {
      * they will be closed and their session configs that is used to restore its states at startup
      * will also be removed.
      *
-     * We prevent that happening here by overriding some functions to set the flag `Autoclose.sessionClosedByUser`
+     * We prevent that happening here by overriding some functions to set the flag `Autoclose.autocloseObject.sessionClosedByUser`
      * to `true`, just before continuing to operate via DBus provided by gnome-session.
      * 
-     * `Autoclose.sessionClosedByUser` will be set to false while users close or cancel the EndSessionDialog.
+     * `Autoclose.autocloseObject.sessionClosedByUser` will be set to false while users close or cancel the EndSessionDialog.
      * 
      * see: https://bugzilla.gnome.org/show_bug.cgi?id=782786
      */
@@ -187,7 +187,7 @@ export const OpenWindowsTracker = class {
             const originalFunc = SystemActions.SystemActions.prototype[funcName];
             this._overrideSystemActionsPrototypeMap.set(funcName, originalFunc);
             SystemActions.SystemActions.prototype[funcName] = function () {
-                Autoclose.sessionClosedByUser = true;
+                Autoclose.autocloseObject.sessionClosedByUser = true;
                 Function.callFunc(this, originalFunc);
             }
         });
@@ -292,14 +292,14 @@ export const OpenWindowsTracker = class {
 
         this._allSavedWindowSessions.push(sessionContent);
 
-        // TODO It's no necessary to put sessions to `RestoreSession.restoringApps` any more, since this job has been done by `MoveSession.moveApps(sessions)`
+        // TODO It's no necessary to put sessions to `RestoreSession.restoreSessionObject.restoringApps` any more, since this job has been done by `MoveSession.moveApps(sessions)`
         const app = this._windowTracker.get_app_from_pid(sessionContent.pid);
         if (app && app.get_name() == sessionContent.app_name) {
-            const restoringShellAppData = RestoreSession.restoringApps.get(app);
+            const restoringShellAppData = RestoreSession.restoreSessionObject.restoringApps.get(app);
             if (restoringShellAppData) {
                 restoringShellAppData.saved_window_sessions.push(sessionContent);
             } else {
-                RestoreSession.restoringApps.set(app, {
+                RestoreSession.restoreSessionObject.restoringApps.set(app, {
                     saved_window_sessions: [sessionContent]
                 });
             }
@@ -399,7 +399,7 @@ export const OpenWindowsTracker = class {
     }
 
     _cleanUpSessionFileByWindow(window, sessionDirectory, sessionName) {
-        if (!window || Autoclose.sessionClosedByUser || this._meta_is_restarting) return;
+        if (!window || Autoclose.autocloseObject.sessionClosedByUser || this._meta_is_restarting) return;
 
         const sessionFilePath = `${sessionDirectory}/${sessionName}`;
         if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) return;
@@ -439,7 +439,7 @@ export const OpenWindowsTracker = class {
     }
 
     _cleanUpSessionFileByApp(app, appName, window, sessionDirectory) {
-        if (!app || Autoclose.sessionClosedByUser || this._meta_is_restarting) return;
+        if (!app || Autoclose.autocloseObject.sessionClosedByUser || this._meta_is_restarting) return;
 
         if (!GLib.file_test(sessionDirectory, GLib.FileTest.EXISTS)) return;
 

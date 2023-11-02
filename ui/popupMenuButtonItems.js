@@ -143,7 +143,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
                 Main.overview.toggle();
             }
 
-            RestoreSession.restoringApps.clear();
+            RestoreSession.restoreSessionObject.restoringApps.clear();
             this.closeSession.closeWindows();
             this._hideConfirm();
 

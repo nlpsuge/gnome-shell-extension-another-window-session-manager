@@ -28,8 +28,10 @@ try {
 
 import * as PrefsUtils from '../utils/prefsUtils.js';
 
-
-var sessionClosedByUser = false;
+// In ESM, we put variables like `sessionClosedByUser` in an object to share them crossing modules
+export const autocloseObject = {
+    sessionClosedByUser: false
+}
 
 let __confirm = null;
 let __init = null;
@@ -126,7 +128,7 @@ export const Autoclose = GObject.registerClass(
 
             EndSessionDialog.EndSessionDialog.prototype._confirm = async function (signal) {
                 try {
-                    sessionClosedByUser = true;
+                    autocloseObject.sessionClosedByUser = true;
 
                     const enableAutocloseSession = that._settings.get_boolean('enable-autoclose-session');
                     if (!enableAutocloseSession) {
