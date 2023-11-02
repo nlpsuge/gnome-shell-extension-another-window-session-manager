@@ -115,18 +115,19 @@ sudo chmod 644 /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
 
 # 3. Copy ydotool.service to /usr/lib/systemd/user, so `systemctl --user enable ydotool.service` can work
 sudo cp /usr/lib/systemd/system/ydotool.service /usr/lib/systemd/user
-# 4. Start the ydotoold service under the normal user
+# 4. Start ydotool.service at startup automatically for the current normal user
+systemctl --user enable ydotool.service
+# 5. Note that you may have to restart the system if the following commands are not working
+# 6. Start the ydotoold service for the current normal user
 systemctl --user start ydotool.service
-# 5. Check if ydotoold service is working. The word `hello` should print on the terminal, if not you might need to reboot the system or try to relogin your account. 
+# 7. Check if ydotoold service is working. The word `hello` should print on the terminal, if not you might need to reboot the system or try to relogin your account. 
 ydotool type 'hello'
 
 ## misc. ##
 
-# Check if the ydotoold service is running, if not it can be started by the folowing cmd
+# Check if the ydotoold service is running, if not you may have to restart the system or start ydotool.service
 systemctl --user status ydotool.service
 
-# Check if ydotool is working. the word `hello` should print on the terminal, if not you might need to reboot the system or try to relogin your account. 
-ydotool type 'hello'
 ```
 
 Note that it's no necessary to run `systemctl --user enable ydotool.service`, because this extension starts `ydotool.service` every time while you use it to close windows.
