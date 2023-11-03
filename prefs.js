@@ -315,23 +315,3 @@ const BuilderScope = GObject.registerClass({
     }
 
 });
-
-function buildPrefsWidget() {
-    const settings = new Prefs();
-
-    if (GnomeVersion.isLessThan42()) {
-        const scroll = new Gtk.ScrolledWindow({ 
-            vexpand: true, 
-            hexpand: true,
-            hscrollbar_policy: Gtk.PolicyType.NEVER,
-            vscrollbar_policy: Gtk.PolicyType.AUTOMATIC
-        });
-        scroll.set_child(settings.notebook);
-        return scroll;
-    }
-    return settings.notebook;
-}
-
-function init() {
-
-}
