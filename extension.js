@@ -23,7 +23,7 @@ let _openWindowsTracker;
 let _autoclose;
 let _windowPickerServiceProvider;
 
-export default class AnotherWindowSessionManager extends Extension {
+export default class AnotherWindowSessionManagerExtension extends Extension {
 
     constructor(metadata) {
         super(metadata);

@@ -42,8 +42,6 @@ export const PrefsUtils = class {
 
     destroy() {
         if (this.settings) {
-            // GObject.Object.run_dispose(): Releases all references to other objects.
-            this.settings.run_dispose();
             this.settings = null;
         }
         

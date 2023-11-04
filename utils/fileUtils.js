@@ -47,7 +47,6 @@ export const FileUtils = class FileUtils {
     
     constructor() {
         const extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
-        // this.settings = extensionObject.getSettings('org.gnome.shell.extensions.another-window-session-manager');
         this.desktop_template_path = GLib.build_filenamev([extensionObject.path, '/template/template.desktop']);
         this.desktop_template_path_restore_at_autostart = GLib.build_filenamev([extensionObject.path, '/template/_gnome-shell-extension-another-window-session-manager.desktop']);
         this.desktop_template_path_restore_previous_at_autostart = GLib.build_filenamev([extensionObject.path, '/template/_awsm-restore-previous-session.desktop']);

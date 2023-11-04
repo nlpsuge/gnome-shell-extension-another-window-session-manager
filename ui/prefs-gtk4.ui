@@ -29,8 +29,8 @@
     <property name="title" translatable="yes">Close windows</property>
     <child>
       <object class="GtkScrolledWindow">
-        <property name="hscrollbar_policy">Always</property>
-        <property name="vscrollbar_policy">Always</property>
+        <property name="hscrollbar_policy">always</property>
+        <property name="vscrollbar_policy">always</property>
         <child>
           <object class="GtkViewport">
             <property name="focusable">False</property>
