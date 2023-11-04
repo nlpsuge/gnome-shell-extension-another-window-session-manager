@@ -23,267 +23,36 @@
     <property name="page-increment">10</property>
   </object>
 
-  <object class="GtkNotebook" id="prefs_notebook">
-    <property name="focusable">0</property>
+  <object class="AdwPreferencesPage" id="close_windows_page">
+    <!-- <property name="icon-name">text-x-generic-symbolic</property> -->
+    <property name="use_underline">true</property>
+    <property name="title" translatable="yes">Close windows</property>
     <child>
-      <object class="GtkNotebookPage">
-        <property name="child">
-          <object class="GtkBox">
-            <property name="orientation">vertical</property>
+      <object class="GtkScrolledWindow">
+        <property name="hscrollbar_policy">always</property>
+        <property name="vscrollbar_policy">always</property>
+        <child>
+          <object class="GtkViewport">
+            <property name="focusable">False</property>
+            <property name="vexpand">True</property>
             <child>
-              <object class="GtkListBox">
-                <child>
-                  <object class="GtkListBoxRow" id="auto_close_session_multi_row">
-                    <property name="focusable">1</property>
-                    <property name="child">
-                      <object class="GtkGrid" id="auto_close_session_multi_grid1">
-                        <property name="margin-top">12</property>
-                        <property name="margin-bottom">12</property>
-                        <property name="row-spacing">6</property>
-                        <property name="column-spacing">32</property>
-                        <child>
-                          <object class="GtkLabel" id="auto_close_session_multi_label">
-                            <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">Auto close session</property>
-                            <property name="use-markup">1</property>
-                            <property name="xalign">0</property>
-                            <layout>
-                              <property name="column">0</property>
-                              <property name="row">0</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkSwitch" id="auto_close_session_switch">
-                            <property name="focusable">1</property>
-                            <property name="halign">end</property>
-                            <property name="valign">center</property>
-                            <layout>
-                              <property name="column">1</property>
-                              <property name="row">0</property>
-                              <property name="row-span">2</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkLabel" id="auto_close_session_multi_label_description">
-                            <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">Enable to close running apps and windows while Logout, Reboot and Shutdown via endSessionDialog.</property>
-                            <property name="wrap">True</property>
-                            <property name="use-markup">1</property>
-                            <property name="xalign">0</property>
-                            <style>
-                              <class name="dim-label"/>
-                            </style>
-                            <layout>
-                              <property name="column">0</property>
-                              <property name="row">1</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <placeholder/>
-                        </child>
-                      </object>
-                    </property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkListBoxRow" id="close_by_rules_multi_row">
-                    <property name="focusable">1</property>
-                    <property name="child">
-                      <object class="GtkGrid" id="close_by_rules_multi_grid1">
-                        <property name="margin-top">12</property>
-                        <property name="margin-bottom">12</property>
-                        <property name="row-spacing">6</property>
-                        <property name="column-spacing">32</property>
-                        <child>
-                          <object class="GtkLabel" id="close_by_rules_multi_label">
-                            <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">Close by rules</property>
-                            <property name="use-markup">1</property>
-                            <property name="xalign">0</property>
-                            <layout>
-                              <property name="column">0</property>
-                              <property name="row">0</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkSwitch" id="close_by_rules_switch">
-                            <property name="focusable">1</property>
-                            <property name="halign">end</property>
-                            <property name="valign">center</property>
-                            <layout>
-                              <property name="column">1</property>
-                              <property name="row">0</property>
-                              <property name="row-span">2</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkLabel" id="close_by_rules_multi_label_description">
-                            <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">To make this feature work, see: &lt;a href='https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work'&gt;How to make `Close by rules` work&lt;/a&gt;</property>
-                            <property name="wrap">True</property>
-                            <property name="use-markup">1</property>
-                            <property name="xalign">0</property>
-                            <style>
-                              <class name="dim-label"/>
-                            </style>
-                            <layout>
-                              <property name="column">0</property>
-                              <property name="row">1</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <placeholder/>
-                        </child>
-                      </object>
-                    </property>
-                  </object>
-                </child>
-              </object>
-            </child>
-            <child>
-              <object class="GtkBox">
+              <object class="GtkBox" id="close_windows_box">
                 <property name="orientation">vertical</property>
                 <child>
-                  <object class="GtkListBox" id="close_by_rules_applications_list_box">
-                    <property name="hexpand">True</property>
-                    <property name="vexpand">True</property>
-                    <property name="show-separators">True</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkListBox" id="close_by_rules_keywords_list_box">
-                    <property name="hexpand">True</property>
-                    <property name="vexpand">True</property>
-                    <property name="show-separators">True</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkListBox" id="close_windows_whitelist_listbox">
-                    <property name="hexpand">True</property>
-                    <property name="vexpand">True</property>
-                    <property name="show-separators">True</property>
-                    <child>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </child>
-          </object>
-        </property>
-        <property name="tab">
-          <object class="GtkLabel">
-            <property name="label" translatable="yes">Close windows</property>
-          </object>
-        </property>
-      </object>
-    </child>
-    <child>
-      <object class="GtkNotebookPage">
-        <property name="position">1</property>
-        <property name="child">
-          <object class="GtkBox">
-            <property name="orientation">vertical</property>
-            <child>
-              <object class="GtkFrame" id="save_session_notification_frame">
-                <property name="margin-top">30</property>
-                <property name="child">
                   <object class="GtkListBox">
                     <child>
-                      <object class="GtkListBoxRow">
+                      <object class="GtkListBoxRow" id="auto_close_session_multi_row">
                         <property name="focusable">1</property>
                         <property name="child">
-                          <object class="GtkGrid">
-                            <property name="margin-bottom">12</property>
-                            <property name="row-spacing">6</property>
-                            <property name="column-spacing">32</property>
-                            <child>
-                              <object class="GtkLabel" id="save_session_notification_label">
-                                <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Session is saved notification</property>
-                                <property name="use-markup">1</property>
-                                <property name="xalign">0</property>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">0</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkSwitch" id="save_session_notification_switch">
-                                <property name="focusable">1</property>
-                                <property name="active">1</property>
-                                <property name="halign">end</property>
-                                <property name="valign">center</property>
-                                <property name="hexpand">1</property>
-                                <layout>
-                                  <property name="column">1</property>
-                                  <property name="row">0</property>
-                                  <property name="row-span">2</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkLabel">
-                                <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Show a notification when users click buttons on the popup menu to save a session.</property>
-                                <property name="wrap">True</property>
-                                <property name="use-markup">1</property>
-                                <property name="xalign">0</property>
-                                <style>
-                                  <class name="dim-label"/>
-                                </style>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">1</property>
-                                </layout>
-                              </object>
-                            </child>
-                          </object>
-                        </property>
-                      </object>
-                    </child>
-                  </object>
-                </property>
-              </object>
-            </child>
-          </object>
-        </property>
-        <property name="tab">
-          <object class="GtkLabel">
-            <property name="label" translatable="yes">Save windows</property>
-          </object>
-        </property>
-      </object>
-    </child>
-    <child>
-      <object class="GtkNotebookPage">
-        <property name="position">2</property>
-        <property name="child">
-          <object class="GtkBox">
-            <property name="margin-top">30</property>
-            <property name="orientation">vertical</property>
-            <child>
-              <object class="GtkFrame" id="restore_previous_frame">
-                <property name="child">
-                  <object class="GtkListBox">
-                    <child>
-                      <object class="GtkListBoxRow" id="restore_previous_multi_row">
-                        <property name="focusable">1</property>
-                        <property name="child">
-                          <object class="GtkGrid">
+                          <object class="GtkGrid" id="auto_close_session_multi_grid1">
                             <property name="margin-top">12</property>
+                            <property name="margin-bottom">12</property>
                             <property name="row-spacing">6</property>
                             <property name="column-spacing">32</property>
-                            <property name="margin-top">12</property><child>
-                              <object class="GtkLabel">
+                            <child>
+                              <object class="GtkLabel" id="auto_close_session_multi_label">
                                 <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Restore previous apps and windows at startup</property>
+                                <property name="label" translatable="yes">Auto close session</property>
                                 <property name="use-markup">1</property>
                                 <property name="xalign">0</property>
                                 <layout>
@@ -293,7 +62,7 @@
                               </object>
                             </child>
                             <child>
-                              <object class="GtkSwitch" id="restore_previous_switch">
+                              <object class="GtkSwitch" id="auto_close_session_switch">
                                 <property name="focusable">1</property>
                                 <property name="halign">end</property>
                                 <property name="valign">center</property>
@@ -305,9 +74,9 @@
                               </object>
                             </child>
                             <child>
-                              <object class="GtkLabel">
+                              <object class="GtkLabel" id="auto_close_session_multi_label_description">
                                 <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Install ~/.config/autostart/_awsm-restore-previous-session.desktop if enabled</property>
+                                <property name="label" translatable="yes">Enable to close running apps and windows while Logout, Reboot and Shutdown via endSessionDialog.</property>
                                 <property name="wrap">True</property>
                                 <property name="use-markup">1</property>
                                 <property name="xalign">0</property>
@@ -320,22 +89,26 @@
                                 </layout>
                               </object>
                             </child>
+                            <child>
+                              <placeholder/>
+                            </child>
                           </object>
                         </property>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkListBoxRow">
+                      <object class="GtkListBoxRow" id="close_by_rules_multi_row">
                         <property name="focusable">1</property>
                         <property name="child">
-                          <object class="GtkGrid" id="restore_previous_delay_multi_grid">
+                          <object class="GtkGrid" id="close_by_rules_multi_grid1">
+                            <property name="margin-top">12</property>
                             <property name="margin-bottom">12</property>
                             <property name="row-spacing">6</property>
                             <property name="column-spacing">32</property>
                             <child>
-                              <object class="GtkLabel" id="restore_previous_delay_multi_label">
+                              <object class="GtkLabel" id="close_by_rules_multi_label">
                                 <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Restore delay([0, 3600]s)</property>
+                                <property name="label" translatable="yes">Close by rules</property>
                                 <property name="use-markup">1</property>
                                 <property name="xalign">0</property>
                                 <layout>
@@ -345,12 +118,9 @@
                               </object>
                             </child>
                             <child>
-                              <object class="GtkSpinButton" id="restore_previous_delay_spinbutton">
+                              <object class="GtkSwitch" id="close_by_rules_switch">
                                 <property name="focusable">1</property>
-                                <property name="text" translatable="yes">10</property>
-                                <property name="adjustment">restore_previous_delay_adjustment</property>
-                                <property name="numeric">1</property>
-                                <property name="value">10</property>
+                                <property name="halign">end</property>
                                 <property name="valign">center</property>
                                 <layout>
                                   <property name="column">1</property>
@@ -360,9 +130,9 @@
                               </object>
                             </child>
                             <child>
-                              <object class="GtkLabel">
+                              <object class="GtkLabel" id="close_by_rules_multi_label_description">
                                 <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">5 by default.</property>
+                                <property name="label" translatable="yes">To make this feature work, see: &lt;a href='https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work'&gt;How to make `Close by rules` work&lt;/a&gt;</property>
                                 <property name="wrap">True</property>
                                 <property name="use-markup">1</property>
                                 <property name="xalign">0</property>
@@ -375,30 +145,73 @@
                                 </layout>
                               </object>
                             </child>
+                            <child>
+                              <placeholder/>
+                            </child>
                           </object>
                         </property>
                       </object>
                     </child>
                   </object>
-                </property>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <child>
+                      <object class="GtkListBox" id="close_by_rules_applications_list_box">
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="show-separators">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkListBox" id="close_by_rules_keywords_list_box">
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="show-separators">True</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkListBox" id="close_windows_whitelist_listbox">
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="show-separators">True</property>
+                        <child>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
               </object>
             </child>
-            <child>
-              <object class="GtkFrame" id="restore_window_frame">
-                <property name="margin-top">30</property>
-                <property name="child">
-                  <object class="GtkListBoxRow" id="restore_at_startup_multi_row">
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="AdwPreferencesPage" id="save_windows_page">
+    <property name="use_underline">true</property>
+    <property name="title" translatable="yes">Save windows</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkFrame" id="save_session_notification_frame">
+            <property name="margin-top">30</property>
+            <property name="child">
+              <object class="GtkListBox">
+                <child>
+                  <object class="GtkListBoxRow">
                     <property name="focusable">1</property>
                     <property name="child">
-                      <object class="GtkGrid" id="restore_at_startup_multi_grid">
-                        <property name="margin-top">12</property>
+                      <object class="GtkGrid">
                         <property name="margin-bottom">12</property>
                         <property name="row-spacing">6</property>
                         <property name="column-spacing">32</property>
                         <child>
-                          <object class="GtkLabel" id="restore_at_startup_multi_label">
+                          <object class="GtkLabel" id="save_session_notification_label">
                             <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">Restore selected session at startup</property>
+                            <property name="label" translatable="yes">Session is saved notification</property>
                             <property name="use-markup">1</property>
                             <property name="xalign">0</property>
                             <layout>
@@ -408,10 +221,12 @@
                           </object>
                         </child>
                         <child>
-                          <object class="GtkSwitch" id="restore_at_startup_switch">
+                          <object class="GtkSwitch" id="save_session_notification_switch">
                             <property name="focusable">1</property>
+                            <property name="active">1</property>
                             <property name="halign">end</property>
                             <property name="valign">center</property>
+                            <property name="hexpand">1</property>
                             <layout>
                               <property name="column">1</property>
                               <property name="row">0</property>
@@ -422,7 +237,7 @@
                         <child>
                           <object class="GtkLabel">
                             <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">Install ~/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop if enabled</property>
+                            <property name="label" translatable="yes">Show a notification when users click buttons on the popup menu to save a session.</property>
                             <property name="wrap">True</property>
                             <property name="use-markup">1</property>
                             <property name="xalign">0</property>
@@ -435,430 +250,614 @@
                             </layout>
                           </object>
                         </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="AdwPreferencesPage" id="restore_sessions_page">
+    <property name="use_underline">true</property>
+    <property name="title" translatable="yes">Restore sessions</property>
+    <child>
+      <object class="GtkScrolledWindow">
+        <property name="hscrollbar_policy">never</property>
+        <child>
+          <object class="GtkViewport">
+            <property name="focusable">False</property>
+            <property name="vexpand">True</property>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-top">30</property>
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkFrame" id="restore_previous_frame">
+                    <property name="child">
+                      <object class="GtkListBox">
                         <child>
-                          <object class="GtkLabel" id="restore_at_startup_without_asking_multi_label">
+                          <object class="GtkListBoxRow" id="restore_previous_multi_row">
+                            <property name="focusable">1</property>
+                            <property name="child">
+                              <object class="GtkGrid">
+                                <property name="margin-top">12</property>
+                                <property name="row-spacing">6</property>
+                                <property name="column-spacing">32</property>
+                                <property name="margin-top">12</property><child>
+                                  <object class="GtkLabel">
+                                    <property name="hexpand">1</property>
+                                    <property name="label" translatable="yes">Restore previous apps and windows at startup</property>
+                                    <property name="use-markup">1</property>
+                                    <property name="xalign">0</property>
+                                    <layout>
+                                      <property name="column">0</property>
+                                      <property name="row">0</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch" id="restore_previous_switch">
+                                    <property name="focusable">1</property>
+                                    <property name="halign">end</property>
+                                    <property name="valign">center</property>
+                                    <layout>
+                                      <property name="column">1</property>
+                                      <property name="row">0</property>
+                                      <property name="row-span">2</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="hexpand">1</property>
+                                    <property name="label" translatable="yes">Install ~/.config/autostart/_awsm-restore-previous-session.desktop if enabled</property>
+                                    <property name="wrap">True</property>
+                                    <property name="use-markup">1</property>
+                                    <property name="xalign">0</property>
+                                    <style>
+                                      <class name="dim-label"/>
+                                    </style>
+                                    <layout>
+                                      <property name="column">0</property>
+                                      <property name="row">1</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkListBoxRow">
+                            <property name="focusable">1</property>
+                            <property name="child">
+                              <object class="GtkGrid" id="restore_previous_delay_multi_grid">
+                                <property name="margin-bottom">12</property>
+                                <property name="row-spacing">6</property>
+                                <property name="column-spacing">32</property>
+                                <child>
+                                  <object class="GtkLabel" id="restore_previous_delay_multi_label">
+                                    <property name="hexpand">1</property>
+                                    <property name="label" translatable="yes">Restore delay([0, 3600]s)</property>
+                                    <property name="use-markup">1</property>
+                                    <property name="xalign">0</property>
+                                    <layout>
+                                      <property name="column">0</property>
+                                      <property name="row">0</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSpinButton" id="restore_previous_delay_spinbutton">
+                                    <property name="focusable">1</property>
+                                    <property name="text" translatable="yes">10</property>
+                                    <property name="adjustment">restore_previous_delay_adjustment</property>
+                                    <property name="numeric">1</property>
+                                    <property name="value">10</property>
+                                    <property name="valign">center</property>
+                                    <layout>
+                                      <property name="column">1</property>
+                                      <property name="row">0</property>
+                                      <property name="row-span">2</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="hexpand">1</property>
+                                    <property name="label" translatable="yes">5 by default.</property>
+                                    <property name="wrap">True</property>
+                                    <property name="use-markup">1</property>
+                                    <property name="xalign">0</property>
+                                    <style>
+                                      <class name="dim-label"/>
+                                    </style>
+                                    <layout>
+                                      <property name="column">0</property>
+                                      <property name="row">1</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkFrame" id="restore_window_frame">
+                    <property name="margin-top">30</property>
+                    <property name="child">
+                      <object class="GtkListBoxRow" id="restore_at_startup_multi_row">
+                        <property name="focusable">1</property>
+                        <property name="child">
+                          <object class="GtkGrid" id="restore_at_startup_multi_grid">
+                            <property name="margin-top">12</property>
+                            <property name="margin-bottom">12</property>
+                            <property name="row-spacing">6</property>
+                            <property name="column-spacing">32</property>
+                            <child>
+                              <object class="GtkLabel" id="restore_at_startup_multi_label">
+                                <property name="hexpand">1</property>
+                                <property name="label" translatable="yes">Restore selected session at startup</property>
+                                <property name="use-markup">1</property>
+                                <property name="xalign">0</property>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">0</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkSwitch" id="restore_at_startup_switch">
+                                <property name="focusable">1</property>
+                                <property name="halign">end</property>
+                                <property name="valign">center</property>
+                                <layout>
+                                  <property name="column">1</property>
+                                  <property name="row">0</property>
+                                  <property name="row-span">2</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="hexpand">1</property>
+                                <property name="label" translatable="yes">Install ~/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop if enabled</property>
+                                <property name="wrap">True</property>
+                                <property name="use-markup">1</property>
+                                <property name="xalign">0</property>
+                                <style>
+                                  <class name="dim-label"/>
+                                </style>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">1</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="restore_at_startup_without_asking_multi_label">
+                                <property name="hexpand">1</property>
+                                <property name="label" translatable="yes">Restore at startup without asking</property>
+                                <property name="use-markup">1</property>
+                                <property name="xalign">0</property>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">2</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkSwitch" id="restore_at_startup_without_asking_switch">
+                                <property name="focusable">1</property>
+                                <property name="halign">end</property>
+                                <property name="valign">center</property>
+                                <layout>
+                                  <property name="column">1</property>
+                                  <property name="row">2</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel" id="timer_on_the_autostart_dialog_multi_label">
+                                <property name="hexpand">1</property>
+                                <property name="label" translatable="yes">Timer on the autostart dialog([0, 3600]s)</property>
+                                <property name="use-markup">1</property>
+                                <property name="xalign">0</property>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">3</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkSpinButton" id="timer_on_the_autostart_dialog_spinbutton">
+                                <property name="focusable">1</property>
+                                <property name="text" translatable="yes">10</property>
+                                <property name="adjustment">timer_on_the_autostart_dialog_adjustment</property>
+                                <property name="numeric">1</property>
+                                <property name="value">10</property>
+                                <layout>
+                                  <property name="column">1</property>
+                                  <property name="row">3</property>
+                                  <property name="row-span">2</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="hexpand">1</property>
+                                <property name="label" translatable="yes">10 by default.</property>
+                                <property name="wrap">True</property>
+                                <property name="use-markup">1</property>
+                                <property name="xalign">0</property>
+                                <style>
+                                  <class name="dim-label"/>
+                                </style>
+                                <layout>
+                                  <property name="column">0</property>
+                                  <property name="row">4</property>
+                                </layout>
+                              </object>
+                            </child>
+                          </object>
+                        </property>
+                      </object>
+                    </property>
+                    <child type="label_item">
+                      <placeholder/>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkFrame" id="restore_session_interval_frame">
+                    <property name="margin-top">30</property>
+                    <property name="child">
+                      <object class="GtkListBox">
+                        <child>
+                          <object class="GtkListBoxRow">
+                            <property name="focusable">1</property>
+                            <property name="child">
+                              <object class="GtkGrid">
+                                <property name="margin-top">12</property>
+                                <property name="row-spacing">6</property>
+                                <property name="column-spacing">32</property>
+                                <child>
+                                  <object class="GtkLabel" id="restore_session_interval_label">
+                                    <property name="hexpand">1</property>
+                                    <property name="label" translatable="yes">Restore applications interval([0, 300000]ms)</property>
+                                    <property name="use-markup">1</property>
+                                    <property name="xalign">0</property>
+                                    <layout>
+                                      <property name="column">0</property>
+                                      <property name="row">0</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSpinButton" id="restore_session_interval_spinbutton">
+                                    <property name="focusable">1</property>
+                                    <property name="text" translatable="yes">10</property>
+                                    <property name="adjustment">restore_session_interval_spinbutton_adjustment</property>
+                                    <property name="numeric">1</property>
+                                    <property name="value">0</property>
+                                    <property name="valign">center</property>
+                                    <layout>
+                                      <property name="column">1</property>
+                                      <property name="row">0</property>
+                                      <property name="row-span">2</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="restore_session_interval_label_description">
+                                    <property name="hexpand">1</property>
+                                    <property name="label" translatable="yes">0 by default. There's no need to set this option normally, unless the process of restoring session is too fast to freeze the system, for example.</property>
+                                    <property name="wrap">True</property>
+                                    <property name="use-markup">1</property>
+                                    <property name="xalign">0</property>
+                                    <style>
+                                      <class name="dim-label"/>
+                                    </style>
+                                    <layout>
+                                      <property name="column">0</property>
+                                      <property name="row">1</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkListBoxRow">
+                            <property name="focusable">1</property>
+                            <property name="child">
+                              <object class="GtkGrid">
+                                <property name="margin-bottom">12</property>
+                                <property name="row-spacing">6</property>
+                                <property name="column-spacing">32</property>
+                                <child>
+                                  <object class="GtkLabel" id="autostart_delay_multi_label">
+                                    <property name="hexpand">1</property>
+                                    <property name="label" translatable="yes">Autostart delay([0, 3600]s)</property>
+                                    <property name="use-markup">1</property>
+                                    <property name="xalign">0</property>
+                                    <layout>
+                                      <property name="column">0</property>
+                                      <property name="row">0</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSpinButton" id="autostart_delay_spinbutton">
+                                    <property name="focusable">1</property>
+                                    <property name="text" translatable="yes">20</property>
+                                    <property name="adjustment">autostart_delay_adjustment</property>
+                                    <property name="numeric">1</property>
+                                    <property name="value">20</property>
+                                    <property name="valign">center</property>
+                                    <layout>
+                                      <property name="column">1</property>
+                                      <property name="row">0</property>
+                                      <property name="row-span">2</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel" id="autostart_delay_multi_label_description">
+                                    <property name="hexpand">1</property>
+                                    <property name="label" translatable="yes">5 by default. Delay before restoring session at startup or the previous session. If the delay is too short, the computer might freeze.</property>
+                                    <property name="wrap">True</property>
+                                    <property name="use-markup">1</property>
+                                    <property name="xalign">0</property>
+                                    <style>
+                                      <class name="dim-label"/>
+                                    </style>
+                                    <layout>
+                                      <property name="column">0</property>
+                                      <property name="row">1</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkFrame" id="restore_window_tiling_frame">
+                    <property name="margin-top">30</property>
+                    <property name="child">
+                      <object class="GtkListBox">
+                        <child>
+                          <object class="GtkListBoxRow">
+                            <property name="focusable">1</property>
+                            <property name="child">
+                              <object class="GtkBox">
+                                <child>
+                                  <object class="GtkLabel" id="restore_window_tiling_label">
+                                    <property name="label" translatable="yes">Restore window tiling</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch" id="restore_window_tiling_switch">
+                                    <property name="focusable">1</property>
+                                    <property name="active">1</property>
+                                    <property name="halign">end</property>
+                                    <property name="valign">center</property>
+                                    <property name="hexpand">1</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkListBoxRow">
+                            <property name="focusable">1</property>
+                            <property name="child">
+                              <object class="GtkBox">
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="label" translatable="yes">Raise windows together</property>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch" id="raise_windows_together_switch">
+                                    <property name="focusable">1</property>
+                                    <property name="active">1</property>
+                                    <property name="halign">end</property>
+                                    <property name="valign">center</property>
+                                    <property name="hexpand">1</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkFrame" id="stash_and_restore_states_frame">
+                    <property name="margin-top">30</property>
+                    <property name="child">
+                      <object class="GtkListBox">
+                        <child>
+                          <object class="GtkListBoxRow">
+                            <property name="focusable">1</property>
+                            <property name="child">
+                              <object class="GtkGrid">
+                                <property name="margin-bottom">12</property>
+                                <property name="row-spacing">6</property>
+                                <property name="column-spacing">32</property>
+                                <child>
+                                  <object class="GtkLabel" id="stash_and_restore_states_label">
+                                    <property name="hexpand">1</property>
+                                    <property name="label" translatable="yes">Restore windows states after Gnome Shell restarts</property>
+                                    <property name="use-markup">1</property>
+                                    <property name="xalign">0</property>
+                                    <layout>
+                                      <property name="column">0</property>
+                                      <property name="row">0</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkSwitch" id="stash_and_restore_states_switch">
+                                    <property name="focusable">1</property>
+                                    <property name="active">1</property>
+                                    <property name="halign">end</property>
+                                    <property name="valign">center</property>
+                                    <property name="hexpand">1</property>
+                                    <layout>
+                                      <property name="column">1</property>
+                                      <property name="row">0</property>
+                                      <property name="row-span">2</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkLabel">
+                                    <property name="hexpand">1</property>
+                                    <property name="label" translatable="yes">Only enabled on X11, since Wayand doesn't support restart Gnome Shell via `Alt+F2 then type r` or `killall -3 gnome-shell`.</property>
+                                    <property name="wrap">True</property>
+                                    <property name="use-markup">1</property>
+                                    <property name="xalign">0</property>
+                                    <property name="valign">center</property>
+                                    <style>
+                                      <class name="dim-label"/>
+                                    </style>
+                                    <layout>
+                                      <property name="column">0</property>
+                                      <property name="row">1</property>
+                                    </layout>
+                                  </object>
+                                </child>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="AdwPreferencesPage" id="general_page">
+    <property name="use_underline">true</property>
+    <property name="title" translatable="yes">General</property>
+    <child>
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkFrame">
+            <property name="margin-top">30</property>
+            <property name="margin-bottom">12</property>
+            <child>
+              <object class="GtkListBox">
+                <property name="selection-mode">none</property>
+                <child>
+                  <object class="GtkListBoxRow">
+                    <property name="focusable">1</property>
+                    <property name="child">
+                      <object class="GtkBox">
+                        <child>
+                          <object class="GtkLabel">
                             <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">Restore at startup without asking</property>
+                            <property name="label" translatable="yes">Show indicator on the panel</property>
                             <property name="use-markup">1</property>
                             <property name="xalign">0</property>
                             <layout>
                               <property name="column">0</property>
-                              <property name="row">2</property>
+                              <property name="row">0</property>
                             </layout>
                           </object>
                         </child>
                         <child>
-                          <object class="GtkSwitch" id="restore_at_startup_without_asking_switch">
+                          <object class="GtkSwitch" id="show_indicator_switch">
                             <property name="focusable">1</property>
                             <property name="halign">end</property>
                             <property name="valign">center</property>
                             <layout>
                               <property name="column">1</property>
-                              <property name="row">2</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkLabel" id="timer_on_the_autostart_dialog_multi_label">
-                            <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">Timer on the autostart dialog([0, 3600]s)</property>
-                            <property name="use-markup">1</property>
-                            <property name="xalign">0</property>
-                            <layout>
-                              <property name="column">0</property>
-                              <property name="row">3</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkSpinButton" id="timer_on_the_autostart_dialog_spinbutton">
-                            <property name="focusable">1</property>
-                            <property name="text" translatable="yes">10</property>
-                            <property name="adjustment">timer_on_the_autostart_dialog_adjustment</property>
-                            <property name="numeric">1</property>
-                            <property name="value">10</property>
-                            <layout>
-                              <property name="column">1</property>
-                              <property name="row">3</property>
-                              <property name="row-span">2</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="GtkLabel">
-                            <property name="hexpand">1</property>
-                            <property name="label" translatable="yes">10 by default.</property>
-                            <property name="wrap">True</property>
-                            <property name="use-markup">1</property>
-                            <property name="xalign">0</property>
-                            <style>
-                              <class name="dim-label"/>
-                            </style>
-                            <layout>
-                              <property name="column">0</property>
-                              <property name="row">4</property>
+                              <property name="row">0</property>
                             </layout>
                           </object>
                         </child>
                       </object>
                     </property>
                   </object>
-                </property>
-                <child type="label_item">
-                  <placeholder/>
                 </child>
               </object>
             </child>
-            <child>
-              <object class="GtkFrame" id="restore_session_interval_frame">
-                <property name="margin-top">30</property>
-                <property name="child">
-                  <object class="GtkListBox">
-                    <child>
-                      <object class="GtkListBoxRow">
-                        <property name="focusable">1</property>
-                        <property name="child">
-                          <object class="GtkGrid">
-                            <property name="margin-top">12</property>
-                            <property name="row-spacing">6</property>
-                            <property name="column-spacing">32</property>
-                            <child>
-                              <object class="GtkLabel" id="restore_session_interval_label">
-                                <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Restore applications interval([0, 300000]ms)</property>
-                                <property name="use-markup">1</property>
-                                <property name="xalign">0</property>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">0</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkSpinButton" id="restore_session_interval_spinbutton">
-                                <property name="focusable">1</property>
-                                <property name="text" translatable="yes">10</property>
-                                <property name="adjustment">restore_session_interval_spinbutton_adjustment</property>
-                                <property name="numeric">1</property>
-                                <property name="value">0</property>
-                                <property name="valign">center</property>
-                                <layout>
-                                  <property name="column">1</property>
-                                  <property name="row">0</property>
-                                  <property name="row-span">2</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkLabel" id="restore_session_interval_label_description">
-                                <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">0 by default. There's no need to set this option normally, unless the process of restoring session is too fast to freeze the system, for example.</property>
-                                <property name="wrap">True</property>
-                                <property name="use-markup">1</property>
-                                <property name="xalign">0</property>
-                                <style>
-                                  <class name="dim-label"/>
-                                </style>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">1</property>
-                                </layout>
-                              </object>
-                            </child>
-                          </object>
-                        </property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkListBoxRow">
-                        <property name="focusable">1</property>
-                        <property name="child">
-                          <object class="GtkGrid">
-                            <property name="margin-bottom">12</property>
-                            <property name="row-spacing">6</property>
-                            <property name="column-spacing">32</property>
-                            <child>
-                              <object class="GtkLabel" id="autostart_delay_multi_label">
-                                <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Autostart delay([0, 3600]s)</property>
-                                <property name="use-markup">1</property>
-                                <property name="xalign">0</property>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">0</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkSpinButton" id="autostart_delay_spinbutton">
-                                <property name="focusable">1</property>
-                                <property name="text" translatable="yes">20</property>
-                                <property name="adjustment">autostart_delay_adjustment</property>
-                                <property name="numeric">1</property>
-                                <property name="value">20</property>
-                                <property name="valign">center</property>
-                                <layout>
-                                  <property name="column">1</property>
-                                  <property name="row">0</property>
-                                  <property name="row-span">2</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkLabel" id="autostart_delay_multi_label_description">
-                                <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">5 by default. Delay before restoring session at startup or the previous session. If the delay is too short, the computer might freeze.</property>
-                                <property name="wrap">True</property>
-                                <property name="use-markup">1</property>
-                                <property name="xalign">0</property>
-                                <style>
-                                  <class name="dim-label"/>
-                                </style>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">1</property>
-                                </layout>
-                              </object>
-                            </child>
-                          </object>
-                        </property>
-                      </object>
-                    </child>
-                  </object>
-                </property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkFrame" id="restore_window_tiling_frame">
-                <property name="margin-top">30</property>
-                <property name="child">
-                  <object class="GtkListBox">
-                    <child>
-                      <object class="GtkListBoxRow">
-                        <property name="focusable">1</property>
-                        <property name="child">
-                          <object class="GtkBox">
-                            <child>
-                              <object class="GtkLabel" id="restore_window_tiling_label">
-                                <property name="label" translatable="yes">Restore window tiling</property>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkSwitch" id="restore_window_tiling_switch">
-                                <property name="focusable">1</property>
-                                <property name="active">1</property>
-                                <property name="halign">end</property>
-                                <property name="valign">center</property>
-                                <property name="hexpand">1</property>
-                              </object>
-                            </child>
-                          </object>
-                        </property>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkListBoxRow">
-                        <property name="focusable">1</property>
-                        <property name="child">
-                          <object class="GtkBox">
-                            <child>
-                              <object class="GtkLabel">
-                                <property name="label" translatable="yes">Raise windows together</property>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkSwitch" id="raise_windows_together_switch">
-                                <property name="focusable">1</property>
-                                <property name="active">1</property>
-                                <property name="halign">end</property>
-                                <property name="valign">center</property>
-                                <property name="hexpand">1</property>
-                              </object>
-                            </child>
-                          </object>
-                        </property>
-                      </object>
-                    </child>
-                  </object>
-                </property>
-              </object>
-            </child>
-            <child>
-              <object class="GtkFrame" id="stash_and_restore_states_frame">
-                <property name="margin-top">30</property>
-                <property name="child">
-                  <object class="GtkListBox">
-                    <child>
-                      <object class="GtkListBoxRow">
-                        <property name="focusable">1</property>
-                        <property name="child">
-                          <object class="GtkGrid">
-                            <property name="margin-bottom">12</property>
-                            <property name="row-spacing">6</property>
-                            <property name="column-spacing">32</property>
-                            <child>
-                              <object class="GtkLabel" id="stash_and_restore_states_label">
-                                <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Restore windows states after Gnome Shell restarts</property>
-                                <property name="use-markup">1</property>
-                                <property name="xalign">0</property>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">0</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkSwitch" id="stash_and_restore_states_switch">
-                                <property name="focusable">1</property>
-                                <property name="active">1</property>
-                                <property name="halign">end</property>
-                                <property name="valign">center</property>
-                                <property name="hexpand">1</property>
-                                <layout>
-                                  <property name="column">1</property>
-                                  <property name="row">0</property>
-                                  <property name="row-span">2</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkLabel">
-                                <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Only enabled on X11, since Wayand doesn't support restart Gnome Shell via `Alt+F2 then type r` or `killall -3 gnome-shell`.</property>
-                                <property name="wrap">True</property>
-                                <property name="use-markup">1</property>
-                                <property name="xalign">0</property>
-                                <property name="valign">center</property>
-                                <style>
-                                  <class name="dim-label"/>
-                                </style>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">1</property>
-                                </layout>
-                              </object>
-                            </child>
-                          </object>
-                        </property>
-                      </object>
-                    </child>
-                  </object>
-                </property>
-              </object>
-            </child>
           </object>
-        </property>
-        <property name="tab">
-          <object class="GtkLabel">
-            <property name="label" translatable="yes">Restore sessions</property>
-          </object>
-        </property>
-      </object>
-    </child>
-    <child>
-      <object class="GtkNotebookPage">
-        <property name="child">
-          <object class="GtkBox">
-            <property name="orientation">vertical</property>
-            <child>
-              <object class="GtkFrame">
-                <property name="margin-top">30</property>
-                <property name="margin-bottom">12</property>
+        </child>
+        <child>
+          <object class="GtkFrame" id="debugging_mode_frame">
+            <property name="child">
+              <object class="GtkListBox" id="debugging_mode_listbox">
+                <property name="selection-mode">none</property>
                 <child>
-                  <object class="GtkListBox">
-                    <property name="selection-mode">none</property>
-                    <child>
-                      <object class="GtkListBoxRow">
-                        <property name="focusable">1</property>
-                        <property name="child">
-                          <object class="GtkBox">
-                            <child>
-                              <object class="GtkLabel">
-                                <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Show indicator on the panel</property>
-                                <property name="use-markup">1</property>
-                                <property name="xalign">0</property>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">0</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkSwitch" id="show_indicator_switch">
-                                <property name="focusable">1</property>
-                                <property name="halign">end</property>
-                                <property name="valign">center</property>
-                                <layout>
-                                  <property name="column">1</property>
-                                  <property name="row">0</property>
-                                </layout>
-                              </object>
-                            </child>
+                  <object class="GtkListBoxRow" id="debugging_mode_multi_row">
+                    <property name="focusable">1</property>
+                    <property name="child">
+                      <object class="GtkGrid" id="debugging_mode_multi_grid">
+                        <property name="margin-top">12</property>
+                        <property name="margin-bottom">12</property>
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">32</property>
+                        <child>
+                          <object class="GtkLabel" id="debugging_mode_label">
+                            <property name="hexpand">1</property>
+                            <property name="label" translatable="yes">Debugging mode</property>
+                            <property name="use-markup">1</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">0</property>
+                            </layout>
                           </object>
-                        </property>
+                        </child>
+                        <child>
+                          <object class="GtkSwitch" id="debugging_mode_switch">
+                            <property name="focusable">1</property>
+                            <property name="halign">end</property>
+                            <property name="valign">center</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">0</property>
+                            </layout>
+                          </object>
+                        </child>
                       </object>
-                    </child>
+                    </property>
                   </object>
                 </child>
               </object>
-            </child>
-            <child>
-              <object class="GtkFrame" id="debugging_mode_frame">
-                <property name="child">
-                  <object class="GtkListBox" id="debugging_mode_listbox">
-                    <property name="selection-mode">none</property>
-                    <child>
-                      <object class="GtkListBoxRow" id="debugging_mode_multi_row">
-                        <property name="focusable">1</property>
-                        <property name="child">
-                          <object class="GtkGrid" id="debugging_mode_multi_grid">
-                            <property name="margin-top">12</property>
-                            <property name="margin-bottom">12</property>
-                            <property name="row-spacing">6</property>
-                            <property name="column-spacing">32</property>
-                            <child>
-                              <object class="GtkLabel" id="debugging_mode_label">
-                                <property name="hexpand">1</property>
-                                <property name="label" translatable="yes">Debugging mode</property>
-                                <property name="use-markup">1</property>
-                                <property name="xalign">0</property>
-                                <layout>
-                                  <property name="column">0</property>
-                                  <property name="row">0</property>
-                                </layout>
-                              </object>
-                            </child>
-                            <child>
-                              <object class="GtkSwitch" id="debugging_mode_switch">
-                                <property name="focusable">1</property>
-                                <property name="halign">end</property>
-                                <property name="valign">center</property>
-                                <layout>
-                                  <property name="column">1</property>
-                                  <property name="row">0</property>
-                                </layout>
-                              </object>
-                            </child>
-                          </object>
-                        </property>
-                      </object>
-                    </child>
-                  </object>
-                </property>
-                <child type="label_item">
-                  <placeholder/>
-                </child>
-              </object>
+            </property>
+            <child type="label_item">
+              <placeholder/>
             </child>
           </object>
-        </property>
-        <property name="tab">
-          <object class="GtkLabel">
-            <property name="label" translatable="yes">General</property>
-          </object>
-        </property>
+        </child>
       </object>
     </child>
   </object>

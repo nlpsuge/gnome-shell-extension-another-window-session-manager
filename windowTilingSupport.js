@@ -1,16 +1,15 @@
 'use strict';
 
-const { Shell, Meta, Gio, GObject } = imports.gi;
+import Shell from 'gi://Shell';
+import Meta from 'gi://Meta';
+import GObject from 'gi://GObject';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-const Log = Me.imports.utils.log;
-const PrefsUtils = Me.imports.utils.prefsUtils;
+import * as Log from './utils/log.js';
+import * as PrefsUtils from './utils/prefsUtils.js';
 
 
 // Singleton class, all methods are `static`
-var WindowTilingSupport = class {
+export class WindowTilingSupport {
 
     static initialize() {
         this._log = new Log.Log();
@@ -204,7 +203,7 @@ var WindowTilingSupport = class {
 
 }
 
-var WindowTilingSupportSignals = GObject.registerClass({
+const WindowTilingSupportSignals = GObject.registerClass({
     Signals: {
         'window-tiled': {
             param_types: [Meta.Window.$gtype, Meta.Window.$gtype],

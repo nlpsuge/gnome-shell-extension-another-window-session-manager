@@ -1,42 +1,33 @@
 'use strict';
 
-const { Shell, Meta, Gio, GLib } = imports.gi;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
+import Meta from 'gi://Meta';
 
-const ByteArray = imports.byteArray;
+import * as SystemActions from 'resource:///org/gnome/shell/misc/systemActions.js';
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-const LoginManager = imports.misc.loginManager;
-const SystemActions = imports.misc.systemActions;
+import * as SaveSession from './saveSession.js';
+import * as RestoreSession from './restoreSession.js';
+import * as MoveSession from './moveSession.js';
 
-const EndSessionDialog = imports.ui.endSessionDialog;
+import * as Autoclose from './ui/autoclose.js';
+import * as UiHelper from './ui/uiHelper.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as Log from './utils/log.js';
+import * as PrefsUtils from './utils/prefsUtils.js';
+import * as FileUtils from './utils/fileUtils.js';
+import * as MetaWindowUtils from './utils/metaWindowUtils.js';
+import * as Function from './utils/function.js';
+import * as GnomeVersion from './utils/gnomeVersion.js';
 
-const SaveSession = Me.imports.saveSession;
-const CloseSession = Me.imports.closeSession;
-const RestoreSession = Me.imports.restoreSession;
-const MoveSession = Me.imports.moveSession;
-
-const Autoclose = Me.imports.ui.autoclose;
-const UiHelper = Me.imports.ui.uiHelper;
-
-const Log = Me.imports.utils.log;
-const PrefsUtils = Me.imports.utils.prefsUtils;
-const FileUtils = Me.imports.utils.fileUtils;
-const MetaWindowUtils = Me.imports.utils.metaWindowUtils;
-const Function = Me.imports.utils.function;
-const GnomeVersion = Me.imports.utils.gnomeVersion;
-
-const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
-
-const EndSessionDialogIface = ByteArray.toString(
-    Me.dir.get_child('dbus-interfaces').get_child('org.gnome.SessionManager.EndSessionDialog.xml').load_contents(null)[1]);
-const EndSessionDialogProxy = Gio.DBusProxy.makeProxyWrapper(EndSessionDialogIface);
+import {WindowTilingSupport} from './windowTilingSupport.js';
 
 
 let _meta_restart = null;
 
-var OpenWindowsTracker = class {
+export const OpenWindowsTracker = class {
 
     constructor() {
 
@@ -170,7 +161,7 @@ var OpenWindowsTracker = class {
 
         this._overrideSystemActionsPrototypeMap = new Map();
         // TODO Users can click the cancel button of EndSessionDialog, and autoclose.js could also call EndSessionDialog.cancel() function，
-        // I don't know how to distinguish them, therefor set `Autoclose.sessionClosedByUser` to false in cancelled signal will not work.
+        // I don't know how to distinguish them, therefor set `Autoclose.autocloseObject.sessionClosedByUser` to false in cancelled signal will not work.
         // this._overrideSystemActions();
     }
 
@@ -179,10 +170,10 @@ var OpenWindowsTracker = class {
      * they will be closed and their session configs that is used to restore its states at startup
      * will also be removed.
      *
-     * We prevent that happening here by overriding some functions to set the flag `Autoclose.sessionClosedByUser`
+     * We prevent that happening here by overriding some functions to set the flag `Autoclose.autocloseObject.sessionClosedByUser`
      * to `true`, just before continuing to operate via DBus provided by gnome-session.
      * 
-     * `Autoclose.sessionClosedByUser` will be set to false while users close or cancel the EndSessionDialog.
+     * `Autoclose.autocloseObject.sessionClosedByUser` will be set to false while users close or cancel the EndSessionDialog.
      * 
      * see: https://bugzilla.gnome.org/show_bug.cgi?id=782786
      */
@@ -195,7 +186,7 @@ var OpenWindowsTracker = class {
             const originalFunc = SystemActions.SystemActions.prototype[funcName];
             this._overrideSystemActionsPrototypeMap.set(funcName, originalFunc);
             SystemActions.SystemActions.prototype[funcName] = function () {
-                Autoclose.sessionClosedByUser = true;
+                Autoclose.autocloseObject.sessionClosedByUser = true;
                 Function.callFunc(this, originalFunc);
             }
         });
@@ -300,14 +291,14 @@ var OpenWindowsTracker = class {
 
         this._allSavedWindowSessions.push(sessionContent);
 
-        // TODO It's no necessary to put sessions to `RestoreSession.restoringApps` any more, since this job has been done by `MoveSession.moveApps(sessions)`
+        // TODO It's no necessary to put sessions to `RestoreSession.restoreSessionObject.restoringApps` any more, since this job has been done by `MoveSession.moveApps(sessions)`
         const app = this._windowTracker.get_app_from_pid(sessionContent.pid);
         if (app && app.get_name() == sessionContent.app_name) {
-            const restoringShellAppData = RestoreSession.restoringApps.get(app);
+            const restoringShellAppData = RestoreSession.restoreSessionObject.restoringApps.get(app);
             if (restoringShellAppData) {
                 restoringShellAppData.saved_window_sessions.push(sessionContent);
             } else {
-                RestoreSession.restoringApps.set(app, {
+                RestoreSession.restoreSessionObject.restoringApps.set(app, {
                     saved_window_sessions: [sessionContent]
                 });
             }
@@ -407,7 +398,7 @@ var OpenWindowsTracker = class {
     }
 
     _cleanUpSessionFileByWindow(window, sessionDirectory, sessionName) {
-        if (!window || Autoclose.sessionClosedByUser || this._meta_is_restarting) return;
+        if (!window || Autoclose.autocloseObject.sessionClosedByUser || this._meta_is_restarting) return;
 
         const sessionFilePath = `${sessionDirectory}/${sessionName}`;
         if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) return;
@@ -447,7 +438,7 @@ var OpenWindowsTracker = class {
     }
 
     _cleanUpSessionFileByApp(app, appName, window, sessionDirectory) {
-        if (!app || Autoclose.sessionClosedByUser || this._meta_is_restarting) return;
+        if (!app || Autoclose.autocloseObject.sessionClosedByUser || this._meta_is_restarting) return;
 
         if (!GLib.file_test(sessionDirectory, GLib.FileTest.EXISTS)) return;
 
@@ -465,6 +456,11 @@ var OpenWindowsTracker = class {
     }
 
     _onNameAppearedGnomeShell() {
+        const extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
+        const EndSessionDialogIface = new TextDecoder().decode(
+            extensionObject.dir.get_child('dbus-interfaces').get_child('org.gnome.SessionManager.EndSessionDialog.xml').load_contents(null)[1]);
+        const EndSessionDialogProxy = Gio.DBusProxy.makeProxyWrapper(EndSessionDialogIface);
+
         this._endSessionProxy = new EndSessionDialogProxy(Gio.DBus.session,
             'org.gnome.Shell',
             '/org/gnome/SessionManager/EndSessionDialog',

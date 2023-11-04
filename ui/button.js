@@ -1,13 +1,13 @@
 'use strict';
 
-const { GObject, St, Clutter } = imports.gi;
+import GObject from 'gi://GObject';
+import St from 'gi://St';
+import Clutter from 'gi://Clutter';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as IconFinder from '../utils/iconFinder.js';
 
-const IconFinder = Me.imports.utils.iconFinder;
 
-var Button = GObject.registerClass(
+export const Button = GObject.registerClass(
 class Button extends GObject.Object {
 
     _init(properties) {

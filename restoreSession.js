@@ -1,25 +1,22 @@
 'use strict';
 
-const { Shell, Gio, GLib } = imports.gi;
-const Util = imports.misc.util;
+import Shell from 'gi://Shell';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
-const { ByteArray } = imports.byteArray;
+import * as FileUtils from './utils/fileUtils.js';
+import * as Log from './utils/log.js';
+import * as PrefsUtils from './utils/prefsUtils.js';
+import * as SubprocessUtils from './utils/subprocessUtils.js';
+import * as DateUtils from './utils/dateUtils.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
 
-const FileUtils = Me.imports.utils.fileUtils;
-const Log = Me.imports.utils.log;
-const PrefsUtils = Me.imports.utils.prefsUtils;
-const SubprocessUtils = Me.imports.utils.subprocessUtils;
-const DateUtils = Me.imports.utils.dateUtils;
+export const restoreSessionObject = {
+    // All launching apps by Shell.App#launch()
+    restoringApps: new Map()
+}
 
-const UiHelper = Me.imports.ui.uiHelper;
-
-// All launching apps by Shell.App#launch()
-var restoringApps = new Map();
-
-var RestoreSession = class {
+export const RestoreSession = class {
 
     constructor() {
         this._log = new Log.Log();
@@ -192,11 +189,11 @@ var RestoreSession = class {
                 let desktop_file_id = session_config_object.desktop_file_id;
                 const shell_app = desktop_file_id ? this._defaultAppSystem.lookup_app(desktop_file_id) : null;
                 if (shell_app) {
-                    const restoringShellAppData = restoringApps.get(shell_app);
+                    const restoringShellAppData = restoreSessionObject.restoringApps.get(shell_app);
                     if (restoringShellAppData) {
                         restoringShellAppData.saved_window_sessions.push(session_config_object);
                     } else {
-                        restoringApps.set(shell_app, {
+                        restoreSessionObject.restoringApps.set(shell_app, {
                             saved_window_sessions: [session_config_object]
                         });
                     }
@@ -232,11 +229,11 @@ var RestoreSession = class {
                             this._log.debug(`${app_name} might be running, preparing to restore window (${session_config_object.window_title}) states.`);
                             
                             // Here we use pid as the key, because the associated ShellApp might not be instantiated at this moment
-                            const restoringShellAppData = restoringApps.get(pid);
+                            const restoringShellAppData = restoreSessionObject.restoringApps.get(pid);
                             if (restoringShellAppData) {
                                 restoringShellAppData.saved_window_sessions.push(session_config_object);
                             } else {
-                                restoringApps.set(pid, {
+                                restoreSessionObject.restoringApps.set(pid, {
                                     saved_window_sessions: [session_config_object]
                                 });
                             }
@@ -258,11 +255,11 @@ var RestoreSession = class {
     
                                                 pid = Number(pid);
                                                 this._cmdAppIdMap.set(cmdString, pid);
-                                                const restoringShellAppData = restoringApps.get(pid);
+                                                const restoringShellAppData = restoreSessionObject.restoringApps.get(pid);
                                                 if (restoringShellAppData) {
                                                     restoringShellAppData.saved_window_sessions.push(session_config_object);
                                                 } else {
-                                                    restoringApps.set(pid, {
+                                                    restoreSessionObject.restoringApps.set(pid, {
                                                         saved_window_sessions: [session_config_object]
                                                     });
                                                 }
@@ -319,7 +316,7 @@ var RestoreSession = class {
         if (this._appIsRunning(shellApp)) {
             this._log.info(`${shellApp.get_name()} is running, skipping`);
             // Delete shellApp from restoringApps to prevent it move the same app when close and open it manually.
-            restoringApps.delete(shellApp);
+            restoreSessionObject.restoringApps.delete(shellApp);
             return [true, true];
         }
 
@@ -356,9 +353,9 @@ var RestoreSession = class {
     }
 
     destroy() {
-        if (restoringApps) {
-            restoringApps.clear();
-            restoringApps = null;
+        if (restoreSessionObject.restoringApps) {
+            restoreSessionObject.restoringApps.clear();
+            restoreSessionObject.restoringApps = null;
         }
 
         if (this._restoredApps) {

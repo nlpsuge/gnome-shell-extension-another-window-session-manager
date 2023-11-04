@@ -1,39 +1,39 @@
 'use strict';
 
-const { GObject, St, Clutter, GLib } = imports.gi;
+import GObject from 'gi://GObject';
+import St from 'gi://St';
+import GLib from 'gi://GLib';
+import Clutter from 'gi://Clutter';
 
-const Main = imports.ui.main;
-const PopupMenu = imports.ui.popupMenu;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as IconFinder from '../utils/iconFinder.js';
+import * as FileUtils from '../utils/fileUtils.js';
+import * as DateUtils from '../utils/dateUtils.js';
+import * as Tooltip from '../utils/tooltip.js';
+import * as GnomeVersion from '../utils/gnomeVersion.js';
+import * as Log from '../utils/log.js';
+import * as PrefsUtils from '../utils/prefsUtils.js';
 
-const IconFinder = Me.imports.utils.iconFinder;
-const FileUtils = Me.imports.utils.fileUtils;
-const DateUtils = Me.imports.utils.dateUtils;
-const Tooltip = Me.imports.utils.tooltip;
-const GnomeVersion = Me.imports.utils.gnomeVersion;
-const Log = Me.imports.utils.log;
+import * as SaveSession from '../saveSession.js';
+import * as RestoreSession from '../restoreSession.js';
+import * as MoveSession from '../moveSession.js';
+import * as CloseSession from '../closeSession.js';
 
-const SaveSession = Me.imports.saveSession;
-const RestoreSession = Me.imports.restoreSession;
-const MoveSession = Me.imports.moveSession;
-const CloseSession = Me.imports.closeSession;
+import {Button} from './button.js';
 
-const { Button } = Me.imports.ui.button;
-const Autoclose = Me.imports.ui.autoclose;
+import * as Autoclose from './autoclose.js';
 
-const PrefsUtils = Me.imports.utils.prefsUtils;
-const CommonError = Me.imports.utils.CommonError;
 
-var SessionItemButtons = GObject.registerClass(
+export const SessionItemButtons = GObject.registerClass(
 class SessionItemButtons extends GObject.Object {
 
     _init(sessionItem) {
         super._init();
 
         this._log = new Log.Log();
-        
+
         this.sessionItem = sessionItem;
 
         // TODO Nullify created object?
@@ -226,8 +226,8 @@ class SessionItemButtons extends GObject.Object {
     }
     
     _onClickRestore(button, event) {
-        Autoclose.sessionClosedByUser = false;
-        RestoreSession.restoringApps = new Map();
+        Autoclose.autocloseObject.sessionClosedByUser = false;
+        RestoreSession.restoreSessionObject.restoringApps = new Map();
         // Using _restoredApps to hold restored apps so we create new instance every time for now
         const _restoreSession = new RestoreSession.RestoreSession();
         _restoreSession.restoreSession(this.sessionItem._filename);

@@ -1,16 +1,15 @@
 'use strict';
 
-const { GObject, St, Clutter, Atk } = imports.gi;
+import GObject from 'gi://GObject';
+import St from 'gi://St';
+import Clutter from 'gi://Clutter';
 
-const PopupMenu = imports.ui.popupMenu;
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-const Tooltip = Me.imports.utils.tooltip;
+import * as Tooltip from '../utils/tooltip.js';
 
 
-var SearchSessionItem = GObject.registerClass(
+export const SearchSessionItem = GObject.registerClass(
     class SearchSessionItem extends PopupMenu.PopupBaseMenuItem {
 
         _init() {

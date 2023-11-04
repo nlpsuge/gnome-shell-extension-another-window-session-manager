@@ -1,21 +1,22 @@
 'use strict';
 
-const { Shell, Gio, GLib, Meta } = imports.gi;
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
+import Meta from 'gi://Meta';
 
-const Main = imports.ui.main;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as UiHelper from './ui/uiHelper.js';
 
-const UiHelper = Me.imports.ui.uiHelper;
+import * as FileUtils from './utils/fileUtils.js';
+import * as Log from './utils/log.js';
+import * as DateUtils from './utils/dateUtils.js';
 
-const FileUtils = Me.imports.utils.fileUtils;
-const Log = Me.imports.utils.log;
-const DateUtils = Me.imports.utils.dateUtils;
+import {WindowTilingSupport} from './windowTilingSupport.js';
 
-const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
 
-var MoveSession = class {
+export const MoveSession = class {
 
     constructor() {
         this._log = new Log.Log();

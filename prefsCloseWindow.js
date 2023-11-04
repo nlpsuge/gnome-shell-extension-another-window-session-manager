@@ -1,20 +1,21 @@
 'use strict';
 
-const { Gio, GLib, GObject, Gtk, Pango, Gdk } = imports.gi;
+import GObject from 'gi://GObject';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
+import Gtk from 'gi://Gtk';
+import Pango from 'gi://Pango';
+import Gdk from 'gi://Gdk';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as CloseWindowsRule from './model/closeWindowsRule.js';
 
-const CloseWindowsRule = Me.imports.model.closeWindowsRule;
+import * as PrefsUtils from './utils/prefsUtils.js';
+import * as Log from './utils/log.js';
+import * as IconFinder from './utils/iconFinder.js';
 
-const PrefsUtils = Me.imports.utils.prefsUtils;
-const Log = Me.imports.utils.log;
-const GnomeVersion = Me.imports.utils.gnomeVersion;
-const IconFinder = Me.imports.utils.iconFinder;
-
-const PrefsWindowPickableEntry = Me.imports.prefsWindowPickableEntry;
-const PrefsWidgets = Me.imports.prefsWidgets;
-const PrefsColumnView = Me.imports.prefsColumnView;
+import * as PrefsWindowPickableEntry from './prefsWindowPickableEntry.js';
+import * as PrefsWidgets from './prefsWidgets.js';
+import * as PrefsColumnView from './prefsColumnView.js';
 
 
 // const _ = ExtensionUtils.gettext;
@@ -22,7 +23,7 @@ const PrefsColumnView = Me.imports.prefsColumnView;
 /**
  * Based on https://gitlab.gnome.org/GNOME/gnome-shell-extensions/-/blob/main/extensions/auto-move-windows/prefs.js
  */
-var UICloseWindows = GObject.registerClass(
+export const UICloseWindows = GObject.registerClass(
     class UICloseWindows extends GObject.Object {
         _init(builder) {
             super._init({
@@ -202,7 +203,7 @@ var UICloseWindows = GObject.registerClass(
         }
 
         _onAddAppActivated() {
-            const dialog = new AwsmNewRuleByAppDialog(this._builder.get_object('prefs_notebook').get_root());
+            const dialog = new AwsmNewRuleByAppDialog(this._builder.get_object('close_windows_page').get_root());
             dialog.connect('response', (dlg, id) => {
                 const appInfo = id === Gtk.ResponseType.OK
                     ? dialog.get_widget().get_app_info() : null;

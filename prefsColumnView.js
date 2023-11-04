@@ -1,19 +1,16 @@
 'use strict';
 
-const { GObject, Gtk, Gio } = imports.gi;
+import GObject from 'gi://GObject';
+import Gtk from 'gi://Gtk';
+import Gio from 'gi://Gio';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as PrefsWindowPickableEntry from './prefsWindowPickableEntry.js';
+import * as PrefsWidgets from './prefsWidgets.js';
 
-const CloseWindowsWhitelist = Me.imports.model.closeWindowsRule.CloseWindowsWhitelist;
-
-const PrefsWindowPickableEntry = Me.imports.prefsWindowPickableEntry;
-const PrefsWidgets = Me.imports.prefsWidgets;
-
-const PrefsUtils = Me.imports.utils.prefsUtils;
+import * as PrefsUtils from './utils/prefsUtils.js';
 
 
-var ColumnView = GObject.registerClass({
+export const ColumnView = GObject.registerClass({
     Signals: {
         'activate': {
             param_types: [Gtk.CheckButton, GObject.TYPE_OBJECT]
@@ -98,7 +95,7 @@ var ColumnView = GObject.registerClass({
 
 });
 
-var WhitelistColumnView = GObject.registerClass({
+export const WhitelistColumnView = GObject.registerClass({
     Signals: {}, 
     Properties: {},
 }, class WhitelistColumnView extends ColumnView {

@@ -37,7 +37,7 @@ class WindowTiling {
     window_tile_for = new WindowTilingFor(); // WindowTilingFor
 }
 
-var SessionConfigObject = class {
+export const SessionConfigObject = class {
 
     window_id; // str, hexadecimal on X11, int on Wayland
     desktop_number; // int
@@ -82,7 +82,7 @@ var SessionConfigObject = class {
     compositor_type; // string. X11, Wayland
 }
 
-var SessionConfig = class {
+export const SessionConfig = class {
     session_name; // str
     session_create_time; // str
     backup_time; // str

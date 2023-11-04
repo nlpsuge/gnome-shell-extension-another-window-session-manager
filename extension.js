@@ -1,100 +1,100 @@
 'use strict';
 
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-const Main = imports.ui.main;
+import * as OpenWindowsTracker from './openWindowsTracker.js';
 
-const OpenWindowsTracker = Me.imports.openWindowsTracker;
+import * as Indicator from './indicator.js';
+import * as Autostart from './ui/autostart.js';
+import * as Autoclose from './ui/autoclose.js';
+import {WindowTilingSupport} from './windowTilingSupport.js';
+import * as WindowPicker from './utils/WindowPicker.js';
 
-const Indicator = Me.imports.indicator;
-const Autostart = Me.imports.ui.autostart;
-const Autoclose = Me.imports.ui.autoclose;
-const WindowTilingSupport = Me.imports.windowTilingSupport.WindowTilingSupport;
-const WindowPicker = Me.imports.utils.WindowPicker;
-const PrefsUtils = Me.imports.utils.prefsUtils;
+import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
+import * as string from './utils/string.js';
 
-Me.imports.utils.string;
+import * as Log from './utils/log.js';
+import * as FileUtils from './utils/fileUtils.js';
 
-const Log = Me.imports.utils.log;
 
 let _indicator;
 let _autostartServiceProvider;
 let _openWindowsTracker;
 let _autoclose;
 let _windowPickerServiceProvider;
-let _settingUtils;
 
-function enable() {
-    _settingUtils = new PrefsUtils.PrefsUtils();
+export default class AnotherWindowSessionManagerExtension extends Extension {
 
-    _settingUtils.getSettings().connect('changed::show-indicator', () => showOrHideIndicator());
-    showOrHideIndicator();
+    constructor(metadata) {
+        super(metadata);
+        this._settings = this.getSettings('org.gnome.shell.extensions.another-window-session-manager');
+    }
 
-    _autostartServiceProvider = new Autostart.AutostartServiceProvider();
+    enable() {
+        
+        this._settings.connect('changed::show-indicator', () => this.showOrHideIndicator());
+        this.showOrHideIndicator();
+
+        FileUtils.init(this);
     
-    WindowTilingSupport.initialize();
-
-    _openWindowsTracker = new OpenWindowsTracker.OpenWindowsTracker();
-    _autoclose = new Autoclose.Autoclose();
-
-    _windowPickerServiceProvider = new WindowPicker.WindowPickerServiceProvider();
-    _windowPickerServiceProvider.enable();
-}
-
-function showOrHideIndicator() {
-    if (_settingUtils.getSettings().get_boolean('show-indicator')) {
-        if (!_indicator) {
-            _indicator = new Indicator.AwsIndicator();
-            Main.panel.addToStatusArea('Another Window Session Manager', _indicator);
+        _autostartServiceProvider = new Autostart.AutostartServiceProvider();
+        
+        WindowTilingSupport.initialize();
+    
+        _openWindowsTracker = new OpenWindowsTracker.OpenWindowsTracker();
+        _autoclose = new Autoclose.Autoclose();
+    
+        _windowPickerServiceProvider = new WindowPicker.WindowPickerServiceProvider();
+        _windowPickerServiceProvider.enable();
+    }
+    
+    showOrHideIndicator() {
+        if (this._settings.get_boolean('show-indicator')) {
+            if (!_indicator) {
+                _indicator = new Indicator.AwsIndicator();
+                Main.panel.addToStatusArea('Another Window Session Manager', _indicator);
+            }
+        } else {
+            this.hideIndicator();
         }
-    } else {
-        hideIndicator();
     }
-}
-
-function hideIndicator() {
-    if (_indicator) {
-        _indicator.destroy();
-        _indicator = null;
-    }
-}
-
-function disable() {
-    if (_settingUtils) {
-        _settingUtils.destroy();
-        _settingUtils = null;
-    }
-
-    hideIndicator();
-
-    if (_autostartServiceProvider) {
-        _autostartServiceProvider.disable();
-        _autostartServiceProvider = null;
-    }
-
-    if (_openWindowsTracker) {
-        _openWindowsTracker.destroy();
-        _openWindowsTracker = null;
-    }
-
-    WindowTilingSupport.destroy();
     
-    if (_autoclose) {
-        _autoclose.destroy();
-        _autoclose = null;
+    hideIndicator() {
+        if (_indicator) {
+            _indicator.destroy();
+            _indicator = null;
+        }
     }
-
-    Log.Log.destroyDefault();
-
-    if (_windowPickerServiceProvider) {
-        _windowPickerServiceProvider.destroy();
-        _windowPickerServiceProvider = null;
+    
+    disable() {
+    
+        this.hideIndicator();
+    
+        if (_autostartServiceProvider) {
+            _autostartServiceProvider.disable();
+            _autostartServiceProvider = null;
+        }
+    
+        if (_openWindowsTracker) {
+            _openWindowsTracker.destroy();
+            _openWindowsTracker = null;
+        }
+    
+        WindowTilingSupport.destroy();
+        
+        if (_autoclose) {
+            _autoclose.destroy();
+            _autoclose = null;
+        }
+    
+        Log.Log.destroyDefault();
+    
+        if (_windowPickerServiceProvider) {
+            _windowPickerServiceProvider.destroy();
+            _windowPickerServiceProvider = null;
+        }
+    
     }
-
-}
-
-function init() {
-
+    
 }
