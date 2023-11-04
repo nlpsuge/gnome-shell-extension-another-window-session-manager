@@ -15,6 +15,7 @@ import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/ex
 import * as string from './utils/string.js';
 
 import * as Log from './utils/log.js';
+import * as FileUtils from './utils/fileUtils.js';
 
 
 let _indicator;
@@ -34,6 +35,8 @@ export default class AnotherWindowSessionManagerExtension extends Extension {
         
         this._settings.connect('changed::show-indicator', () => this.showOrHideIndicator());
         this.showOrHideIndicator();
+
+        FileUtils.init(this);
     
         _autostartServiceProvider = new Autostart.AutostartServiceProvider();
         

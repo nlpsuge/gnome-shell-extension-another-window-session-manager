@@ -33,7 +33,6 @@ class SessionItemButtons extends GObject.Object {
         super._init();
 
         this._log = new Log.Log();
-        this._fileUtils = new FileUtils.FileUtils();
 
         this.sessionItem = sessionItem;
 
@@ -103,9 +102,9 @@ class SessionItemButtons extends GObject.Object {
             markup: 'Open session file using an external editor',
         });
         viewButton.connect('clicked', () => {
-            const sessions_path = this._fileUtils.get_sessions_path();
+            const sessions_path = FileUtils.get_sessions_path();
             const session_file_path = GLib.build_filenamev([sessions_path, this.sessionItem._filename]);
-            this._fileUtils.findDefaultApp(session_file_path).then(([app, file]) => {
+            FileUtils.findDefaultApp(session_file_path).then(([app, file]) => {
                 try {
                     app.launch([file], global.create_app_launch_context(DateUtils.get_current_time(), -1));
                 } catch (error) {
@@ -123,7 +122,7 @@ class SessionItemButtons extends GObject.Object {
         });
         deleteButton.connect('clicked', () => {
             // We just trash file to trash scan instead of delete in case still need it.
-            this._fileUtils.trashSession(this.sessionItem._filename);
+            FileUtils.trashSession(this.sessionItem._filename);
         });
 
     }
@@ -149,7 +148,7 @@ class SessionItemButtons extends GObject.Object {
     }
 
     _addViewButton() {
-        const [exists, sessionFilePath] = this._fileUtils.sessionExists(this.sessionItem._filename);
+        const [exists, sessionFilePath] = FileUtils.sessionExists(this.sessionItem._filename);
         return this._addTextButton('View', exists);
     }
 

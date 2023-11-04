@@ -24,7 +24,6 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         
         // gsettings
         this._settings = this.getSettings('org.gnome.shell.extensions.another-window-session-manager');
-        this._fileUtils = new FileUtils.FileUtils();
 
         this._log = new Log.Log();
 
@@ -173,14 +172,14 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
 
         this._settings.connect('changed::enable-autorestore-sessions', (settings) => {
             if (this._settings.get_boolean('enable-autorestore-sessions')) {
-                this._installAutostartDesktopFile(this._fileUtils.desktop_template_path_restore_at_autostart,
+                this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
                     FileUtils.autostart_restore_desktop_file_path);
             }
         });
 
         this._settings.connect('changed::enable-restore-previous-session', (settings) => {
             if (this._settings.get_boolean('enable-restore-previous-session')) {
-                this._installAutostartDesktopFile(this._fileUtils.desktop_template_path_restore_previous_at_autostart,
+                this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_previous_at_autostart,
                     FileUtils.autostart_restore_previous_desktop_file_path);
             }
         });
@@ -192,9 +191,9 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         });
 
         this._settings.connect('changed::autostart-delay', (settings) => {
-            this._installAutostartDesktopFile(this._fileUtils.desktop_template_path_restore_at_autostart,
+            this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
                 FileUtils.autostart_restore_desktop_file_path);
-            this._installAutostartDesktopFile(this._fileUtils.desktop_template_path_restore_previous_at_autostart,
+            this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_previous_at_autostart,
                 FileUtils.autostart_restore_previous_desktop_file_path);
         });
 
@@ -264,7 +263,7 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         const argument = {
             autostartDelay: this._settings.get_int('autostart-delay'),
         };
-        const desktopFileContent = this._fileUtils.loadTemplate(desktopFileTemplate).fill(argument);
+        const desktopFileContent = FileUtils.loadTemplate(desktopFileTemplate).fill(argument);
         this._installDesktopFileToAutostartDir(targetDesktopFilePath, desktopFileContent);
     }
 

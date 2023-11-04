@@ -35,7 +35,6 @@ export const SaveSession = class {
 
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
-        this._fileUtils = new FileUtils.FileUtils();
 
         this._sourceIds = [];
     }
@@ -350,7 +349,7 @@ export const SaveSession = class {
             };
 
             const desktopFileName = '__' + appName + '.desktop';
-            const desktopFileContent = this._fileUtils.loadDesktopTemplate(cancellable).fill(argument);
+            const desktopFileContent = FileUtils.loadDesktopTemplate(cancellable).fill(argument);
             if (!desktopFileContent) {
                 const errMsg = `Failed to generate a .desktop file ${desktopFileName} using ${JSON.stringify(argument)}`;
                 this._log.error(new Error(errMsg));
@@ -368,14 +367,14 @@ export const SaveSession = class {
 
     async backupExistingSessionIfNecessary(sessionName, baseDir) {
 
-        const sessions_path = this._fileUtils.get_sessions_path();
+        const sessions_path = FileUtils.get_sessions_path();
         const session_file_path = GLib.build_filenamev([sessions_path, sessionName]);
         const session_file = Gio.File.new_for_path(session_file_path);
         // Backup first if exists
         if (GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
             this._log.debug(`Backing up existing session ${sessionName}`);
 
-            const session_file_backup_path = this._fileUtils.get_sessions_backups_path();
+            const session_file_backup_path = FileUtils.get_sessions_backups_path();
             const session_file_backup = GLib.build_filenamev([session_file_backup_path, sessionName + '.backup-' + new Date().getTime()]);
             if (GLib.mkdir_with_parents(session_file_backup_path, 0o744) !== 0) {
                 const errMsg = `Cannot save session: ${session_file_path}`;
@@ -416,7 +415,7 @@ export const SaveSession = class {
             return Promise.resolve(false);
         }
 
-        const sessions_path = this._fileUtils.get_sessions_path(baseDir);
+        const sessions_path = FileUtils.get_sessions_path(baseDir);
         const session_file_path = GLib.build_filenamev([sessions_path, sessionConfig.session_name]);
         const sessionFile = Gio.File.new_for_path(session_file_path);
 

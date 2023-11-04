@@ -77,7 +77,6 @@ export const OpenWindowsTracker = class {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
-        this._fileUtils = new FileUtils.FileUtils();
 
         this._saveSession = new SaveSession.SaveSession();
         this._moveSession = new MoveSession.MoveSession();
@@ -287,7 +286,7 @@ export const OpenWindowsTracker = class {
             return;
         }
 
-        const sessionContent = this._fileUtils.getJsonObj(contents);
+        const sessionContent = FileUtils.getJsonObj(contents);
         Log.Log.getDefault().debug(`Prepare to restore window session from ${sessionFilePath}`);
 
         this._allSavedWindowSessions.push(sessionContent);
@@ -408,7 +407,7 @@ export const OpenWindowsTracker = class {
 
         this._log.debug(`${window.get_title()}(${app?.get_name()}) was closed. Cleaning up its saved session files.`);
 
-        this._fileUtils.removeFile(sessionFilePath);
+        FileUtils.removeFile(sessionFilePath);
         this._removeOrphanSessionConfigs(app, sessionDirectory);
     }
 
@@ -426,11 +425,11 @@ export const OpenWindowsTracker = class {
                 sessionNames.add(`${MetaWindowUtils.getStableWindowId(metaWindow)}.json`);
             }
 
-            this._fileUtils.listAllSessions(sessionDirectory, false, (file, info) => {
+            FileUtils.listAllSessions(sessionDirectory, false, (file, info) => {
                 const filename = info.get_name();
                 const path = file.get_path();
                 if (!sessionNames.has(filename) && path && GLib.file_test(path, GLib.FileTest.EXISTS)) {
-                    this._fileUtils.removeFile(path);
+                    FileUtils.removeFile(path);
                 }
             });
         } catch (e) {
@@ -447,12 +446,12 @@ export const OpenWindowsTracker = class {
         // the app name outside this function. (See: shell-app.c -> shell_app_get_name -> window_backed_app_get_window: g_assert (app->running_state->windows))
         this._log.debug(`${appName} was closed. Cleaning up its saved session files.`);
 
-        this._fileUtils.removeFile(sessionDirectory, true);
+        FileUtils.removeFile(sessionDirectory, true);
 
         const possibleOrphanFolder = `${FileUtils.current_session_path}/${window.get_wm_class_instance()}`;
         if (GLib.file_test(possibleOrphanFolder, GLib.FileTest.EXISTS)) {
             this._log.debug(`Removing orphan session folder ${possibleOrphanFolder}`)
-            this._fileUtils.removeFile(possibleOrphanFolder, true);
+            FileUtils.removeFile(possibleOrphanFolder, true);
         }
     }
 

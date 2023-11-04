@@ -39,7 +39,6 @@ class AwsIndicator extends PanelMenu.Button {
         this._settings = this._prefsUtils.getSettings();
         this._log = new Log.Log();
         this._signal = new Signal.Signal();
-        this._fileUtils = new FileUtils.FileUtils();
         
         this._itemIndex = 0;
 
@@ -325,7 +324,7 @@ class AwsIndicator extends PanelMenu.Button {
         this._log.debug('List all sessions to add session items');
         
         let sessionFileInfos = [];
-        await this._fileUtils.listAllSessions(null, false, (file, info) => {
+        await FileUtils.listAllSessions(null, false, (file, info) => {
             // We have an interest in regular and text files
 
             const file_type = info.get_file_type();

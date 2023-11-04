@@ -22,7 +22,6 @@ export const RestoreSession = class {
         this._log = new Log.Log();
         this._prefsUtils = new PrefsUtils.PrefsUtils();
         this._settings = this._prefsUtils.getSettings();
-        this._fileUtils = new FileUtils.FileUtils();
 
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
@@ -50,7 +49,7 @@ export const RestoreSession = class {
      */
     static restoreFromSummary() {
         Log.Log.getDefault().debug(`Prepare to restore summary`);
-        this._fileUtils.loadSummary().then(([summary, path]) => {
+        FileUtils.loadSummary().then(([summary, path]) => {
             Log.Log.getDefault().info(`Restoring summary from ${path}`);
             const savedNWorkspace = summary.n_workspace;
             const workspaceManager = global.workspace_manager;
@@ -70,7 +69,7 @@ export const RestoreSession = class {
             sessionName = this.sessionName;
         }
         
-        const sessions_path = this._fileUtils.get_sessions_path();
+        const sessions_path = FileUtils.get_sessions_path();
         const session_file_path = GLib.build_filenamev([sessions_path, sessionName]);
         if (!GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
             logError(new Error(`Session file not found: ${session_file_path}`));
@@ -92,7 +91,7 @@ export const RestoreSession = class {
             return;
         }
 
-        let session_config = this._fileUtils.getJsonObj(contents);
+        let session_config = FileUtils.getJsonObj(contents);
         let session_config_objects = session_config.x_session_config_objects;
         if (!(session_config_objects && session_config_objects.length)) {
             this._log.error(new Error(`Session details not found: ${session_file_path}`));
@@ -146,7 +145,7 @@ export const RestoreSession = class {
             const ignoringFilePaths = [
                 GLib.build_filenamev([FileUtils.current_session_path, 'summary.json'])
             ];
-            this._fileUtils.listAllSessions(FileUtils.current_session_path, true, (file, info) => {
+            FileUtils.listAllSessions(FileUtils.current_session_path, true, (file, info) => {
                 const contentType = info.get_content_type();
                 if (contentType !== 'application/json') {
                     return;
@@ -164,13 +163,13 @@ export const RestoreSession = class {
                         if (!success) {
                             return;
                         }
-                        const sessionConfig = this._fileUtils.getJsonObj(contents);
+                        const sessionConfig = FileUtils.getJsonObj(contents);
                         sessionConfig._file_path = file.get_path();
                         this._restoreOneSession(sessionConfig).then(([launched, running]) => {
                             if (removeAfterRestore && launched && !running) {
                                 const path = file.get_path();
                                 this._log.debug(`Restored ${sessionConfig.window_title}(${sessionConfig.app_name}), cleaning ${path}`);
-                                this._fileUtils.removeFile(path);
+                                FileUtils.removeFile(path);
                             }
                         }).catch(e => this._log.error(e));
                     });
@@ -240,8 +239,8 @@ export const RestoreSession = class {
                             }
                         }
 
-                        const launchAppTemplate = this._fileUtils.desktop_template_launch_app_shell_script;
-                        const launchAppShellScript = this._fileUtils.loadTemplate(launchAppTemplate).fill({cmdString});
+                        const launchAppTemplate = FileUtils.desktop_template_launch_app_shell_script;
+                        const launchAppShellScript = FileUtils.loadTemplate(launchAppTemplate).fill({cmdString});
                         this._log.info(`Launching ${app_name} via command line ${cmdString}!`);
                         SubprocessUtils.trySpawnCmdstr(`bash -c '${launchAppShellScript}'`).then(
                             ([success, status, stdoutInputStream, stderrInputStream]) => {

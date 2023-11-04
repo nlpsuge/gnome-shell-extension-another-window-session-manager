@@ -233,7 +233,6 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this._addYesAndNoButtons();
 
         this._log = new Log.Log();
-        this._fileUtils = new FileUtils.FileUtils();
 
         this._saveSession = new SaveSession.SaveSession(true);
 
@@ -375,7 +374,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             return [false, `ERROR: ${sessionName} is a reserved word, can't be used.`];
         }
 
-        if (this._fileUtils.isDirectory(sessionName)) {
+        if (FileUtils.isDirectory(sessionName)) {
             return [false, `ERROR: Can't save windows using '${sessionName}', it's an existing directory!`];
         }
 

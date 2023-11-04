@@ -24,7 +24,6 @@ export const MoveSession = class {
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();
         this._windowTracker = Shell.WindowTracker.get_default();
-        this._fileUtils = new FileUtils.FileUtils();
 
         this._sourceIds = [];
 
@@ -37,7 +36,7 @@ export const MoveSession = class {
             sessionName = this.sessionName;
         }
 
-        const sessions_path = this._fileUtils.get_sessions_path();
+        const sessions_path = FileUtils.get_sessions_path();
         const session_file_path = GLib.build_filenamev([sessions_path, sessionName]);
         if (!GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
             logError(new Error(`Session file not found: ${session_file_path}`));
@@ -48,7 +47,7 @@ export const MoveSession = class {
         const session_file = Gio.File.new_for_path(session_file_path);
         let [success, contents] = session_file.load_contents(null);
         if (success) {
-            let session_config = this._fileUtils.getJsonObj(contents);
+            let session_config = FileUtils.getJsonObj(contents);
 
             const session_config_objects = session_config.x_session_config_objects;
             if (!session_config_objects) {

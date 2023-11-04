@@ -228,7 +228,6 @@ const AutostartDialog = GObject.registerClass(
             });
 
             this._settings = new PrefsUtils.PrefsUtils().getSettings();
-            this._fileUtils = new FileUtils.FileUtils();
 
             this._sessionName = this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
 
@@ -277,7 +276,7 @@ const AutostartDialog = GObject.registerClass(
                 return;
                 
             if (this._sessionName) {
-                const [exists, sessionFilePath] = this._fileUtils.sessionExists(this._sessionName);
+                const [exists, sessionFilePath] = FileUtils.sessionExists(this._sessionName);
                 if (exists) {
                     this._startTimer();
                     this._sync();
