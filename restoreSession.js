@@ -6,7 +6,7 @@ import GLib from 'gi://GLib';
 
 import * as FileUtils from './utils/fileUtils.js';
 import * as Log from './utils/log.js';
-import * as PrefsUtils from './utils/prefsUtils.js';
+import PrefsUtils from './utils/prefsUtils.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import * as DateUtils from './utils/dateUtils.js';
 
@@ -20,8 +20,7 @@ export const RestoreSession = class {
 
     constructor() {
         this._log = new Log.Log();
-        this._prefsUtils = new PrefsUtils.PrefsUtils();
-        this._settings = this._prefsUtils.getSettings();
+        this._settings = PrefsUtils.getSettings();
 
         this.sessionName = FileUtils.default_sessionName;
         this._defaultAppSystem = Shell.AppSystem.get_default();

@@ -12,10 +12,11 @@ import * as WindowPicker from './utils/WindowPicker.js';
 
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import * as string from './utils/string.js';
+import * as String from './utils/string.js';
 
 import * as Log from './utils/log.js';
 import * as FileUtils from './utils/fileUtils.js';
+import PrefsUtils from './utils/prefsUtils.js';
 
 
 let _indicator;
@@ -28,15 +29,16 @@ export default class AnotherWindowSessionManagerExtension extends Extension {
 
     constructor(metadata) {
         super(metadata);
-        this._settings = this.getSettings('org.gnome.shell.extensions.another-window-session-manager');
     }
 
     enable() {
+        // settings is needed by the initialization of some utils
+        this._settings = this.getSettings('org.gnome.shell.extensions.another-window-session-manager');        
+
+        this.initUtils();
         
         this._settings.connect('changed::show-indicator', () => this.showOrHideIndicator());
         this.showOrHideIndicator();
-
-        FileUtils.init(this);
     
         _autostartServiceProvider = new Autostart.AutostartServiceProvider();
         
@@ -47,6 +49,12 @@ export default class AnotherWindowSessionManagerExtension extends Extension {
     
         _windowPickerServiceProvider = new WindowPicker.WindowPickerServiceProvider();
         _windowPickerServiceProvider.enable();
+    }
+
+    initUtils() {
+        String.initFill();
+        PrefsUtils._init(this, this._settings);
+        FileUtils.init(this);
     }
     
     showOrHideIndicator() {
@@ -93,6 +101,10 @@ export default class AnotherWindowSessionManagerExtension extends Extension {
         if (_windowPickerServiceProvider) {
             _windowPickerServiceProvider.destroy();
             _windowPickerServiceProvider = null;
+        }
+
+        if (this._settings) {
+            this._settings = null;
         }
     
     }

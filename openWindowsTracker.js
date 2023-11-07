@@ -16,7 +16,7 @@ import * as Autoclose from './ui/autoclose.js';
 import * as UiHelper from './ui/uiHelper.js';
 
 import * as Log from './utils/log.js';
-import * as PrefsUtils from './utils/prefsUtils.js';
+import PrefsUtils from './utils/prefsUtils.js';
 import * as FileUtils from './utils/fileUtils.js';
 import * as MetaWindowUtils from './utils/metaWindowUtils.js';
 import * as Function from './utils/function.js';
@@ -75,8 +75,7 @@ export const OpenWindowsTracker = class {
         this._wm = global.workspace_manager;
 
         this._log = new Log.Log();
-        this._prefsUtils = new PrefsUtils.PrefsUtils();
-        this._settings = this._prefsUtils.getSettings();
+        this._settings = PrefsUtils.getSettings();
 
         this._saveSession = new SaveSession.SaveSession();
         this._moveSession = new MoveSession.MoveSession();
@@ -456,9 +455,8 @@ export const OpenWindowsTracker = class {
     }
 
     _onNameAppearedGnomeShell() {
-        const extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
         const EndSessionDialogIface = new TextDecoder().decode(
-            extensionObject.dir.get_child('dbus-interfaces').get_child('org.gnome.SessionManager.EndSessionDialog.xml').load_contents(null)[1]);
+            FileUtils.current_extension_dir.get_child('dbus-interfaces').get_child('org.gnome.SessionManager.EndSessionDialog.xml').load_contents(null)[1]);
         const EndSessionDialogProxy = Gio.DBusProxy.makeProxyWrapper(EndSessionDialogIface);
 
         this._endSessionProxy = new EndSessionDialogProxy(Gio.DBus.session,

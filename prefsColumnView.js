@@ -7,7 +7,7 @@ import Gio from 'gi://Gio';
 import * as PrefsWindowPickableEntry from './prefsWindowPickableEntry.js';
 import * as PrefsWidgets from './prefsWidgets.js';
 
-import * as PrefsUtils from './utils/prefsUtils.js';
+import PrefsUtils from './utils/prefsUtils.js';
 
 
 export const ColumnView = GObject.registerClass({
@@ -104,8 +104,7 @@ export const WhitelistColumnView = GObject.registerClass({
         super._init(datalist, {});
 
         const settingKey = 'close-windows-whitelist';
-        this._prefsUtils = new PrefsUtils.PrefsUtils();
-        this._settings = this._prefsUtils.getSettings();
+        this._settings = PrefsUtils.getSettings();
 
         const nameColumn = PrefsWidgets.newColumnViewColumn('Name', 
         null, (factory, listItem) => {

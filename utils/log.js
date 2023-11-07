@@ -1,16 +1,15 @@
 'use strict';
 
-import * as PrefsUtils from './prefsUtils.js';
+import PrefsUtils from './prefsUtils.js';
 
 
 export const Log = class {
 
     constructor() {
-        this._prefsUtils = new PrefsUtils.PrefsUtils();
     }
     
     isDebug() {
-        return this._prefsUtils.isDebug();
+        return PrefsUtils.isDebug();
     }
 
     debug(logContent) {
@@ -35,10 +34,6 @@ export const Log = class {
     }
 
     destroy() {
-        if (this._prefsUtils) {
-            this._prefsUtils.destroy();
-            this._prefsUtils = null;
-        }
 
     }
 

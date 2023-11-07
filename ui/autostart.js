@@ -9,16 +9,18 @@ import Clutter from 'gi://Clutter';
 
 import * as EndSessionDialog from 'resource:///org/gnome/shell/ui/endSessionDialog.js';
 
-import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Dialog from 'resource:///org/gnome/shell/ui/dialog.js';
 import * as ModalDialog from 'resource:///org/gnome/shell/ui/modalDialog.js';
 
 import * as Autoclose from './autoclose.js';
-import * as Log from '../utils/log.js';
 import * as RestoreSession from '../restoreSession.js';
-import * as PrefsUtils from '../utils/prefsUtils.js';
+import * as Constants from '../constants.js';
+
+import * as Log from '../utils/log.js';
+import PrefsUtils from '../utils/prefsUtils.js';
 import * as FileUtils from '../utils/fileUtils.js';
 
 
@@ -32,9 +34,8 @@ export const AutostartServiceProvider = GObject.registerClass(
 
             this._log = new Log.Log();
 
-            const extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
             this._autostartDbusXml = new TextDecoder().decode(
-                extensionObject.dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.Autostart.xml').load_contents(null)[1]);
+                FileUtils.current_extension_dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.Autostart.xml').load_contents(null)[1]);
 
             this._autostartService = null;
             this._autostartDbusImpl = null;
@@ -97,8 +98,8 @@ const AutostartService = GObject.registerClass(
             this._restorePreviousSourceId = 0;
             this._idleIdOpenRestoreSessionDialog = 0;
 
-            this._settings = new PrefsUtils.PrefsUtils().getSettings();
-            this._sessionName = this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+            this._settings = PrefsUtils.getSettings();
+            this._sessionName = this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
         }
 
         // Call this method asynchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession` 
@@ -227,9 +228,9 @@ const AutostartDialog = GObject.registerClass(
                 destroyOnClose: true
             });
 
-            this._settings = new PrefsUtils.PrefsUtils().getSettings();
+            this._settings = PrefsUtils.getSettings();
 
-            this._sessionName = this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+            this._sessionName = this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
 
             this._totalSecondsToStayOpen = this._settings.get_int('autorestore-sessions-timer');
             this._secondsLeft = 0;

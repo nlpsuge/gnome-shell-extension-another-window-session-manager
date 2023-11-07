@@ -14,10 +14,9 @@ import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as LookingGlass from 'resource:///org/gnome/shell/ui/lookingGlass.js';
 
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
-
 import * as GnomeVersion from './gnomeVersion.js';
 
+import * as FileUtils from './fileUtils.js';
 
 // Based on the WindowPicker.js from Burn-My-Windows. 
 // I modified and enhanced it, so it can be used in my case 
@@ -35,9 +34,8 @@ export const WindowPickerServiceProvider = class WindowPickerServiceProvider {
   // ------------------------------------------------------------------------- constructor
 
   constructor() {
-    let extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
     const iFace = new TextDecoder().decode(
-      extensionObject.dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.PickWindow.xml').load_contents(null)[1]);
+      FileUtils.current_extension_dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.PickWindow.xml').load_contents(null)[1]);
     this._dbus = Gio.DBusExportedObject.wrapJSObject(iFace, this);
   }
 

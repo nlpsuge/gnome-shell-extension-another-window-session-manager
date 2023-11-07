@@ -1,27 +1,17 @@
 'use strict';
 
-// import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-let Extension;
-let _;
-try {
-    let extensionObj = await import('resource:///org/gnome/shell/extensions/extension.js');
-    Extension = extensionObj.Extension;
-    _ = extensionObj.gettext;
-} catch (e) {
-    let extensionPrefsObj = await import('resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js');
-    Extension = extensionPrefsObj.ExtensionPreferences;
-    _ = extensionPrefsObj.gettext;
-}
-
-export const SETTINGS_AUTORESTORE_SESSIONS = 'autorestore-sessions';
-
-
+/**
+ * This util has to be initialized via `_init()` from extension.js before be able to use.
+ */
 export const PrefsUtils = class {
 
     constructor() {
-        this.extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
-        this.settings = this.extensionObject.getSettings('org.gnome.shell.extensions.another-window-session-manager');
+    }
+
+    _init(extensionObject, settings) {
+        this.extensionObject = extensionObject;
+        this.settings = settings;
     }
 
     getSettingString(settingName) {
@@ -41,9 +31,10 @@ export const PrefsUtils = class {
     }
 
     destroy() {
-        if (this.settings) {
-            this.settings = null;
-        }
-        
+        this.settings = null;
+        this.extensionObject = null;
     }
 }
+
+const prefsUtils = new PrefsUtils();
+export default prefsUtils;

@@ -26,7 +26,7 @@ try {
     Log.Log.getDefault().error(e, `GTop is not installed, I highly recommend to install it, so that a process can be closed safely. How to install it? Please visit: https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#dependencies .`);
 }
 
-import * as PrefsUtils from '../utils/prefsUtils.js';
+import PrefsUtils from '../utils/prefsUtils.js';
 
 // In ESM, we put variables like `sessionClosedByUser` in an object to share them crossing modules
 export const autocloseObject = {
@@ -64,7 +64,7 @@ export const Autoclose = GObject.registerClass(
         _init() {
 
             this._log = new Log.Log();
-            this._settings = new PrefsUtils.PrefsUtils().getSettings();
+            this._settings = PrefsUtils.getSettings();
             this._defaultAppSystem = Shell.AppSystem.get_default();
 
             this._runningApplicationListWindow = null;

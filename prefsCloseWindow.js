@@ -9,7 +9,7 @@ import Gdk from 'gi://Gdk';
 
 import * as CloseWindowsRule from './model/closeWindowsRule.js';
 
-import * as PrefsUtils from './utils/prefsUtils.js';
+import PrefsUtils from './utils/prefsUtils.js';
 import * as Log from './utils/log.js';
 import * as IconFinder from './utils/iconFinder.js';
 
@@ -34,8 +34,7 @@ export const UICloseWindows = GObject.registerClass(
             this._builder = builder;
             this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
 
-            this._prefsUtils = new PrefsUtils.PrefsUtils();
-            this._settings = this._prefsUtils.getSettings();
+            this._settings = PrefsUtils.getSettings();
 
             // TODO
             this._scrollToWidget = null;
@@ -367,8 +366,7 @@ const RuleRow = GObject.registerClass({
 }, class RuleRow extends Row {
     _init(ruleDetail) {
         this._log = new Log.Log();
-        this._prefsUtils = new PrefsUtils.PrefsUtils();
-        this._settings = this._prefsUtils.getSettings();
+        this._settings = PrefsUtils.getSettings();
 
         const ruleRowBox = this._newBox({
             hexpand: true,
@@ -998,8 +996,7 @@ const AwsmNewRuleByAppDialog = GObject.registerClass(
                 modal: true,
             });
 
-            this._prefsUtils = new PrefsUtils.PrefsUtils();
-            this._settings = this._prefsUtils.getSettings();
+            this._settings = PrefsUtils.getSettings();
 
             this.get_widget().set({
                 show_recommended: true,

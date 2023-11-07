@@ -3,6 +3,8 @@
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
+import * as FileUtils from './fileUtils.js';
+
 // import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 let Extension;
 try {
@@ -14,8 +16,7 @@ try {
 }
 
 export function find(iconName) {
-    const extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
-    let iconPath = `${extensionObject.path}/icons/${iconName}`;
+    let iconPath = `${FileUtils.current_extension_path}/icons/${iconName}`;
     if (GLib.file_test(iconPath, GLib.FileTest.EXISTS)) {
         return Gio.icon_new_for_string(`${iconPath}`);
     }
@@ -25,8 +26,7 @@ export function find(iconName) {
 }
 
 export function findPath(iconName) {
-    const extensionObject = Extension.lookupByUUID('another-window-session-manager@gmail.com');
-    let iconPath = `${extensionObject.path}/icons/${iconName}`;
+    let iconPath = `${FileUtils.current_extension_path}/icons/${iconName}`;
     if (GLib.file_test(iconPath, GLib.FileTest.EXISTS)) {
         return iconPath;
     }

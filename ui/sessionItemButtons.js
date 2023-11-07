@@ -14,12 +14,13 @@ import * as DateUtils from '../utils/dateUtils.js';
 import * as Tooltip from '../utils/tooltip.js';
 import * as GnomeVersion from '../utils/gnomeVersion.js';
 import * as Log from '../utils/log.js';
-import * as PrefsUtils from '../utils/prefsUtils.js';
+import PrefsUtils from '../utils/prefsUtils.js';
 
 import * as SaveSession from '../saveSession.js';
 import * as RestoreSession from '../restoreSession.js';
 import * as MoveSession from '../moveSession.js';
 import * as CloseSession from '../closeSession.js';
+import * as Constants from '../constants.js';
 
 import {Button} from './button.js';
 
@@ -41,7 +42,7 @@ class SessionItemButtons extends GObject.Object {
         this._moveSession = new MoveSession.MoveSession();
         this._closeSession = new CloseSession.CloseSession(CloseSession.flags.closeWindows);
 
-        this._settings = new PrefsUtils.PrefsUtils().getSettings();
+        this._settings = PrefsUtils.getSettings();
     }
 
     addButtons() {
@@ -83,14 +84,14 @@ class SessionItemButtons extends GObject.Object {
         autoRestoreSwitcher.connect('clicked', (button, event) => {
             const state = this._autostartSwitch.state;
             if (state) {
-                this._settings.set_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS, this.sessionItem._filename);
+                this._settings.set_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS, this.sessionItem._filename);
             } else {
-                this._settings.set_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS, '');
+                this._settings.set_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS, '');
             }
         });
 
-        this._settings.connect(`changed::${PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS}`, (settings) => {
-            const toggled = this.sessionItem._filename == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+        this._settings.connect(`changed::${Constants.PREFS_SETTING_AUTORESTORE_SESSIONS}`, (settings) => {
+            const toggled = this.sessionItem._filename == this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
             this._autostartSwitch.state = toggled;
         });
 
@@ -129,7 +130,7 @@ class SessionItemButtons extends GObject.Object {
 
     _addAutostartSwitcher() {
 
-        const toggled = this.sessionItem._filename == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+        const toggled = this.sessionItem._filename == this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
         this._autostartSwitch = new PopupMenu.Switch(toggled);
         this._autostartSwitch.set_style_class_name('toggle-switch awsm-toggle-switch');
         let button = new St.Button({

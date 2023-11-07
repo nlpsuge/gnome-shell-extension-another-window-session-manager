@@ -8,7 +8,7 @@ import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as Log from './utils/log.js';
-import * as PrefsUtils from './utils/prefsUtils.js';
+import PrefsUtils from './utils/prefsUtils.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import * as DateUtils from './utils/dateUtils.js';
 import * as Function from './utils/function.js';
@@ -27,8 +27,7 @@ const allFlags = flags.closeWindows | flags.logoff;
 export const CloseSession = class {
     constructor(flags) {
         this._log = new Log.Log();
-        this._prefsUtils = new PrefsUtils.PrefsUtils();
-        this._settings = this._prefsUtils.getSettings();
+        this._settings = PrefsUtils.getSettings();
 
         this._skip_app_with_multiple_windows = true;
         this._defaultAppSystem = Shell.AppSystem.get_default();
@@ -409,10 +408,10 @@ export const CloseSession = class {
             return [this._defaultAppSystem.get_running(), [], []];
         }
 
-        const closeWindowsRules = this._prefsUtils.getSettingString('close-windows-rules');
+        const closeWindowsRules = PrefsUtils.getSettingString('close-windows-rules');
         const closeWindowsRulesObj = JSON.parse(closeWindowsRules);
 
-        const closeWindowsRulesKeyword = this._prefsUtils.getSettingString('close-windows-rules-by-keyword');
+        const closeWindowsRulesKeyword = PrefsUtils.getSettingString('close-windows-rules-by-keyword');
         const closeWindowsRulesObjKeyword = JSON.parse(closeWindowsRulesKeyword);
 
         let runningAppsClosingByAppRules = [];

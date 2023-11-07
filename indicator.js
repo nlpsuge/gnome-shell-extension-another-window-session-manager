@@ -4,25 +4,22 @@ import GObject from 'gi://GObject';
 import St from 'gi://St';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
-import Clutter from 'gi://Clutter';
 import Shell from 'gi://Shell';
 import Meta from 'gi://Meta';
-
-import * as ExtensionUtils from 'resource:///org/gnome/shell/misc/extensionUtils.js';
-
 
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 import * as MoveSession from './moveSession.js';
 import * as RestoreSession from './restoreSession.js';
+import * as Constants from './constants.js';
 
 import * as FileUtils from './utils/fileUtils.js';
 import * as SessionItem from './ui/sessionItem.js';
 import * as SearchSessionItem from './ui/searchSessionItem.js';
 import * as PopupMenuButtonItems from './ui/popupMenuButtonItems.js';
 import * as IconFinder from './utils/iconFinder.js';
-import * as PrefsUtils from './utils/prefsUtils.js';
+import PrefsUtils from './utils/prefsUtils.js';
 import * as Log from './utils/log.js';
 import * as Signal from './utils/signal.js';
 
@@ -35,8 +32,7 @@ class AwsIndicator extends PanelMenu.Button {
 
         this._windowTracker = Shell.WindowTracker.get_default();
 
-        this._prefsUtils = new PrefsUtils.PrefsUtils();
-        this._settings = this._prefsUtils.getSettings();
+        this._settings = PrefsUtils.getSettings();
         this._log = new Log.Log();
         this._signal = new Signal.Signal();
         
@@ -506,7 +502,7 @@ class AwsIndicator extends PanelMenu.Button {
             for (const menuItem of menuItems) {
                 const sessionName = menuItem._filename;
                 if (menuItem.actor.visible) {
-                    const visible = sessionName == this._settings.get_string(PrefsUtils.SETTINGS_AUTORESTORE_SESSIONS);
+                    const visible = sessionName == this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
                     menuItem.actor.visible = visible;
                 }
             }
@@ -552,11 +548,6 @@ class AwsIndicator extends PanelMenu.Button {
 
         if (this._sessions_path) {
             this._sessions_path = null;
-        }
-
-        if (this._prefsUtils) {
-            this._prefsUtils.destroy();
-            this._prefsUtils = null;
         }
 
         if (this._metaWindowConnectIds) {

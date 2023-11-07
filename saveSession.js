@@ -16,7 +16,7 @@ import * as Log from './utils/log.js';
 import * as MetaWindowUtils from './utils/metaWindowUtils.js';
 import * as CommonError from './utils/CommonError.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
-import * as PrefsUtils from './utils/prefsUtils.js';
+import PrefsUtils from './utils/prefsUtils.js';
 
 
 export const SaveSession = class {
@@ -33,8 +33,7 @@ export const SaveSession = class {
                     Gio.SubprocessFlags.STDERR_PIPE)});
         this._defaultAppSystem = Shell.AppSystem.get_default();
 
-        this._prefsUtils = new PrefsUtils.PrefsUtils();
-        this._settings = this._prefsUtils.getSettings();
+        this._settings = PrefsUtils.getSettings();
 
         this._sourceIds = [];
     }
@@ -188,7 +187,7 @@ export const SaveSession = class {
         sessionConfig.active_workspace_index = global.workspace_manager.get_active_workspace_index();
         
         for (const runningShellApp of runningShellApps) {
-            var { metaWindows, ignoredWindowsMap } = this._doIgnoreWindows(runningShellApp);
+            let { metaWindows, ignoredWindowsMap } = this._doIgnoreWindows(runningShellApp);
 
             const processInfoMap = await _getProcessInfoPromise;
 

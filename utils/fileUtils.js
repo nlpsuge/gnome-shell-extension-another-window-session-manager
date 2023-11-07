@@ -5,6 +5,10 @@ import GLib from 'gi://GLib';
 
 import * as Log from './log.js';
 
+
+export let current_extension_path = null;
+export let current_extension_dir = null;
+
 export const default_sessionName = 'defaultSession';
 export const data_dir = GLib.get_user_data_dir();
 export const user_config = GLib.get_user_config_dir();
@@ -16,10 +20,10 @@ export const sessions_path = GLib.build_filenamev([config_path_base, 'sessions']
 export const sessions_backup_folder_name = 'backups';
 const sessions_backup_path = GLib.build_filenamev([sessions_path, sessions_backup_folder_name]);
 
-export let desktop_template_path;
-export let desktop_template_path_restore_at_autostart;
-export let desktop_template_path_restore_previous_at_autostart;
-export let desktop_template_launch_app_shell_script;
+export let desktop_template_path = null;
+export let desktop_template_path_restore_at_autostart = null;
+export let desktop_template_path_restore_previous_at_autostart = null;
+export let desktop_template_launch_app_shell_script = null;
 
 export const desktop_file_store_path_base = GLib.build_filenamev([data_dir, '/applications']);
 export const desktop_file_store_path = `${desktop_file_store_path_base}/__another-window-session-manager`;
@@ -42,6 +46,8 @@ export const system_udev_rules_path_ydotool_uinput_rules = '/etc/udev/rules.d/60
 // Some constants rely on extension metadata,
 // we put them all here and initialize them from extension.js 
 export function init(extensionObject) {
+    current_extension_dir = extensionObject.dir;
+    current_extension_path = extensionObject.path;
     desktop_template_path = GLib.build_filenamev([extensionObject.path, '/template/template.desktop']);
     desktop_template_path_restore_at_autostart = GLib.build_filenamev([extensionObject.path, '/template/_gnome-shell-extension-another-window-session-manager.desktop']);
     desktop_template_path_restore_previous_at_autostart = GLib.build_filenamev([extensionObject.path, '/template/_awsm-restore-previous-session.desktop']);

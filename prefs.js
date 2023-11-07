@@ -11,9 +11,8 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 
 import * as FileUtils from './utils/fileUtils.js';
 import * as Log from './utils/log.js';
-import * as GnomeVersion from './utils/gnomeVersion.js';
-
-import * as string from './utils/string.js';
+import * as String from './utils/string.js';
+import PrefsUtils from './utils/prefsUtils.js';
 
 import * as PrefsCloseWindow from './prefsCloseWindow.js';
 
@@ -21,9 +20,10 @@ import * as PrefsCloseWindow from './prefsCloseWindow.js';
 export default class AnotherWindowSessionManagerPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         window.set_default_size(1000, 800);
+
+        const settings = this.getSettings('org.gnome.shell.extensions.another-window-session-manager');
         
-        // gsettings
-        this._settings = this.getSettings('org.gnome.shell.extensions.another-window-session-manager');
+        this.initUtils(settings);
 
         this._log = new Log.Log();
 
@@ -35,6 +35,12 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         this._setSensitive();
 
         this._addPages(window);
+    }
+
+    initUtils(settings) {
+        String.initFill();
+        PrefsUtils._init(this, settings);
+        FileUtils.init(this);
     }
 
     _addPages(window) {
@@ -65,132 +71,132 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
     }
 
     _bindSettings() {
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'debugging-mode',
             this.debugging_mode_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'show-indicator',
             this.show_indicator_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'enable-save-session-notification',
             this.save_session_notification_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'enable-autorestore-sessions',
             this.restore_at_startup_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
-        
-        this._settings.bind(
+
+        PrefsUtils.getSettings().bind(
             'enable-restore-previous-session',
             this.restore_previous_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'restore-at-startup-without-asking',
             this.restore_at_startup_without_asking_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'autorestore-sessions-timer',
             this.timer_on_the_autostart_dialog_spinbutton,
             'value',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'restore-previous-delay',
             this.restore_previous_delay_spinbutton,
             'value',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'restore-session-interval',
             this.restore_session_interval_spinbutton,
             'value',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'autostart-delay',
             this.autostart_delay_spinbutton,
             'value',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'restore-window-tiling',
             this.restore_window_tiling_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'raise-windows-together',
             this.raise_windows_together_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'stash-and-restore-states',
             this.stash_and_restore_states_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'enable-autoclose-session',
             this.auto_close_session_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.bind(
+        PrefsUtils.getSettings().bind(
             'enable-close-by-rules',
             this.close_by_rules_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
 
-        this._settings.connect('changed::enable-autorestore-sessions', (settings) => {
-            if (this._settings.get_boolean('enable-autorestore-sessions')) {
+        PrefsUtils.getSettings().connect('changed::enable-autorestore-sessions', (settings) => {
+            if (PrefsUtils.getSettings().get_boolean('enable-autorestore-sessions')) {
                 this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
                     FileUtils.autostart_restore_desktop_file_path);
             }
         });
 
-        this._settings.connect('changed::enable-restore-previous-session', (settings) => {
-            if (this._settings.get_boolean('enable-restore-previous-session')) {
+        PrefsUtils.getSettings().connect('changed::enable-restore-previous-session', (settings) => {
+            if (PrefsUtils.getSettings().get_boolean('enable-restore-previous-session')) {
                 this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_previous_at_autostart,
                     FileUtils.autostart_restore_previous_desktop_file_path);
             }
         });
 
-        this._settings.connect('changed::restore-at-startup-without-asking', (settings) => {
+        PrefsUtils.getSettings().connect('changed::restore-at-startup-without-asking', (settings) => {
             this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(
-                !this._settings.get_boolean('restore-at-startup-without-asking')
+                !PrefsUtils.getSettings().get_boolean('restore-at-startup-without-asking')
             );
         });
 
-        this._settings.connect('changed::autostart-delay', (settings) => {
+        PrefsUtils.getSettings().connect('changed::autostart-delay', (settings) => {
             this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
                 FileUtils.autostart_restore_desktop_file_path);
             this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_previous_at_autostart,
@@ -235,7 +241,7 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         this.restore_at_startup_switch.connect('notify::active', (widget) => {
             const active = widget.active;
             this.restore_at_startup_without_asking_switch.set_sensitive(active);
-            const enableTimerSpinButton = active && !this._settings.get_boolean('restore-at-startup-without-asking');
+            const enableTimerSpinButton = active && !PrefsUtils.getSettings().get_boolean('restore-at-startup-without-asking');
             if (enableTimerSpinButton) {
                 this.timer_on_the_autostart_dialog_spinbutton.set_sensitive(true);
             } else {
@@ -261,7 +267,7 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
 
     _installAutostartDesktopFile(desktopFileTemplate, targetDesktopFilePath) {
         const argument = {
-            autostartDelay: this._settings.get_int('autostart-delay'),
+            autostartDelay: PrefsUtils.getSettings().get_int('autostart-delay'),
         };
         const desktopFileContent = FileUtils.loadTemplate(desktopFileTemplate).fill(argument);
         this._installDesktopFileToAutostartDir(targetDesktopFilePath, desktopFileContent);
