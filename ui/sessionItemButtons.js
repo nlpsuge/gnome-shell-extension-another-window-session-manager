@@ -12,7 +12,6 @@ import * as IconFinder from '../utils/iconFinder.js';
 import * as FileUtils from '../utils/fileUtils.js';
 import * as DateUtils from '../utils/dateUtils.js';
 import * as Tooltip from '../utils/tooltip.js';
-import * as GnomeVersion from '../utils/gnomeVersion.js';
 import * as Log from '../utils/log.js';
 import PrefsUtils from '../utils/prefsUtils.js';
 
@@ -232,13 +231,6 @@ class SessionItemButtons extends GObject.Object {
         // Using _restoredApps to hold restored apps so we create new instance every time for now
         const _restoreSession = new RestoreSession.RestoreSession();
         _restoreSession.restoreSession(this.sessionItem._filename);
-
-        // The below bug is fixed in Gnome 42.
-        // Leave Overview if we are in Overview to reduce or fix `Bug in window manager: Workspace does not exist to index!` in mutter
-        // See: https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2134, which has been merged into Gnome 42
-        if (GnomeVersion.isLessThan42() && Main.overview.visible) {
-            Main.overview.toggle();
-        }
     }
     
     _onClickMove(button, event) {

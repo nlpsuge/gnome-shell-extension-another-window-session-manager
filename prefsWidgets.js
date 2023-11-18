@@ -4,8 +4,6 @@ import GObject from 'gi://GObject';
 import Gtk from 'gi://Gtk';
 import GLib from 'gi://GLib';
 
-import * as GnomeVersion from './utils/gnomeVersion.js';
-
 
 export const boxProperties = {
     spacing: 0,
@@ -48,11 +46,7 @@ export const newLabelSwitch = function(text, tooltipText, active) {
 
 export const updateStyle = function(widget, css) {
     const cssProvider = new Gtk.CssProvider();
-    if (GnomeVersion.isLessThan44()) {
-        cssProvider.load_from_data(css);
-    } else {
-        cssProvider.load_from_data(css, -1);
-    }
+    cssProvider.load_from_data(css, -1);
     widget.get_style_context().add_provider(cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
 }
 

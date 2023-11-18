@@ -20,7 +20,6 @@ import PrefsUtils from './utils/prefsUtils.js';
 import * as FileUtils from './utils/fileUtils.js';
 import * as MetaWindowUtils from './utils/metaWindowUtils.js';
 import * as Function from './utils/function.js';
-import * as GnomeVersion from './utils/gnomeVersion.js';
 
 import {WindowTilingSupport} from './windowTilingSupport.js';
 
@@ -194,16 +193,9 @@ export const OpenWindowsTracker = class {
     _overrideMetaRestart() {
         const that = this;
         _meta_restart = Meta.restart;
-        if (GnomeVersion.isLessThan43()) {
-            Meta.restart = function (message) {
-                that._meta_is_restarting = true;
-                _meta_restart(message);
-            }
-        } else {
-            Meta.restart = function (message, context) {
-                that._meta_is_restarting = true;
-                _meta_restart(message, context);
-            }
+        Meta.restart = function (message, context) {
+            that._meta_is_restarting = true;
+            _meta_restart(message, context);
         }
     }
 

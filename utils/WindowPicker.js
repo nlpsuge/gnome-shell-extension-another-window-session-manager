@@ -14,8 +14,6 @@ import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as LookingGlass from 'resource:///org/gnome/shell/ui/lookingGlass.js';
 
-import * as GnomeVersion from './gnomeVersion.js';
-
 import * as FileUtils from './fileUtils.js';
 
 // Based on the WindowPicker.js from Burn-My-Windows. 
@@ -53,14 +51,7 @@ export const WindowPickerServiceProvider = class WindowPickerServiceProvider {
 
     const inspector = new MyInspector(Main.createLookingGlass());
     
-    // Compatibility: gnome shell 41.x does not have the variable `_grab` in lookingGlass.LookingGlass
-    // Release the global grab, so that we can move around freely (specially, free to use Ctrl+`
-    // to switch windows) and pick a window that is on another workspace.
-    if (GnomeVersion.isLessThan42()) {
-      // Main.popModal(lookingGlass._entry);
-    } else {
-      Main.popModal(lookingGlass._grab);
-    }
+    Main.popModal(lookingGlass._grab);
 
     inspector.connect('target', (me, target, x, y) => {
       // Remove border effect when window is picked.
@@ -105,14 +96,9 @@ export const WindowPickerServiceProvider = class WindowPickerServiceProvider {
 
     // Close LookingGlass and release the grab when the picking is finished.
     inspector.connect('closed', () => {
-      if (GnomeVersion.isLessThan42()) {
-        // Main.pushModal(lookingGlass._entry, { actionMode: Shell.ActionMode.LOOKING_GLASS });
-        lookingGlass.close();
-      } else {
-        // Restore the global grab to prevent the error 'incorrect pop' thrown by LookingGlass.close/Main.popModal(this._grab)
-        lookingGlass._grab = Main.pushModal(lookingGlass, { actionMode: Shell.ActionMode.LOOKING_GLASS });
-        lookingGlass.close();
-      }
+      // Restore the global grab to prevent the error 'incorrect pop' thrown by LookingGlass.close/Main.popModal(this._grab)
+      lookingGlass._grab = Main.pushModal(lookingGlass, { actionMode: Shell.ActionMode.LOOKING_GLASS });
+      lookingGlass.close();
     });
 
     inspector.connect('WindowPickCancelled', () => {
