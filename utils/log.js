@@ -1,6 +1,6 @@
 'use strict';
 
-import PrefsUtils from './prefsUtils.js';
+import {PrefsUtils} from './prefsUtils.js';
 
 
 export const Log = class {

@@ -5,7 +5,7 @@ import Meta from 'gi://Meta';
 import GObject from 'gi://GObject';
 
 import * as Log from './utils/log.js';
-import PrefsUtils from './utils/prefsUtils.js';
+import {PrefsUtils} from './utils/prefsUtils.js';
 
 
 // Singleton class, all methods are `static`

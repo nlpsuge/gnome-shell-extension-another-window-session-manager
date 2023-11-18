@@ -8,7 +8,7 @@ import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as Log from './utils/log.js';
-import PrefsUtils from './utils/prefsUtils.js';
+import {PrefsUtils} from './utils/prefsUtils.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import * as DateUtils from './utils/dateUtils.js';
 import * as Function from './utils/function.js';

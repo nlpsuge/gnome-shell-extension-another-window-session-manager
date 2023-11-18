@@ -1,10 +1,17 @@
 'use strict';
 
+export let PrefsUtils = null;
+
+export function prefsUtilsInit(extensionObject, settings) {
+    const prefsUtils = new PrefsUtilsClass();
+    prefsUtils._init(extensionObject, settings);
+    PrefsUtils = prefsUtils;
+}
 
 /**
  * This util has to be initialized via `_init()` from extension.js before be able to use.
  */
-export const PrefsUtils = class {
+const PrefsUtilsClass = class {
 
     constructor() {
     }
@@ -12,6 +19,7 @@ export const PrefsUtils = class {
     _init(extensionObject, settings) {
         this.extensionObject = extensionObject;
         this.settings = settings;
+        PrefsUtils = this;
     }
 
     getSettingString(settingName) {
@@ -36,5 +44,3 @@ export const PrefsUtils = class {
     }
 }
 
-const prefsUtils = new PrefsUtils();
-export default prefsUtils;

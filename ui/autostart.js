@@ -20,7 +20,7 @@ import * as RestoreSession from '../restoreSession.js';
 import * as Constants from '../constants.js';
 
 import * as Log from '../utils/log.js';
-import PrefsUtils from '../utils/prefsUtils.js';
+import {PrefsUtils} from '../utils/prefsUtils.js';
 import * as FileUtils from '../utils/fileUtils.js';
 
 

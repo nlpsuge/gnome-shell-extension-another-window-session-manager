@@ -19,7 +19,7 @@ import * as SessionItem from './ui/sessionItem.js';
 import * as SearchSessionItem from './ui/searchSessionItem.js';
 import * as PopupMenuButtonItems from './ui/popupMenuButtonItems.js';
 import * as IconFinder from './utils/iconFinder.js';
-import PrefsUtils from './utils/prefsUtils.js';
+import {PrefsUtils} from './utils/prefsUtils.js';
 import * as Log from './utils/log.js';
 import * as Signal from './utils/signal.js';
 

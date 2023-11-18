@@ -16,7 +16,7 @@ import * as Autoclose from './ui/autoclose.js';
 import * as UiHelper from './ui/uiHelper.js';
 
 import * as Log from './utils/log.js';
-import PrefsUtils from './utils/prefsUtils.js';
+import {PrefsUtils} from './utils/prefsUtils.js';
 import * as FileUtils from './utils/fileUtils.js';
 import * as MetaWindowUtils from './utils/metaWindowUtils.js';
 import * as Function from './utils/function.js';

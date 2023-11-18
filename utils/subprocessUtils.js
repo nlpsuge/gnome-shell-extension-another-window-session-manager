@@ -5,10 +5,6 @@ import GLib from 'gi://GLib';
 
 import * as Log from './log.js';
 
-const subprocessLauncher = new Gio.SubprocessLauncher({
-    flags: (Gio.SubprocessFlags.STDOUT_PIPE |
-            Gio.SubprocessFlags.STDERR_PIPE)});
-
 
 export async function getProcessInfo(apps /*ShellApp*/, ignoreWindowsCb) {
     try {
@@ -36,7 +32,6 @@ export async function getProcessInfo(apps /*ShellApp*/, ignoreWindowsCb) {
     
         return new Promise((resolve, reject) => {
             try {
-                // const proc = subprocessLauncher.spawnv(psCmd);
                 let proc = Gio.Subprocess.new(
                     psCmd,
                     Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE

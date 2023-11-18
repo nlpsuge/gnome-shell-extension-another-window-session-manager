@@ -9,7 +9,7 @@ import Gdk from 'gi://Gdk';
 
 import * as CloseWindowsRule from './model/closeWindowsRule.js';
 
-import PrefsUtils from './utils/prefsUtils.js';
+import {PrefsUtils} from './utils/prefsUtils.js';
 import * as Log from './utils/log.js';
 import * as IconFinder from './utils/iconFinder.js';
 

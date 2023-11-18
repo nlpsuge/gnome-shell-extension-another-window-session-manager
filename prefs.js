@@ -11,7 +11,7 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 
 import * as FileUtils from './utils/fileUtils.js';
 import * as Log from './utils/log.js';
-import PrefsUtils from './utils/prefsUtils.js';
+import {prefsUtilsInit, PrefsUtils} from './utils/prefsUtils.js';
 import * as StringUtils from './utils/stringUtils.js';
 
 import * as PrefsCloseWindow from './prefsCloseWindow.js';
@@ -38,7 +38,7 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
     }
 
     initUtils(settings) {
-        PrefsUtils._init(this, settings);
+        prefsUtilsInit(this, settings);
         FileUtils.init(this);
     }
 

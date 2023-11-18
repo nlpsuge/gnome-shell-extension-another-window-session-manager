@@ -16,7 +16,7 @@ import * as Log from './utils/log.js';
 import * as MetaWindowUtils from './utils/metaWindowUtils.js';
 import * as CommonError from './utils/CommonError.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
-import PrefsUtils from './utils/prefsUtils.js';
+import {PrefsUtils} from './utils/prefsUtils.js';
 import * as StringUtils from './utils/stringUtils.js';
 
 

@@ -6,7 +6,7 @@ import GLib from 'gi://GLib';
 
 import * as FileUtils from './utils/fileUtils.js';
 import * as Log from './utils/log.js';
-import PrefsUtils from './utils/prefsUtils.js';
+import {PrefsUtils} from './utils/prefsUtils.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import * as DateUtils from './utils/dateUtils.js';
 import * as StringUtils from './utils/stringUtils.js';

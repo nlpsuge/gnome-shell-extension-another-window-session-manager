@@ -13,7 +13,7 @@ import * as FileUtils from '../utils/fileUtils.js';
 import * as DateUtils from '../utils/dateUtils.js';
 import * as Tooltip from '../utils/tooltip.js';
 import * as Log from '../utils/log.js';
-import PrefsUtils from '../utils/prefsUtils.js';
+import {PrefsUtils} from '../utils/prefsUtils.js';
 
 import * as SaveSession from '../saveSession.js';
 import * as RestoreSession from '../restoreSession.js';

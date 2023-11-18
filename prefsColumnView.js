@@ -7,7 +7,7 @@ import Gio from 'gi://Gio';
 import * as PrefsWindowPickableEntry from './prefsWindowPickableEntry.js';
 import * as PrefsWidgets from './prefsWidgets.js';
 
-import PrefsUtils from './utils/prefsUtils.js';
+import {PrefsUtils} from './utils/prefsUtils.js';
 
 
 export const ColumnView = GObject.registerClass({
