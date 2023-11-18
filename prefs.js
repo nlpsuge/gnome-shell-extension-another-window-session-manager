@@ -11,8 +11,8 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 
 import * as FileUtils from './utils/fileUtils.js';
 import * as Log from './utils/log.js';
-import * as String from './utils/string.js';
 import PrefsUtils from './utils/prefsUtils.js';
+import * as StringUtils from './utils/stringUtils.js';
 
 import * as PrefsCloseWindow from './prefsCloseWindow.js';
 
@@ -38,7 +38,6 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
     }
 
     initUtils(settings) {
-        String.initFill();
         PrefsUtils._init(this, settings);
         FileUtils.init(this);
     }
@@ -269,7 +268,7 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         const argument = {
             autostartDelay: PrefsUtils.getSettings().get_int('autostart-delay'),
         };
-        const desktopFileContent = FileUtils.loadTemplate(desktopFileTemplate).fill(argument);
+        const desktopFileContent = StringUtils.format(FileUtils.loadTemplate(desktopFileTemplate), argument);
         this._installDesktopFileToAutostartDir(targetDesktopFilePath, desktopFileContent);
     }
 

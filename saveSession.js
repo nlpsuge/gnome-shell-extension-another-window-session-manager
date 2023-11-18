@@ -17,6 +17,7 @@ import * as MetaWindowUtils from './utils/metaWindowUtils.js';
 import * as CommonError from './utils/CommonError.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import PrefsUtils from './utils/prefsUtils.js';
+import * as StringUtils from './utils/stringUtils.js';
 
 
 export const SaveSession = class {
@@ -348,7 +349,7 @@ export const SaveSession = class {
             };
 
             const desktopFileName = '__' + appName + '.desktop';
-            const desktopFileContent = FileUtils.loadDesktopTemplate(cancellable).fill(argument);
+            const desktopFileContent = StringUtils.format(FileUtils.loadDesktopTemplate(cancellable), argument);
             if (!desktopFileContent) {
                 const errMsg = `Failed to generate a .desktop file ${desktopFileName} using ${JSON.stringify(argument)}`;
                 this._log.error(new Error(errMsg));

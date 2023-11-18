@@ -12,8 +12,6 @@ import * as WindowPicker from './utils/WindowPicker.js';
 
 import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import * as String from './utils/string.js';
-
 import * as Log from './utils/log.js';
 import * as FileUtils from './utils/fileUtils.js';
 import PrefsUtils from './utils/prefsUtils.js';
@@ -52,7 +50,6 @@ export default class AnotherWindowSessionManagerExtension extends Extension {
     }
 
     initUtils() {
-        String.initFill();
         PrefsUtils._init(this, this._settings);
         FileUtils.init(this);
     }

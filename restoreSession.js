@@ -9,6 +9,7 @@ import * as Log from './utils/log.js';
 import PrefsUtils from './utils/prefsUtils.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import * as DateUtils from './utils/dateUtils.js';
+import * as StringUtils from './utils/stringUtils.js';
 
 
 export const restoreSessionObject = {
@@ -239,7 +240,7 @@ export const RestoreSession = class {
                         }
 
                         const launchAppTemplate = FileUtils.desktop_template_launch_app_shell_script;
-                        const launchAppShellScript = FileUtils.loadTemplate(launchAppTemplate).fill({cmdString});
+                        const launchAppShellScript = StringUtils.format(FileUtils.loadTemplate(launchAppTemplate), {cmdString});
                         this._log.info(`Launching ${app_name} via command line ${cmdString}!`);
                         SubprocessUtils.trySpawnCmdstr(`bash -c '${launchAppShellScript}'`).then(
                             ([success, status, stdoutInputStream, stderrInputStream]) => {
