@@ -3,9 +3,9 @@
 export let PrefsUtils = null;
 
 export function prefsUtilsInit(extensionObject, settings) {
-    const prefsUtils = new PrefsUtilsClass();
-    prefsUtils._init(extensionObject, settings);
-    PrefsUtils = prefsUtils;
+    const prefsUtilsClass = new PrefsUtilsClass();
+    prefsUtilsClass._init(extensionObject, settings);
+    PrefsUtils = prefsUtilsClass;
 }
 
 /**
@@ -19,7 +19,6 @@ const PrefsUtilsClass = class {
     _init(extensionObject, settings) {
         this.extensionObject = extensionObject;
         this.settings = settings;
-        PrefsUtils = this;
     }
 
     getSettingString(settingName) {
