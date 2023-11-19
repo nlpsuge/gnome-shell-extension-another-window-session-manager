@@ -1,15 +1,28 @@
 'use strict';
 
+/**
+ * The instance of the PrefsUtilsClass
+ */
 export let PrefsUtils = null;
 
+/**
+ * Initialize the PrefsUtilsClass from extension.js or prefs.js so that it can be used.
+ * 
+ * @param {*} extensionObject 
+ * @param {*} settings 
+ */
 export function prefsUtilsInit(extensionObject, settings) {
+    if (PrefsUtils) {
+        return;
+    }
+
     const prefsUtilsClass = new PrefsUtilsClass();
     prefsUtilsClass._init(extensionObject, settings);
     PrefsUtils = prefsUtilsClass;
 }
 
 /**
- * This util has to be initialized via `_init()` from extension.js before be able to use.
+ * This class must be initialized using `prefsUtilsInit()` from extension.js or prefs.js before it can be used.
  */
 const PrefsUtilsClass = class {
 
