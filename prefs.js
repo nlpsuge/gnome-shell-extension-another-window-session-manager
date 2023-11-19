@@ -11,7 +11,7 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 
 import * as FileUtils from './utils/fileUtils.js';
 import * as Log from './utils/log.js';
-import {prefsUtilsInit, PrefsUtils} from './utils/prefsUtils.js';
+import {prefsUtilsInit, prefsUtilsDestroy, PrefsUtils} from './utils/prefsUtils.js';
 import * as StringUtils from './utils/stringUtils.js';
 
 import * as PrefsCloseWindow from './prefsCloseWindow.js';
@@ -35,6 +35,9 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         this._setSensitive();
 
         this._addPages(window);
+        window.connect('close-request', () => {
+            this._destroy();
+        });
     }
 
     initUtils(settings) {
@@ -292,6 +295,11 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         } else {
             this._log.error(new Error(`Failed to create folder: ${autostart_restore_desktop_file_path_parent}`));
         }
+    }
+
+    _destroy() {
+        prefsUtilsDestroy();
+        
     }
 }
 
