@@ -36,7 +36,7 @@ export async function getProcessInfo(apps /*ShellApp*/, ignoreWindowsCb) {
                     psCmd,
                     Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
                 );
-                proc.communicate_utf8_async(null, null, ((proc, res) => {
+                proc.communicate_utf8_async(null, null, (proc, res) => {
                     try {
                         const processInfoMap = new Map();
                         let [, stdout, stderr] = proc.communicate_utf8_finish(res);
@@ -57,7 +57,7 @@ export async function getProcessInfo(apps /*ShellApp*/, ignoreWindowsCb) {
                         Log.Log.getDefault().error(e);
                         reject(e);
                     }
-                }));
+                });
             } catch (e) {
                 Log.Log.getDefault().error(e);
                 reject(e);
@@ -107,7 +107,7 @@ export const trySpawnCmdstr = function(commandLineString, callBackOnSuccess, cal
         Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
     );
     return new Promise((resolve, reject) => {
-        proc.wait_async(null, ((proc, res) => {
+        proc.wait_async(null, (proc, res) => {
             try {
                 let successful = proc.wait_finish(res);
                 let status = proc.get_exit_status();
@@ -130,7 +130,7 @@ export const trySpawnCmdstr = function(commandLineString, callBackOnSuccess, cal
                 Log.Log.getDefault().error(e);
                 reject(e);
             }
-        }));
+        });
     });
 }
 
@@ -159,7 +159,7 @@ export const trySpawnCmdstrWithBlocking = function(commandLineString, callBackOn
         Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
     );
     return new Promise((resolve, reject) => {
-        proc.communicate_utf8_async(null, null, ((proc, res) => {
+        proc.communicate_utf8_async(null, null, (proc, res) => {
             try {
                 let [, stdout, stderr] = proc.communicate_utf8_finish(res);
                 let status = proc.get_exit_status();
@@ -168,7 +168,7 @@ export const trySpawnCmdstrWithBlocking = function(commandLineString, callBackOn
                 Log.Log.getDefault().error(e);
                 reject(e);
             }
-        }));
+        });
     });
 }
 

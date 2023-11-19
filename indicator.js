@@ -275,15 +275,15 @@ class AwsIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(this._searchSessionItem, this._itemIndex++);
                 
         this._addScrollableSessionsMenuSection();
-        this._addSessionItems().catch((error => {
+        this._addSessionItems().catch(error => {
             this._log.error(error, 'Error adding session items while creating indicator menu');
-        }));
+        });
 
         this._addSessionFolderMonitor();
         this._settings.connect('changed::debugging-mode', () => {
-            this._addSessionItems().catch((error => {
+            this._addSessionItems().catch(error => {
                 this._log.error(error, 'Error reloading session items while debugging-mode was changed');
-            }));
+            });
         });
     }
 
@@ -485,9 +485,9 @@ class AwsIndicator extends PanelMenu.Button {
         // Can use Gio.FileMonitorEvent to modify the results 
         // of this._sessionsMenuSection._getMenuItems() when the performance
         // is a problem to be resolved, it's a more complex implement.
-        this._addSessionItems().catch((error => {
+        this._addSessionItems().catch(error => {
             this._log.error(error, 'Error adding session items while session was changed');
-        }));
+        });
     }
 
     _onAutoRestoreSwitchChanged() {
