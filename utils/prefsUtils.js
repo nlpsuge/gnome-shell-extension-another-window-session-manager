@@ -21,6 +21,13 @@ export function prefsUtilsInit(extensionObject, settings) {
     PrefsUtils = prefsUtilsClass;
 }
 
+export function prefsUtilsDestroy() {
+    if (PrefsUtils) {
+        PrefsUtils.destroy();
+        PrefsUtils = null;
+    }
+}
+
 /**
  * This class must be initialized using `prefsUtilsInit()` from extension.js or prefs.js before it can be used.
  */
