@@ -26,7 +26,7 @@ export const Log = class {
     }
 
     info(logContent) {
-        log(`[INFO   ][Another window session manager] ${logContent}`);
+        
     }
 
     warn(logContent) {
