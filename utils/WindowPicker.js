@@ -110,12 +110,27 @@ export const WindowPickerServiceProvider = class WindowPickerServiceProvider {
 
   // Call this to make the window-picking API available on the D-Bus.
   enable() {
+    // Defensively unexport first: after a rapid disable/enable cycle (e.g.
+    // suspend/resume, screen lock/unlock), the previous export may still be
+    // registered.  Calling unexport() on an already-unexported object is
+    // harmless, but calling export() on an already-exported path throws:
+    //   Gio.IOErrorEnum: An object is already exported for the interface
+    //   org.gnome.Shell.Extensions.awsm.PickWindow at /org/gnome/shell/extensions/awsm
+    try {
+      this._dbus.unexport();
+    } catch (_e) {
+      // Not exported yet — expected on first enable()
+    }
     this._dbus.export(Gio.DBus.session, '/org/gnome/shell/extensions/awsm');
   }
 
   // Call this to stop this D-Bus again.
   destroy() {
-    this._dbus.unexport();
+    try {
+      this._dbus.unexport();
+    } catch (_e) {
+      // Already unexported — not an error
+    }
   }
 };
 

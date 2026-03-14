@@ -74,11 +74,24 @@ export const AutostartServiceProvider = GObject.registerClass(
         }
 
         disable() {
-            // To avoid the below error
-            // JS ERROR: Gio.IOErrorEnum: An object is already exported for the interface org.gnome.Shell.Extensions.awsm.Autostart at /org/gnome/Shell/Extensions/awsm
-            // when disable and enable this extension
-            this._autostartDbusImpl.flush();
-            this._autostartDbusImpl.unexport();
+            // Unexport the D-Bus interface to avoid:
+            //   Gio.IOErrorEnum: An object is already exported for the interface
+            //   org.gnome.Shell.Extensions.awsm.Autostart at /org/gnome/Shell/Extensions/awsm
+            // when the extension is disabled and re-enabled (e.g. suspend/resume cycle).
+            //
+            // _autostartDbusImpl may be null if onBusAcquired() hasn't been called yet
+            // (race condition during rapid disable after enable).
+            if (this._autostartDbusImpl) {
+                this._autostartDbusImpl.flush();
+                this._autostartDbusImpl.unexport();
+                this._autostartDbusImpl = null;
+            }
+
+            // Release the D-Bus name so the next enable() can re-acquire it cleanly
+            if (this._dbusNameOwnerId) {
+                Gio.bus_unown_name(this._dbusNameOwnerId);
+                this._dbusNameOwnerId = 0;
+            }
 
             if (this._autostartService) {
                 this._autostartService._disable();
