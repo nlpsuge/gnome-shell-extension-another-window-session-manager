@@ -7,12 +7,13 @@ import Meta from 'gi://Meta';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import * as Constants from './constants.js';
+
 import * as UiHelper from './ui/uiHelper.js';
 
 import * as FileUtils from './utils/fileUtils.js';
 import * as Log from './utils/log.js';
 import * as DateUtils from './utils/dateUtils.js';
-import { shellVersion } from './constants.js';
 
 import {WindowTilingSupport} from './windowTilingSupport.js';
 
@@ -333,7 +334,7 @@ export const MoveSession = class {
         }
 
         const savedMetaMaximized = window_state.meta_maximized;
-        if (shellVersion >= 49) {
+        if (Constants.shellVersion >= 49) {
             // Maximize a window to take up all of the space
             if (savedMetaMaximized) {
                 const currentMetaMaximized = metaWindow.is_maximized();
@@ -362,14 +363,14 @@ export const MoveSession = class {
         let delay = false;
         const window_state = saved_window_session.window_state;
         const savedMetaMaximized = window_state.meta_maximized;
-        if (shellVersion >= 49) {
+        if (Constants.shellVersion >= 49) {
             if (!savedMetaMaximized) {
                 // It can't be resized if current window is in maximum mode, including vertically maximization along the left and right sides of the screen
                 const currentMetaMaximized = metaWindow.is_maximized();
                 if (currentMetaMaximized) {
                     metaWindow.set_unmaximize_flags(Meta.MaximizeFlags.BOTH);
                     metaWindow.unmaximize();
-                    if (shellVersion >= 50) {
+                    if (Constants.shellVersion >= 50) {
                         if (!currentMetaMaximized) {
                             delay = true;
                         }            
@@ -386,7 +387,7 @@ export const MoveSession = class {
                 const currentMetaMaximized = metaWindow.get_maximized();
                 if (currentMetaMaximized) {
                     metaWindow.unmaximize(currentMetaMaximized);
-                    if (shellVersion >= 50) {
+                    if (Constants.shellVersion >= 50) {
                         if (currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
                             delay = true;
                         }                        

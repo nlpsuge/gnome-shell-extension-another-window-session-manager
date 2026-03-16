@@ -487,7 +487,7 @@ export const CloseSession = class {
 
         let windows;
 
-        if (shellVersion >= 50) {
+        if (Constants.shellVersion >= 50) {
             windows = this._sortWindowsOnWayland(app);
         } else {
             if (Meta.is_wayland_compositor()) {

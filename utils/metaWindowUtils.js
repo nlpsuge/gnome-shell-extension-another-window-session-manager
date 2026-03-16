@@ -2,6 +2,8 @@
 
 import Meta from 'gi://Meta';
 
+import * as Constants from '../constants.js';
+
 
 /**
  * Get the stable window id, don't change even after gnome shell is restarted
@@ -11,7 +13,7 @@ import Meta from 'gi://Meta';
  * @returns stable window id
  */
 export const getStableWindowId = function(metaWindow) {
-    if (shellVersion >= 50) {
+    if (Constants.shellVersion >= 50) {
         return metaWindow.get_id();
     } else {
         return Meta.is_wayland_compositor() ? metaWindow.get_id() : metaWindow.get_description();

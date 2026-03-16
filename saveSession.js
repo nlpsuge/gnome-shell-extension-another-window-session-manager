@@ -9,6 +9,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as SessionConfig from './model/sessionConfig.js';
 
+import * as Constants from './constants.js';
+
 import * as UiHelper from './ui/uiHelper.js';
 
 import * as FileUtils from './utils/fileUtils.js';
@@ -18,7 +20,6 @@ import * as CommonError from './utils/CommonError.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import {PrefsUtils} from './utils/prefsUtils.js';
 import * as StringUtils from './utils/stringUtils.js';
-import { shellVersion } from './constants.js';
 
 
 export const SaveSession = class {
@@ -271,7 +272,7 @@ export const SaveSession = class {
         sessionConfigObject.fullscreen = metaWindow.is_fullscreen();
         sessionConfigObject.minimized = metaWindow.minimized;
 
-        if (shellVersion >= 50) {
+        if (Constants.shellVersion >= 50) {
             sessionConfigObject.compositor_type = 'Wayland'
         } else {
             sessionConfigObject.compositor_type = Meta.is_wayland_compositor() ? 'Wayland' : 'X11'
@@ -290,7 +291,7 @@ export const SaveSession = class {
         window_state.is_sticky = metaWindow.is_on_all_workspaces();
         window_state.is_above = metaWindow.is_above();
         
-        if (shellVersion >= 49) {
+        if (Constants.shellVersion >= 49) {
             window_state.meta_maximized = metaWindow.is_maximized();
         } else {
             window_state.meta_maximized = metaWindow.get_maximized();
