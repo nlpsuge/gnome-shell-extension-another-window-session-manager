@@ -486,10 +486,15 @@ export const CloseSession = class {
         }
 
         let windows;
-        if (Meta.is_wayland_compositor()) {
+
+        if (Constants.shellVersion >= 50) {
             windows = this._sortWindowsOnWayland(app);
         } else {
-            windows = this._sortWindowsOnX11(app);
+            if (Meta.is_wayland_compositor()) {
+                windows = this._sortWindowsOnWayland(app);
+            } else {
+                windows = this._sortWindowsOnX11(app);
+            }
         }
         return windows;
     }
