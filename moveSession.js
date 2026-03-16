@@ -369,8 +369,14 @@ export const MoveSession = class {
                 if (currentMetaMaximized) {
                     metaWindow.set_unmaximize_flags(Meta.MaximizeFlags.BOTH);
                     metaWindow.unmaximize();
-                    if (Meta.is_wayland_compositor() && !currentMetaMaximized) {
-                        delay = true;
+                    if (shellVersion >= 50) {
+                        if (!currentMetaMaximized) {
+                            delay = true;
+                        }            
+                    } else {
+                        if (Meta.is_wayland_compositor() && !currentMetaMaximized) {
+                            delay = true;
+                        }
                     }
                 }
             }
@@ -380,8 +386,14 @@ export const MoveSession = class {
                 const currentMetaMaximized = metaWindow.get_maximized();
                 if (currentMetaMaximized) {
                     metaWindow.unmaximize(currentMetaMaximized);
-                    if (Meta.is_wayland_compositor() && currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
-                        delay = true;
+                    if (shellVersion >= 50) {
+                        if (currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
+                            delay = true;
+                        }                        
+                    } else {
+                        if (Meta.is_wayland_compositor() && currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
+                            delay = true;
+                        }
                     }
                 }
             }
