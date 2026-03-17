@@ -280,6 +280,9 @@ export const SaveSession = class {
         window_position.width = frameRect.width;
         window_position.height = frameRect.height;
 
+        sessionConfigObject.window_hash = `${metaWindow.get_wm_class()}|${sessionConfigObject.desktop_number}|${frameRect.x}|${frameRect.y}`;
+        this._log.debug(`Window hash for ${appName} - ${metaWindow.get_title()}: ${sessionConfigObject.window_hash}`);
+
         let window_state = sessionConfigObject.window_state;
         // See: ui/windowMenu.js:L80
         window_state.is_sticky = metaWindow.is_on_all_workspaces();

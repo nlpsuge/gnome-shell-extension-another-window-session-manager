@@ -85,6 +85,8 @@ export const SessionConfigObject = class {
 
     is_focused; // boolean, whether is the currently active window
 
+    window_hash; // string. Hash for matching windows across sessions: "wm_class|desktop_number|x|y"
+
     compositor_type; // string. X11, Wayland
 }
 

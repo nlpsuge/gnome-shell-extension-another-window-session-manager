@@ -32,6 +32,13 @@ export const MoveSession = class {
 
     }
 
+    _computeWindowHash(metaWindow) {
+        const wm_class = metaWindow.get_wm_class();
+        const desktop_number = metaWindow.get_workspace().index();
+        const frameRect = metaWindow.get_frame_rect();
+        return `${wm_class}|${desktop_number}|${frameRect.x}|${frameRect.y}`;
+    }
+
     async moveWindows(sessionName) {
         if (!sessionName) {
             sessionName = this.sessionName;
@@ -271,24 +278,44 @@ export const MoveSession = class {
             return !saved_window_session.moved;
         });
 
+        const currentHash = this._computeWindowHash(metaWindow);
+        this._log.debug(`Matching window hash: ${currentHash} (${metaWindow.get_title()})`);
+
         for (const saved_window_session of saved_window_sessions) {
-            const title = metaWindow.get_title();
-            const windows_count = saved_window_session.windows_count;
             const open_window_workspace_index = metaWindow.get_workspace().index();
             const desktop_number = saved_window_session.desktop_number;
 
-            if (windows_count === 1 || title === saved_window_session.window_title) {
-                if (open_window_workspace_index === desktop_number) {
-                    if (this._log.isDebug()) {
-                        const shellApp = this._windowTracker.get_window_app(metaWindow);
-                        this._log.debug(`The window '${shellApp?.get_name()} - ${title}' is already on workspace ${desktop_number}`);
+            // Match by hash if available, fall back to old logic for backward compatibility
+            if (saved_window_session.window_hash) {
+                if (currentHash === saved_window_session.window_hash) {
+                    this._log.debug(`Hash match: ${currentHash}`);
+                    if (open_window_workspace_index === desktop_number) {
+                        if (this._log.isDebug()) {
+                            const shellApp = this._windowTracker.get_window_app(metaWindow);
+                            this._log.debug(`The window '${shellApp?.get_name()} - ${metaWindow.get_title()}' is already on workspace ${desktop_number}`);
+                        }
+                        saved_window_session.moved = true;
                     }
-                    saved_window_session.moved = true;
+                    return saved_window_session;
                 }
-
-                return saved_window_session;
+            } else {
+                // Backward compatibility: old sessions without window_hash
+                const title = metaWindow.get_title();
+                const windows_count = saved_window_session.windows_count;
+                if (windows_count === 1 || title === saved_window_session.window_title) {
+                    if (open_window_workspace_index === desktop_number) {
+                        if (this._log.isDebug()) {
+                            const shellApp = this._windowTracker.get_window_app(metaWindow);
+                            this._log.debug(`The window '${shellApp?.get_name()} - ${metaWindow.get_title()}' is already on workspace ${desktop_number}`);
+                        }
+                        saved_window_session.moved = true;
+                    }
+                    return saved_window_session;
+                }
             }
         }
+
+        this._log.debug(`No match found for hash: ${currentHash}`);
         return null;
     }
 
@@ -446,20 +473,32 @@ export const MoveSession = class {
 
         let autoMoveInterestingWindows = [];
         const open_windows = shellApp.get_windows();
-        saved_window_sessions.forEach(saved_window_session => {
-            open_windows.forEach(open_window => {
+        for (const saved_window_session of saved_window_sessions) {
+            for (const open_window of open_windows) {
                 if (open_window.get_wm_class() != saved_window_session.wm_class) {
-                    return;
+                    continue;
                 }
 
-                const title = open_window.get_title();
-                const windows_count = saved_window_session.windows_count;
                 const open_window_workspace_index = open_window.get_workspace().index();
                 const desktop_number = saved_window_session.desktop_number;
 
-                if (windows_count === 1 || title === saved_window_session.window_title) {
+                let matched = false;
+                if (saved_window_session.window_hash) {
+                    const currentHash = this._computeWindowHash(open_window);
+                    matched = (currentHash === saved_window_session.window_hash);
+                    if (matched) {
+                        this._log.debug(`Auto-move hash match: ${currentHash} for ${shellApp.get_name()}`);
+                    }
+                } else {
+                    // Backward compatibility
+                    const title = open_window.get_title();
+                    const windows_count = saved_window_session.windows_count;
+                    matched = (windows_count === 1 || title === saved_window_session.window_title);
+                }
+
+                if (matched) {
                     if (open_window_workspace_index === desktop_number) {
-                        this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
+                        this._log.debug(`The window '${open_window.get_title()}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
                         this._restoreWindowStates(open_window, saved_window_session, true);
                     } else {
                         autoMoveInterestingWindows.push({
@@ -467,11 +506,10 @@ export const MoveSession = class {
                             saved_window_session: saved_window_session
                         });
                     }
+                    break; // This saved_window_session is matched, move to next one
                 }
-
-            });
-
-        });
+            }
+        }
 
         return autoMoveInterestingWindows;
     }
