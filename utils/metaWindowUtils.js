@@ -2,16 +2,22 @@
 
 import Meta from 'gi://Meta';
 
+import * as Constants from '../constants.js';
+
 
 /**
  * Get the stable window id, don't change even after gnome shell is restarted
- * 
+ *
  * On X11, return xid; On Wayland, return id
- * 
+ *
  * @returns stable window id
  */
 export const getStableWindowId = function(metaWindow) {
-    return Meta.is_wayland_compositor() ? metaWindow.get_id() : metaWindow.get_description();
+    if (Constants.shellVersion >= 50) {
+        return metaWindow.get_id();
+    } else {
+        return Meta.is_wayland_compositor() ? metaWindow.get_id() : metaWindow.get_description();
+    }
 }
 
 export const isSurfaceActor = function(clutterActor) {
