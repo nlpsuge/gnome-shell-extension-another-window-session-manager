@@ -933,5 +933,32 @@
         </child>
       </object>
     </child>
+    <child>
+      <object class="AdwPreferencesGroup" id="about_group">
+        <property name="title" translatable="yes">About</property>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="margin-top">6</property>
+            <property name="margin-bottom">6</property>
+            <property name="margin-start">6</property>
+            <property name="margin-end">6</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="hexpand">true</property>
+                <property name="label" translatable="yes">Version</property>
+                <property name="xalign">0</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel" id="version_label">
+                <property name="halign">end</property>
+                <property name="label">-</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
   </object>
 </interface>

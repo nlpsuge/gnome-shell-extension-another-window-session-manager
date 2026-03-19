@@ -39,6 +39,27 @@ export const MoveSession = class {
         return `${wm_class}|${desktop_number}|${frameRect.x}|${frameRect.y}`;
     }
 
+    /**
+     * Compute a position-only hash (without workspace) for matching windows
+     * that may be on the wrong workspace. Used by the "move windows" feature
+     * where the whole point is that windows need to change workspace.
+     */
+    _computePositionHash(metaWindow) {
+        const wm_class = metaWindow.get_wm_class();
+        const frameRect = metaWindow.get_frame_rect();
+        return `${wm_class}|${frameRect.x}|${frameRect.y}`;
+    }
+
+    /**
+     * Extract a position-only hash from a saved window_hash by stripping
+     * the desktop_number component (format: wm_class|desktop|x|y -> wm_class|x|y)
+     */
+    _savedHashToPositionHash(savedHash) {
+        const parts = savedHash.split('|');
+        // Remove the desktop_number (index 1)
+        return `${parts[0]}|${parts[2]}|${parts[3]}`;
+    }
+
     async moveWindows(sessionName) {
         if (!sessionName) {
             sessionName = this.sessionName;
@@ -110,8 +131,9 @@ export const MoveSession = class {
                         this._changeWorkspace(metaWindow, desktop_number);
                     }
     
-                    // restore window state if necessary due to moving windows could lost window state
+                    // restore window state and geometry after moving, since workspace change can reset both
                     this._restoreWindowState(metaWindow, saved_window_session);
+                    this._restoreWindowGeometry(metaWindow, saved_window_session);
     
                 } catch (e) {
                     // I just don't want one failure breaks the loop
@@ -254,8 +276,9 @@ export const MoveSession = class {
                     this._log.debug(`MWMW: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
                     this._changeWorkspace(metaWindow, desktop_number);
                 }
-                // The window state get lost during moving the window, and we need to restore window state again.
+                // The window state and geometry get lost during moving the window, restore both again.
                 this._restoreWindowState(metaWindow, saved_window_session);
+                this._restoreWindowGeometry(metaWindow, saved_window_session);
 
                 saved_window_session.moved = true;
             }
@@ -278,44 +301,44 @@ export const MoveSession = class {
             return !saved_window_session.moved;
         });
 
-        const currentHash = this._computeWindowHash(metaWindow);
-        this._log.debug(`Matching window hash: ${currentHash} (${metaWindow.get_title()})`);
+        const currentPositionHash = this._computePositionHash(metaWindow);
+        this._log.debug(`Matching window position hash: ${currentPositionHash} (${metaWindow.get_title()})`);
 
         for (const saved_window_session of saved_window_sessions) {
             const open_window_workspace_index = metaWindow.get_workspace().index();
             const desktop_number = saved_window_session.desktop_number;
 
-            // Match by hash if available, fall back to old logic for backward compatibility
+            // Try position hash first (best precision, works when windows are at saved positions)
+            let matched = false;
             if (saved_window_session.window_hash) {
-                if (currentHash === saved_window_session.window_hash) {
-                    this._log.debug(`Hash match: ${currentHash}`);
-                    if (open_window_workspace_index === desktop_number) {
-                        if (this._log.isDebug()) {
-                            const shellApp = this._windowTracker.get_window_app(metaWindow);
-                            this._log.debug(`The window '${shellApp?.get_name()} - ${metaWindow.get_title()}' is already on workspace ${desktop_number}`);
-                        }
-                        saved_window_session.moved = true;
-                    }
-                    return saved_window_session;
+                const savedPositionHash = this._savedHashToPositionHash(saved_window_session.window_hash);
+                if (currentPositionHash === savedPositionHash) {
+                    this._log.debug(`Position hash match: ${currentPositionHash} -> workspace ${desktop_number}`);
+                    matched = true;
                 }
-            } else {
-                // Backward compatibility: old sessions without window_hash
+            }
+            // Fall back to title/count matching (works after login when windows are at default positions)
+            if (!matched) {
                 const title = metaWindow.get_title();
                 const windows_count = saved_window_session.windows_count;
                 if (windows_count === 1 || title === saved_window_session.window_title) {
-                    if (open_window_workspace_index === desktop_number) {
-                        if (this._log.isDebug()) {
-                            const shellApp = this._windowTracker.get_window_app(metaWindow);
-                            this._log.debug(`The window '${shellApp?.get_name()} - ${metaWindow.get_title()}' is already on workspace ${desktop_number}`);
-                        }
-                        saved_window_session.moved = true;
-                    }
-                    return saved_window_session;
+                    this._log.debug(`Title/count fallback match: ${metaWindow.get_title()} -> workspace ${desktop_number}`);
+                    matched = true;
                 }
+            }
+            if (matched) {
+                if (open_window_workspace_index === desktop_number) {
+                    if (this._log.isDebug()) {
+                        const shellApp = this._windowTracker.get_window_app(metaWindow);
+                        this._log.debug(`The window '${shellApp?.get_name()} - ${metaWindow.get_title()}' is already on workspace ${desktop_number}`);
+                    }
+                    saved_window_session.moved = true;
+                }
+                return saved_window_session;
             }
         }
 
-        this._log.debug(`No match found for hash: ${currentHash}`);
+        this._log.debug(`No match found for position hash: ${currentPositionHash}`);
         return null;
     }
 
@@ -483,17 +506,23 @@ export const MoveSession = class {
                 const desktop_number = saved_window_session.desktop_number;
 
                 let matched = false;
+                // Try position hash first (best precision, works when windows are at saved positions)
                 if (saved_window_session.window_hash) {
-                    const currentHash = this._computeWindowHash(open_window);
-                    matched = (currentHash === saved_window_session.window_hash);
+                    const currentPositionHash = this._computePositionHash(open_window);
+                    const savedPositionHash = this._savedHashToPositionHash(saved_window_session.window_hash);
+                    matched = (currentPositionHash === savedPositionHash);
                     if (matched) {
-                        this._log.debug(`Auto-move hash match: ${currentHash} for ${shellApp.get_name()}`);
+                        this._log.debug(`Auto-move position hash match: ${currentPositionHash} for ${shellApp.get_name()}`);
                     }
-                } else {
-                    // Backward compatibility
+                }
+                // Fall back to title/count matching (works after login when windows are at default positions)
+                if (!matched) {
                     const title = open_window.get_title();
                     const windows_count = saved_window_session.windows_count;
                     matched = (windows_count === 1 || title === saved_window_session.window_title);
+                    if (matched) {
+                        this._log.debug(`Auto-move title/count fallback match: ${open_window.get_title()} for ${shellApp.get_name()}`);
+                    }
                 }
 
                 if (matched) {

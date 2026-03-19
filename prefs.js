@@ -273,6 +273,9 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
 
         this.close_by_rules_switch = this._builder.get_object('close_by_rules_switch');
         this.auto_close_session_switch = this._builder.get_object('auto_close_session_switch');
+
+        const versionLabel = this._builder.get_object('version_label');
+        versionLabel.set_label(`${this.metadata.version}`);
     }
 
     _installAutostartDesktopFile(desktopFileTemplate, targetDesktopFilePath) {
