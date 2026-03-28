@@ -35,7 +35,7 @@ export default class AnotherWindowSessionManagerExtension extends Extension {
 
         this.initUtils();
         
-        this._settings.connect('changed::show-indicator', () => this.showOrHideIndicator());
+        this._settingsChangedId = this._settings.connect('changed::show-indicator', () => this.showOrHideIndicator());
         this.showOrHideIndicator();
     
         _autostartServiceProvider = new Autostart.AutostartServiceProvider();
@@ -57,6 +57,12 @@ export default class AnotherWindowSessionManagerExtension extends Extension {
     showOrHideIndicator() {
         if (this._settings.get_boolean('show-indicator')) {
             if (!_indicator) {
+                // Remove any stale indicator left over from a previous enable/disable cycle
+                // (e.g. after screen lock/unlock) to avoid "Extension point conflict" error
+                const existingIndicator = Main.panel.statusArea['Another Window Session Manager'];
+                if (existingIndicator) {
+                    existingIndicator.destroy();
+                }
                 _indicator = new Indicator.AwsIndicator();
                 Main.panel.addToStatusArea('Another Window Session Manager', _indicator);
             }
@@ -101,6 +107,10 @@ export default class AnotherWindowSessionManagerExtension extends Extension {
         }
 
         if (this._settings) {
+            if (this._settingsChangedId) {
+                this._settings.disconnect(this._settingsChangedId);
+                this._settingsChangedId = null;
+            }
             this._settings = null;
         }
 
