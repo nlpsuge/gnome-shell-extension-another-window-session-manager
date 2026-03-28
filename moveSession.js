@@ -17,6 +17,33 @@ import { shellVersion } from './constants.js';
 import {WindowTilingSupport} from './windowTilingSupport.js';
 
 
+// Zero-width characters used by Window Titler's invisible ID feature.
+// Each window gets a unique 4-char prefix encoded in these characters.
+const ZERO_WIDTH_CHARS = new Set([
+    '\u200B', // Zero Width Space
+    '\u200C', // Zero Width Non-Joiner
+    '\u200D', // Zero Width Joiner
+    '\u2060', // Word Joiner
+]);
+const INVISIBLE_ID_LENGTH = 4;
+
+// Extract the invisible ID prefix from a window title, or null if none.
+function _extractInvisibleId(title) {
+    if (!title || title.length < INVISIBLE_ID_LENGTH) return null;
+    for (let i = 0; i < INVISIBLE_ID_LENGTH; i++) {
+        if (!ZERO_WIDTH_CHARS.has(title[i])) return null;
+    }
+    return title.substring(0, INVISIBLE_ID_LENGTH);
+}
+
+// Match two window titles by their invisible ID prefix (if both have one).
+// Returns true if both titles have an invisible ID and they are identical.
+function _matchByInvisibleId(titleA, titleB) {
+    const idA = _extractInvisibleId(titleA);
+    const idB = _extractInvisibleId(titleB);
+    return idA !== null && idB !== null && idA === idB;
+}
+
 export const MoveSession = class {
 
     constructor() {
@@ -277,7 +304,11 @@ export const MoveSession = class {
             const open_window_workspace_index = metaWindow.get_workspace().index();
             const desktop_number = saved_window_session.desktop_number;
 
-            if (windows_count === 1 || title === saved_window_session.window_title) {
+            const invisibleMatch = _matchByInvisibleId(title, saved_window_session.window_title);
+            const titleExactMatch = title === saved_window_session.window_title;
+            const singleWindow = windows_count === 1;
+
+            if (singleWindow || invisibleMatch || titleExactMatch) {
                 if (open_window_workspace_index === desktop_number) {
                     if (this._log.isDebug()) {
                         const shellApp = this._windowTracker.get_window_app(metaWindow);
@@ -457,7 +488,11 @@ export const MoveSession = class {
                 const open_window_workspace_index = open_window.get_workspace().index();
                 const desktop_number = saved_window_session.desktop_number;
 
-                if (windows_count === 1 || title === saved_window_session.window_title) {
+                const invisibleMatch = _matchByInvisibleId(title, saved_window_session.window_title);
+                const titleExactMatch = title === saved_window_session.window_title;
+                const singleWindow = windows_count === 1;
+
+                if (singleWindow || invisibleMatch || titleExactMatch) {
                     if (open_window_workspace_index === desktop_number) {
                         this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
                         this._restoreWindowStates(open_window, saved_window_session, true);
