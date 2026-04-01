@@ -193,7 +193,7 @@ export const Autoclose = GObject.registerClass(
                                 const { hasRunningApps } = result;
                                 if (hasRunningApps) {
                                     that._log.debug('One or more apps cannot be closed, please close them manually.');
-                                    that._runningApplicationListWindow._applicationSection.title = `Those apps can't be closed, please close them manually`;
+                                    that._runningApplicationListWindow._applicationSection.title = `These apps can't be closed, please close them manually`;
                                     that._runningApplicationListWindow.showRunningApps();
                                     that._runningApplicationListWindow._retryButton.reactive = true;
                                 } else {
