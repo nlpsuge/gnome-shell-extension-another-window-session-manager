@@ -486,7 +486,7 @@ export const CloseSession = class {
         }
 
         let windows;
-        if (Meta.is_wayland_compositor()) {
+        if (Meta.is_wayland_compositor) {
             windows = this._sortWindowsOnWayland(app);
         } else {
             windows = this._sortWindowsOnX11(app);
