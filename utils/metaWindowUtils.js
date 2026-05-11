@@ -11,7 +11,7 @@ import Meta from 'gi://Meta';
  * @returns stable window id
  */
 export const getStableWindowId = function(metaWindow) {
-    return Meta.is_wayland_compositor() ? metaWindow.get_id() : metaWindow.get_description();
+    return Meta.is_wayland_compositor ? metaWindow.get_id() : metaWindow.get_description();
 }
 
 export const isSurfaceActor = function(clutterActor) {

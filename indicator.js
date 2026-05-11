@@ -80,7 +80,7 @@ class AwsIndicator extends PanelMenu.Button {
 
     // TODO Move this method and related code to a single .js file
     async _windowCreated(display, metaWindow, userData) {
-        if (!Meta.is_wayland_compositor()) {
+        if (!Meta.is_wayland_compositor) {
             // We call createEnoughWorkspaceAndMoveWindows() if and only if all conditions checked.
             
             // But we give some windows (such as the OS running in VirtualBox) a chance to connect `first-frame` and `shown` signals.
