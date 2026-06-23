@@ -136,7 +136,7 @@
                         <child>
                           <object class="GtkLabel" id="close_by_rules_multi_label_description">
                             <property name="hexpand">true</property>
-                            <property name="label" translatable="yes">To make this feature work, see: &lt;a href='https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work'&gt;How to make `Close by rules` work&lt;/a&gt;</property>
+                            <property name="label" translatable="yes">To make this feature work, see: &lt;a href='https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager#how-to-make-close-by-rules-work'&gt;How to make `Close by rules` work&lt;/a&gt;</property>
                             <property name="wrap">true</property>
                             <property name="use-markup">true</property>
                             <property name="xalign">0</property>
@@ -327,7 +327,7 @@
                         <child>
                           <object class="GtkLabel">
                             <property name="hexpand">true</property>
-                            <property name="label" translatable="yes">Install ~/.config/autostart/_awsm-restore-previous-session.desktop if enabled</property>
+                            <property name="label" translatable="yes">Install ~/.config/autostart/_yawsm-restore-previous-session.desktop if enabled</property>
                             <property name="wrap">true</property>
                             <property name="use-markup">true</property>
                             <property name="xalign">0</property>
@@ -450,7 +450,7 @@
                         <child>
                           <object class="GtkLabel">
                             <property name="hexpand">true</property>
-                            <property name="label" translatable="yes">Install ~/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop if enabled</property>
+                            <property name="label" translatable="yes">Install ~/.config/autostart/_gnome-shell-extension-yet-another-window-session-manager.desktop if enabled</property>
                             <property name="wrap">true</property>
                             <property name="use-markup">true</property>
                             <property name="xalign">0</property>

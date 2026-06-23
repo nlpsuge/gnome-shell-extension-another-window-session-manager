@@ -2,7 +2,7 @@
 <schemalist>
   
   <!-- Note that name in the path should be the same as in id-->
-  <schema id="org.gnome.shell.extensions.another-window-session-manager" path="/org/gnome/shell/extensions/another-window-session-manager/">    
+  <schema id="org.gnome.shell.extensions.yet-another-window-session-manager" path="/org/gnome/shell/extensions/yet-another-window-session-manager/">    
     <key name='enable-close-by-rules' type='b'>
       <default>true</default>
       <summary>Enable or disable the ability of closing windows by customed rules, such as a shortcut</summary>
@@ -73,7 +73,7 @@
       <summary>Enable to restore session(s) on startup</summary>
       <description>
       Enable to restore session(s) on startup and install 
-      `~/.config/autostart/_gnome-shell-extension-another-window-session-manager.desktop`.
+      `~/.config/autostart/_gnome-shell-extension-yet-another-window-session-manager.desktop`.
       </description>
     </key>
     <key name='restore-session-interval' type="i">

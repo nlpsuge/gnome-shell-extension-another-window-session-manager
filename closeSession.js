@@ -51,13 +51,13 @@ export const CloseSession = class {
                 await this._startYdotoold();
 
                 for(const [app, rules] of runningAppsClosingByAppRules) {
-                    app._rulesAWSM = rules;
-                    await this._tryCloseAppsByRules(app).finally(() => delete app._rulesAWSM);
+                    app._rulesYAWSM = rules;
+                    await this._tryCloseAppsByRules(app).finally(() => delete app._rulesYAWSM);
                 }
 
                 for(const [app, rules] of runningAppsClosingByKeywordRules) {
-                    app._rulesAWSM = rules;
-                    await this._tryCloseAppsByRules(app).finally(() => delete app._rulesAWSM);
+                    app._rulesYAWSM = rules;
+                    await this._tryCloseAppsByRules(app).finally(() => delete app._rulesYAWSM);
                 }
             }
             
@@ -259,7 +259,7 @@ export const CloseSession = class {
                 return;
             }
 
-            const rules = app._rulesAWSM;
+            const rules = app._rulesYAWSM;
             if (rules?.type === 'shortcut') {
                 let keycodesSegments = [];
                 let shortcutsOriginal = [];
@@ -350,7 +350,7 @@ export const CloseSession = class {
 
     async _activateAndCloseWindows(app, linuxKeyCodes, shortcutsOriginal) {
         try {
-            const rules = app._rulesAWSM;
+            const rules = app._rulesYAWSM;
             const keyDelay = rules?.keyDelay;
             const cmd = ['ydotool', 'key', '--key-delay', keyDelay ? keyDelay + '' : '0'].concat(linuxKeyCodes);
             const cmdStr = cmd.join(' ');
@@ -389,11 +389,11 @@ export const CloseSession = class {
                         Log.Log.getDefault().debug(`Finished to start ydotool.service. Started: ${started}`);
                         resolve(started);
                     } catch (error) {
-                        const additionalInfo = 'Please make sure `ydotool` is installed and set up properly, see https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work for more instruction';
+                        const additionalInfo = 'Please make sure `ydotool` is installed and set up properly, see https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager#how-to-make-close-by-rules-work for more instruction';
                         const msg = 'Failed to start ydotool.service';
                         Log.Log.getDefault().error(error, `${msg} ${additionalInfo}`);
                         global.notify_error(`${msg}`, `${error ? error.message : ''} ${additionalInfo}`);
-                        // `ydotool` might not be available, which can't stop AWSM continue to close the rest of apps
+                        // `ydotool` might not be available, which can't stop YAWSM continue to close the rest of apps
                         resolve(false);
                     }
                 });

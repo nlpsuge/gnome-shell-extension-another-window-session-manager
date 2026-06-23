@@ -60,7 +60,7 @@ export const UICloseWindows = GObject.registerClass(
             });
 
             const whitelistColumnView = new PrefsColumnView.WhitelistColumnView();
-            const addWhitelist = new AwsmNewRuleRow();
+            const addWhitelist = new YawsmNewRuleRow();
             close_windows_whitelist_listbox.append(whitelistColumnView);
             // Get the auto-created ListBoxRow and make it non-activatable
             const whitelistRow = whitelistColumnView.get_parent();
@@ -118,7 +118,7 @@ export const UICloseWindows = GObject.registerClass(
             close_by_rules_list_box.set_header_func((currentRow, beforeRow, data) => {
                 this._setHeader(currentRow, beforeRow, data, 'Applications');
             });
-            const addApp = new AwsmNewRuleRow();
+            const addApp = new YawsmNewRuleRow();
             close_by_rules_list_box.append(addApp);
             addApp.connect('clicked', this._onAddAppActivated.bind(this));
 
@@ -152,7 +152,7 @@ export const UICloseWindows = GObject.registerClass(
             close_by_rules_by_keyword_list_box.set_header_func((currentRow, beforeRow, data) => {
                 this._setHeader(currentRow, beforeRow, data, 'Keywords');
             });
-            const addKeyword = new AwsmNewRuleRow();
+            const addKeyword = new YawsmNewRuleRow();
             close_by_rules_by_keyword_list_box.append(addKeyword);
             addKeyword.connect('clicked', (source) => {
                 const oldCloseWindowsRules = this._settings.get_string('close-windows-rules-by-keyword');
@@ -205,17 +205,17 @@ export const UICloseWindows = GObject.registerClass(
                     Object.assign(label, labelProperties);
                 boxVertical.append(label);
                 boxVertical.append(new Gtk.Separator({orientation: Gtk.Orientation.HORIZONTAL}));
-                boxVertical._isHeaderAWSM = true;
+                boxVertical._isHeaderYAWSM = true;
                 currentRow.set_header(boxVertical);
             }
 
-            if ((currentRow instanceof AwsmNewRuleRow) && beforeRow && header) {
+            if ((currentRow instanceof YawsmNewRuleRow) && beforeRow && header) {
                 currentRow.set_header(null);
             }
         }
 
         _onAddAppActivated() {
-            const dialog = new AwsmNewRuleByAppDialog(this._builder.get_object('close_windows_page').get_root());
+            const dialog = new YawsmNewRuleByAppDialog(this._builder.get_object('close_windows_page').get_root());
             dialog.connect('response', (dlg, id) => {
                 const appInfo = id === Gtk.ResponseType.OK
                     ? dialog.get_widget().get_app_info() : null;
@@ -251,9 +251,9 @@ export const UICloseWindows = GObject.registerClass(
 
         _getRuleRows(listBox, id) {
             return [...listBox].filter(row => 
-                !(row instanceof AwsmNewRuleRow) 
+                !(row instanceof YawsmNewRuleRow) 
                 // Skip header (The header is a child of listBox actually)
-                && !row._isHeaderAWSM);
+                && !row._isHeaderYAWSM);
         }
 
         _sync(listBox, obj, settingName, keyName) {
@@ -994,12 +994,12 @@ const RuleRowByKeyword = GObject.registerClass({
 
 });
 
-const AwsmNewRuleRow = GObject.registerClass({
+const YawsmNewRuleRow = GObject.registerClass({
     Signals: {
         'clicked': { param_types: [] }
     }
 },
-class AwsmNewRuleRow extends Gtk.ListBoxRow {
+class YawsmNewRuleRow extends Gtk.ListBoxRow {
     _init() {
         super._init({
             action_name: 'rules.add',
@@ -1025,8 +1025,8 @@ class AwsmNewRuleRow extends Gtk.ListBoxRow {
     }
 });
 
-const AwsmNewRuleByAppDialog = GObject.registerClass(
-    class AwsmNewRuleByAppDialog extends Gtk.AppChooserDialog {
+const YawsmNewRuleByAppDialog = GObject.registerClass(
+    class YawsmNewRuleByAppDialog extends Gtk.AppChooserDialog {
         _init(parent) {
             super._init({
                 transient_for: parent,

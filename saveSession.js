@@ -297,7 +297,7 @@ export const SaveSession = class {
             window_state.meta_maximized = metaWindow.get_maximized();
         }
 
-        const windowTileFor = metaWindow.get_tile_match() ?? metaWindow._tile_match_awsm;
+        const windowTileFor = metaWindow.get_tile_match() ?? metaWindow._tile_match_yawsm;
         if (windowTileFor) {
             const shellApp = this._windowTracker.get_window_app(windowTileFor);
             if (shellApp) {
@@ -467,7 +467,7 @@ export const SaveSession = class {
                                 const savedMsg = `Session ${sessionConfig.session_name} saved to ${sessionFile.get_path()}!`;
                                 Log.Log.getDefault().info(`${savedMsg}`);
                                 if (this._notifyUser && this._settings.get_boolean('enable-save-session-notification')) {
-                                    Main.notify(`Another Window Session Manager`, savedMsg);
+                                    Main.notify(`Yet Another Window Session Manager`, savedMsg);
                                 }
                                 resolve(success);
                                 // TODO Notification

@@ -30,7 +30,7 @@ export const AwsIndicator = GObject.registerClass(
 class AwsIndicator extends PanelMenu.Button {
 
     _init() {
-        super._init(0.0, "Another Window Session Manager");
+        super._init(0.0, "Yet Another Window Session Manager");
 
         this._windowTracker = Shell.WindowTracker.get_default();
 
@@ -216,7 +216,7 @@ class AwsIndicator extends PanelMenu.Button {
 
         // The window title might be changing multiple times while the app is starting. 
         // For some apps, such as Visual Studio Code, when it's starting, the first title is `Visual Studio Code`,
-        // the second could be `indicator.js - gnome-shell-extension-another-window-session-manager - Visual Studio Code`.
+        // the second could be `indicator.js - gnome-shell-extension-yet-another-window-session-manager - Visual Studio Code`.
         // In the above instance, `notify::title` catches the second.
         let titleChangedId = metaWindow.connect('notify::title', () => {
             if (this._isDestroyed) {

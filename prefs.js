@@ -21,7 +21,7 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         window.set_default_size(1200, 800);
         window.set_size_request(1200, 800);
 
-        const settings = this.getSettings('org.gnome.shell.extensions.another-window-session-manager');
+        const settings = this.getSettings('org.gnome.shell.extensions.yet-another-window-session-manager');
         
         this.initUtils(settings);
 

@@ -1,8 +1,8 @@
-.awsm-toggle-switch {
+.yawsm-toggle-switch {
     background-image: url("./icons/toggle-off-autorestore-symbolic.svg");
 }
 
-.awsm-toggle-switch:checked {
+.yawsm-toggle-switch:checked {
     background-image: url("./icons/toggle-on-autorestore-symbolic.svg");
 }
 
@@ -15,27 +15,27 @@
 /**
 * *-tooltip: Adapted from: https://github.com/GSConnect/gnome-shell-extension-gsconnect/blob/master/src/stylesheet.css
 */
-.awsm-tooltip {
+.yawsm-tooltip {
     border-radius: 3px;
     min-width: 0;
     min-height: 0;
     padding: 6px;
 }
 
-.awsm-tooltip > StBoxLayout {
+.yawsm-tooltip > StBoxLayout {
     spacing: 6px;
 }
 
-.awsm-tooltip StIcon {
+.yawsm-tooltip StIcon {
     icon-size: 16px;
 }
 
-.awsm-tooltip StLabel {
+.yawsm-tooltip StLabel {
     font-weight: normal;
     text-align: left;
 }
 
-.awsm-tooltip StLabel:rtl {
+.yawsm-tooltip StLabel:rtl {
     text-align: right;
 }
 

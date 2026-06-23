@@ -147,7 +147,7 @@ export const Tooltip = class Tooltip {
 
         if (this._bin === null) {
             this._bin = new St.Bin({
-                style_class: 'osd-window awsm-tooltip',
+                style_class: 'osd-window yawsm-tooltip',
                 opacity: 232,
             });
 

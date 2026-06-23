@@ -1,4 +1,4 @@
-# gnome-shell-extension-another-window-session-manager
+# gnome-shell-extension-yet-another-window-session-manager
 Close open windows gracefully and save them as a session. And you can restore them when necessary manually or automatically at startup.
 
 Most importantly, it supports both X11 and Wayland!
@@ -7,7 +7,7 @@ This extension is based on several [Gnome technologies](https://www.gnome.org/te
 
 
 <p align="left">
-  <a href="https://extensions.gnome.org/extension/4709/another-window-session-manager/">
+  <a href="https://extensions.gnome.org/extension/4709/yet-another-window-session-manager/">
     <img alt="Get it on GNOME Extensions" width="228" src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true"/>
   </a>
 </p>
@@ -49,13 +49,13 @@ After confirm to save:
 ![image](https://user-images.githubusercontent.com/2271720/215283405-5c052244-8223-4aa4-9786-2798a073c3e0.png)
 
 # Main features
-1. Restore the previous session at startup. **disabled by default**, to enable it please activate `Restore previous apps and windows at startup` under `Restore sessions`. (See also: [Restore previous apps and windows at startup](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#restore-previous-apps-and-windows-at-startup)).
+1. Restore the previous session at startup. **disabled by default**, to enable it please activate `Restore previous apps and windows at startup` under `Restore sessions`. (See also: [Restore previous apps and windows at startup](https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager#restore-previous-apps-and-windows-at-startup)).
 1. Save running apps and windows automatically when necessary, this will be used to restore the previous session at startup.
-1. Close running apps and windows automatically before `Log Out`, `Restart`, `Power Off`. **disabled by default**, to enable it please activate `Auto close session` under `Close windows`. (See also: [Auto close session](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#auto-close-session)).
+1. Close running apps and windows automatically before `Log Out`, `Restart`, `Power Off`. **disabled by default**, to enable it please activate `Auto close session` under `Close windows`. (See also: [Auto close session](https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager#auto-close-session)).
 1. Close running windows gracefully
-1. Close apps with multiple windows gracefully via `ydotool` so you don't lose sessions of this app (See also: [How to make Close by rules work](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#how-to-make-close-by-rules-work))
+1. Close apps with multiple windows gracefully via `ydotool` so you don't lose sessions of this app (See also: [How to make Close by rules work](https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager#how-to-make-close-by-rules-work))
 1. Save running apps and windows manually
-1. Restore a selected session at startup (See also: [#9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9#issuecomment-1097012874)). **disabled by default**.
+1. Restore a selected session at startup (See also: [#9](https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager/issues/9#issuecomment-1097012874)). **disabled by default**.
 1. Restore a saved session manually
 1. Restore window state, including `Always on Top`, `Always on Visible Workspace` and maximization
 1. Restore window workspace, size and position
@@ -78,9 +78,9 @@ After you click the `Log Out/Restart/Power Off` button:
 
 ![image](https://user-images.githubusercontent.com/2271720/214377307-0af5b841-93b8-4b6c-bd09-7a620dc79025.png)
 
-If the second button on the above dialog has `via AWSM`, it means this feature is enabled. 
+If the second button on the above dialog has `via YAWSM`, it means this feature is enabled. 
 
-After you click `Log Out(via AWSM)`, all apps and windows will be closed automatically by AWSM. But some apps might be still opening, you have to close them yourself; then if there are no running apps, this extension logs out the current user immediately.
+After you click `Log Out(via YAWSM)`, all apps and windows will be closed automatically by YAWSM. But some apps might be still opening, you have to close them yourself; then if there are no running apps, this extension logs out the current user immediately.
 
 ![image](https://user-images.githubusercontent.com/2271720/214394659-651e6259-842c-49ca-9c97-6df62c9485d1.png)
 
@@ -99,19 +99,19 @@ sudo dnf install ydotool
 
 #Check the permission of `/dev/uinput`, if it's `crw-rw----+`, you can skip step 2
 # 2. Get permission to access to `/dev/uinput` as the normal user
-sudo touch /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
-# Here we use `tee`, not redirect(>), to avoid `warning: An error occurred while redirecting file '/etc/udev/rules.d/60-awsm-ydotool-uinput.rules' open: Permission denied`
+sudo touch /etc/udev/rules.d/60-yawsm-ydotool-uinput.rules
+# Here we use `tee`, not redirect(>), to avoid `warning: An error occurred while redirecting file '/etc/udev/rules.d/60-yawsm-ydotool-uinput.rules' open: Permission denied`
 # See: https://www.shellhacks.com/sudo-echo-to-file-permission-denied/
 echo '# See:
   # https://github.com/ValveSoftware/steam-devices/blob/master/60-steam-input.rules 
   # https://github.com/ReimuNotMoe/ydotool/issues/25
 
   # ydotool udev write access
-  KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' | sudo tee --append /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
+  KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"' | sudo tee --append /etc/udev/rules.d/60-yawsm-ydotool-uinput.rules
 
-cat /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
+cat /etc/udev/rules.d/60-yawsm-ydotool-uinput.rules
 #Remove executable permission (a.k.a. x)
-sudo chmod 644 /etc/udev/rules.d/60-awsm-ydotool-uinput.rules
+sudo chmod 644 /etc/udev/rules.d/60-yawsm-ydotool-uinput.rules
 
 # 3. Copy ydotool.service to /usr/lib/systemd/user, so `systemctl --user enable ydotool.service` can work
 sudo cp /usr/lib/systemd/system/ydotool.service /usr/lib/systemd/user
@@ -141,27 +141,27 @@ Feel free to fill an issue if `ydotool` does not work under normal user, you may
 
 Activate `Restore previous apps and windows at startup` to enable this feature. This option and `Restore selected session at startup` are exclusive. And this option works for shutting down the system normally (via Log Out/Restart/Power Off buttons) and other ways (like pressing the physical power-off button).
 
-Then while startup, AWSM will launch and restore apps and states from the previous saved session configs.
+Then while startup, YAWSM will launch and restore apps and states from the previous saved session configs.
 
-The session configs are saved in the path `~/.config/another-window-session-manager/sessions/currentSession`.
+The session configs are saved in the path `~/.config/yet-another-window-session-manager/sessions/currentSession`.
 
 You can use the below command to test it. 
 ```bash
-gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{'removeAfterRestore': <false>}"
+gdbus call --session --dest org.gnome.Shell.Extensions.yawsm --object-path /org/gnome/Shell/Extensions/yawsm --method org.gnome.Shell.Extensions.yawsm.Autostart.RestorePreviousSession "{'removeAfterRestore': <false>}"
 ```
 
 ### How to `Restore a session at startup`?
 
 To make it work, you must enable it through `Restore sessions -> Restore at startup` in the Preferences AND active a session by clicking <img src=https://user-images.githubusercontent.com/2271720/162792222-0fc7e6ca-1382-49cf-975a-f53d878d0479.png width="24" height="13"> in the popup menu.
 
-While you enable it through `Restore sessions -> Restore at startup`, it creates a `_gnome-shell-extension-another-window-session-manager.desktop` under the folder `~/.config/autostart/`. 
+While you enable it through `Restore sessions -> Restore at startup`, it creates a `_gnome-shell-extension-yet-another-window-session-manager.desktop` under the folder `~/.config/autostart/`. 
 
 Test the settings in command line via:
 ```Bash
-gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession
+gdbus call --session --dest org.gnome.Shell.Extensions.yawsm --object-path /org/gnome/Shell/Extensions/yawsm --method org.gnome.Shell.Extensions.yawsm.Autostart.RestoreSession
 ```
 
-Please do not modify `_gnome-shell-extension-another-window-session-manager.desktop`, all changes by yourself could be overidden or deleted.
+Please do not modify `_gnome-shell-extension-yet-another-window-session-manager.desktop`, all changes by yourself could be overidden or deleted.
 
 # Panel menu items
 
@@ -193,7 +193,7 @@ Send keys to close the application gracefully with multiple windows.
 
 * libgtop2
 
-As of version 34, AWSM also uses `libgtop2` to query process information, just like `ps`. The cost of calling `ps` is very high, so I'm planing to remove this entirely.
+As of version 34, YAWSM also uses `libgtop2` to query process information, just like `ps`. The cost of calling `ps` is very high, so I'm planing to remove this entirely.
 
 To install it:
 
@@ -230,21 +230,21 @@ One of the following should be enough to prove the .desktop is not proper:
 Most existing applications should have a proper .desktop. I'm just handling the special case. Someone like myself might want this feature.
 
 # Where are the saved sessions?
-They are all in `~/.config/another-window-session-manager/sessions`. When use an existing name to save the current open windows, the previous file will be copied to `~/.config/another-window-session-manager/sessions/backups` as a new name, which is the-old-session-name**.backup-current-timestamp**.
+They are all in `~/.config/yet-another-window-session-manager/sessions`. When use an existing name to save the current open windows, the previous file will be copied to `~/.config/yet-another-window-session-manager/sessions/backups` as a new name, which is the-old-session-name**.backup-current-timestamp**.
 
-Note that I've marked `backups` as a reserved word, so you can't use it as a session name when saving a session. But you do have the freedom to manually create a file named `backups` in `~/.config/another-window-session-manager/sessions`. But this extension will only backup the session file that you are clicking the save button and you will receive an error log in the `journalctl` and an error notification every time you save an existing session.
+Note that I've marked `backups` as a reserved word, so you can't use it as a session name when saving a session. But you do have the freedom to manually create a file named `backups` in `~/.config/yet-another-window-session-manager/sessions`. But this extension will only backup the session file that you are clicking the save button and you will receive an error log in the `journalctl` and an error notification every time you save an existing session.
 
 # TODO
 1. - Close open windows
-     - [ ] Close all windows on the current workspace. (WIP, see https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/pull/71)
+     - [ ] Close all windows on the current workspace. (WIP, see https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager/pull/71)
 1. - Save open windows
      - [x] Save open windows 
 1. - Restore saved open windows
       - [x] Restore saved open windows
       - [x] Move to belonging workspace automatically
-      - [x] Restore window size and position ([issue 17](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/17))
+      - [x] Restore window size and position ([issue 17](https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager/issues/17))
       - [x] Restore window workspace, size and position of applications launched via a command line and don't have a recognizable `.desktop` file by `Shell.AppSystem.get_default().get_running()`.
-      - [x] Support multi-monitor ([issue 21](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/21))
+      - [x] Support multi-monitor ([issue 21](https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager/issues/21))
 1. - Saved open windows list
       - [x] Save open windows button
       - [x] Restore button
@@ -255,11 +255,11 @@ Note that I've marked `backups` as a reserved word, so you can't use it as a ses
 1. - [ ] Settings
       - [x] Debugging mode
       - [ ] whitelist using for closing application with multiple windows
-1. - [x] Support restoring a saved session at startup ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
-1. - [x] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/9))
+1. - [x] Support restoring a saved session at startup ([issue 9](https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager/issues/9))
+1. - [x] Support saving and closing windows when Log Out, Power off, Reboot ([issue 9](https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager/issues/9))
 1. - [ ] All TODO tags in the projects
 1. - [ ] Translation?
-1. - [ ] A client tool called `awsm-client` (See: [issue 34](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/34))
+1. - [ ] A client tool called `yawsm-client` (See: [issue 34](https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager/issues/34))
 1. - [ ] Fix any typo or grammar errors.
 1. - [ ] Open the Preferences on the popup menu 
 1. - [x] Open the session file from the popup menu

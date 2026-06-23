@@ -34,8 +34,8 @@ export class WindowTilingSupport {
         const windowAboutToResize = this._getWindowAboutToResize(window_tiling);
         if (!windowAboutToResize) return;
 
-        metaWindow._tile_match_awsm = windowAboutToResize;
-        windowAboutToResize._tile_match_awsm = metaWindow;
+        metaWindow._tile_match_yawsm = windowAboutToResize;
+        windowAboutToResize._tile_match_yawsm = metaWindow;
         
         this._signals.emit('window-tiled', metaWindow, windowAboutToResize);
 
@@ -60,8 +60,8 @@ export class WindowTilingSupport {
         if (!grabbedWindow) return;
 
         // Check if the grabbed window has been in a tiling state with another window
-        const windowAboutToResize = grabbedWindow._tile_match_awsm;
-        if (!windowAboutToResize || windowAboutToResize._tile_match_awsm !== grabbedWindow) 
+        const windowAboutToResize = grabbedWindow._tile_match_yawsm;
+        if (!windowAboutToResize || windowAboutToResize._tile_match_yawsm !== grabbedWindow) 
             return;
             
         // When position changed
@@ -113,14 +113,14 @@ export class WindowTilingSupport {
             || oldGrabbedWindowRect.width !== currentRect.width
             || oldGrabbedWindowRect.height !== currentRect.height)) 
         {
-            const anotherTilingWindow = grabbedWindow._tile_match_awsm;
+            const anotherTilingWindow = grabbedWindow._tile_match_yawsm;
 
             this._log.debug(`Untiling ${grabbedWindow.get_title()}`);
-            delete grabbedWindow._tile_match_awsm;
+            delete grabbedWindow._tile_match_yawsm;
 
             if (anotherTilingWindow) {
                 this._log.debug(`Untiling ${anotherTilingWindow.get_title()}`);
-                delete anotherTilingWindow._tile_match_awsm;
+                delete anotherTilingWindow._tile_match_yawsm;
             }
             this._grabbedWindowsAboutToUntileMap.delete(grabbedWindow);
 
