@@ -8,12 +8,12 @@ This extension is based on several [Gnome technologies](https://www.gnome.org/te
 Based on [Another Window Session Manager](https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager) by nlpsuge.
 
 
-<!-- <p align="left">
-  <a href="https://extensions.gnome.org/extension/4709/yet-another-window-session-manager/">
+<p align="left">
+  <a href="https://extensions.gnome.org/extension/10276/yet-another-window-session-manager/">
     <img alt="Get it on GNOME Extensions" width="228" src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true"/>
   </a>
 </p>
--->
+
 # Screenshot
 
 ## Overview
