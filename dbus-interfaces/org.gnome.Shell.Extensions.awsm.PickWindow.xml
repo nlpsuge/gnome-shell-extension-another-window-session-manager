@@ -1,0 +1,12 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+    "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+
+<node>
+    <interface name="org.gnome.Shell.Extensions.awsm.PickWindow">
+        <method name="PickWindow" />
+        <signal name="WindowPicked">
+            <arg name="results" type="(ssss)" />
+        </signal>
+        <signal name="WindowPickCancelled" />
+    </interface>
+</node>

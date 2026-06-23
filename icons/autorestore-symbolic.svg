@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="26"
+   height="26"
+   version="1.1"
+   id="svg10"
+   sodipodi:docname="autorestore-symbolic-2.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs14" />
+  <sodipodi:namedview
+     id="namedview12"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="7.764201"
+     inkscape:cx="-5.4738408"
+     inkscape:cy="14.553977"
+     inkscape:window-width="1920"
+     inkscape:window-height="992"
+     inkscape:window-x="0"
+     inkscape:window-y="48"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg10"
+     width="26px" />
+  <g
+     id="g15"
+     transform="scale(0.99998391,1.0041154)">
+    <rect
+       style="fill:#ffffff;fill-opacity:0.15;stroke:none;stroke-width:0.737499;marker:none"
+       width="26.10742"
+       height="26"
+       x="-26.10742"
+       y="-7.3242186e-06"
+       ry="13"
+       fill="#3081e3"
+       rx="7.0707593"
+       id="rect2"
+       transform="scale(-1,1)" />
+    <rect
+       ry="11"
+       rx="11"
+       y="2.9999926"
+       x="-24"
+       height="22"
+       width="22"
+       style="fill:#000000;fill-opacity:0.2;stroke:none;stroke-width:0.999999;marker:none"
+       fill="#f8f7f7"
+       id="rect4"
+       transform="scale(-1,1)" />
+    <rect
+       ry="11"
+       rx="11"
+       y="1.9999927"
+       x="-24"
+       height="22"
+       width="22"
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.999999;marker:none"
+       fill="#f8f7f7"
+       id="rect6"
+       transform="scale(-1,1)" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:24px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none"
+       x="4.9826608"
+       y="20.416645"
+       id="text18"><tspan
+         sodipodi:role="line"
+         id="tspan16"
+         x="4.9826608"
+         y="20.416645"
+         style="font-size:24px">A</tspan></text>
+  </g>
+</svg>
