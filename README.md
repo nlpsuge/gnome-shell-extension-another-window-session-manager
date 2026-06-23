@@ -6,12 +6,12 @@ Most importantly, it supports both X11 and Wayland!
 This extension is based on several [Gnome technologies](https://www.gnome.org/technologies/) and APIs including [Meta](https://gjs-docs.gnome.org/meta9~9_api), [Shell](https://gjs-docs.gnome.org/shell01~0.1_api/) and [St(Shell Toolkit)](https://gjs-docs.gnome.org/st10~1.0_api/).
 
 
-<p align="left">
+<!-- <p align="left">
   <a href="https://extensions.gnome.org/extension/4709/yet-another-window-session-manager/">
     <img alt="Get it on GNOME Extensions" width="228" src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true"/>
   </a>
 </p>
-
+-->
 # Screenshot
 
 ## Overview
