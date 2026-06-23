@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: nlpsuge <https://github.com/nlpsuge>
+// SPDX-FileCopyrightText: mendres82 <https://github.com/mendres82>
 // SPDX-FileCopyrightText: Simon Schneegans <code@simonschneegans.de>
 // SPDX-FileCopyrightText: Aurélien Hamy <aunetx@yandex.com>
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -18,7 +18,7 @@ import * as FileUtils from './fileUtils.js';
 
 // Based on the WindowPicker.js from Burn-My-Windows. 
 // I modified and enhanced it, so it can be used in my case 
-// properly for the Another Window Session Manager extension.
+// properly for the Yet Another Window Session Manager extension.
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -33,7 +33,7 @@ export const WindowPickerServiceProvider = class WindowPickerServiceProvider {
 
   constructor() {
     const iFace = new TextDecoder().decode(
-      FileUtils.current_extension_dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.PickWindow.xml').load_contents(null)[1]);
+      FileUtils.current_extension_dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.yawsm.PickWindow.xml').load_contents(null)[1]);
     this._dbus = Gio.DBusExportedObject.wrapJSObject(iFace, this);
   }
 
@@ -110,7 +110,7 @@ export const WindowPickerServiceProvider = class WindowPickerServiceProvider {
 
   // Call this to make the window-picking API available on the D-Bus.
   enable() {
-    this._dbus.export(Gio.DBus.session, '/org/gnome/shell/extensions/awsm');
+    this._dbus.export(Gio.DBus.session, '/org/gnome/shell/extensions/yawsm');
   }
 
   // Call this to stop this D-Bus again.

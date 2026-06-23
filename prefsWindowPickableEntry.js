@@ -58,8 +58,8 @@ export const WindowPickableEntry = GObject.registerClass({
             if (icon_pos !== Gtk.EntryIconPosition.SECONDARY)
                 return;
 
-            if (source._showSaveIconAWSM) {
-                delete source._showSaveIconAWSM;
+            if (source._showSaveIconYAWSM) {
+                delete source._showSaveIconYAWSM;
                 this._completeEditEntry(entry);
                 if (this._prefsDialogCloseRequestId) {
                     const prefsDialogWindow = entry.get_root();
@@ -76,7 +76,7 @@ export const WindowPickableEntry = GObject.registerClass({
 
                 source.set_icon_from_icon_name(Gtk.EntryIconPosition.SECONDARY, 'emblem-ok-symbolic');
                 source.set_icon_tooltip_text(Gtk.EntryIconPosition.SECONDARY, 'Complete editing');
-                source._showSaveIconAWSM = true;
+                source._showSaveIconYAWSM = true;
 
                 // Save the entry when we close the prefs dialog window
                 const prefsDialogWindow = entry.get_root();
@@ -136,8 +136,8 @@ export const WindowPickableEntry = GObject.registerClass({
 
             Gio.DBus.session.call(
                 'org.gnome.Shell',
-                '/org/gnome/shell/extensions/awsm',
-                'org.gnome.Shell.Extensions.awsm.PickWindow', 'PickWindow',
+                '/org/gnome/shell/extensions/yawsm',
+                'org.gnome.Shell.Extensions.yawsm.PickWindow', 'PickWindow',
                 null, null, Gio.DBusCallFlags.NO_AUTO_START, -1, null, null);
 
             this._dbusConnection = this._subscribeSignal('WindowPicked', (conn, sender, obj_path, iface, signal, results) => {
@@ -189,9 +189,9 @@ export const WindowPickableEntry = GObject.registerClass({
 
     _subscribeSignal(signalName, callback) {
         const dbusConnection = Gio.DBus.session.signal_subscribe(
-            'org.gnome.Shell', 'org.gnome.Shell.Extensions.awsm.PickWindow', 
+            'org.gnome.Shell', 'org.gnome.Shell.Extensions.yawsm.PickWindow', 
             signalName,
-            '/org/gnome/shell/extensions/awsm', null, Gio.DBusSignalFlags.NONE, 
+            '/org/gnome/shell/extensions/yawsm', null, Gio.DBusSignalFlags.NONE, 
             callback);
         return dbusConnection;
     }

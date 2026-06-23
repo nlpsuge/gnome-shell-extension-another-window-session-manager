@@ -2,7 +2,7 @@
     "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
 
 <node>
-    <interface name="org.gnome.Shell.Extensions.awsm.PickWindow">
+    <interface name="org.gnome.Shell.Extensions.yawsm.PickWindow">
         <method name="PickWindow" />
         <signal name="WindowPicked">
             <arg name="results" type="(ssss)" />

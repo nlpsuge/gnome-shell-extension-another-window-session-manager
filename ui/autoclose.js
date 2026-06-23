@@ -23,7 +23,7 @@ let GTop = null;
 try {
     GTop = await import('gi://GTop');
 } catch (e) {
-    Log.Log.getDefault().error(e, `GTop is not installed, I highly recommend to install it, so that a process can be closed safely. How to install it? Please visit: https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#dependencies .`);
+    Log.Log.getDefault().error(e, `GTop is not installed, I highly recommend to install it, so that a process can be closed safely. How to install it? Please visit: https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager#dependencies .`);
 }
 
 import {PrefsUtils} from '../utils/prefsUtils.js';
@@ -92,8 +92,8 @@ export const Autoclose = GObject.registerClass(
             // so here we catch the error to avoid `Unhandled promise rejection` possibly caused by this extension.
             EndSessionDialog.EndSessionDialog.prototype.OpenAsync = function (parameters, invocation) {
                 try {
-                    if (this._openingByAWSM) {
-                        that._log.debug(`EndSessionDialog is already opening by AWSM, ignore...`);
+                    if (this._openingByYAWSM) {
+                        that._log.debug(`EndSessionDialog is already opening by YAWSM, ignore...`);
                         return;
                     }
     
@@ -112,11 +112,11 @@ export const Autoclose = GObject.registerClass(
                     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/name#bound_function
                     // Function.prototype.bind() produces a function whose name is "bound " plus the function name.
                     if (buttonInfo.action.name !== `bound ${this.cancel.name}` && enableAutocloseSession) {
-                        buttonInfo.label = (`${buttonInfo.label} (via AWSM)`);
+                        buttonInfo.label = (`${buttonInfo.label} (via YAWSM)`);
 
                         // The button underlying uses `label` as an input param, so we cannot use Clutter.Text here
                         // const label = new Clutter.Text();
-                        // label.set_markup(`${buttonInfo.label} (<b style='color:red'>via AWSM</b>)`);
+                        // label.set_markup(`${buttonInfo.label} (<b style='color:red'>via YAWSM</b>)`);
                         // buttonInfo.label = label;
                     }
                 } catch (error) {
@@ -149,10 +149,10 @@ export const Autoclose = GObject.registerClass(
                         that._runningApplicationListWindow = new RunningApplicationListWindow(
                             confirmButtOnLabel,
                             () => {
-                                this._openingByAWSM = true;
+                                this._openingByYAWSM = true;
                             },
                             (opt) => {
-                                this._openingByAWSM = false;
+                                this._openingByYAWSM = false;
 
                                 if (opt === 'Confirm') {
                                     // this.close();

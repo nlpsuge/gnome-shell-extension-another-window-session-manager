@@ -2,7 +2,7 @@
     "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
 
 <node>
-    <interface name="org.gnome.Shell.Extensions.awsm.Autostart">
+    <interface name="org.gnome.Shell.Extensions.yawsm.Autostart">
         <method name="RestoreSession">
             <arg type="s" name="message" direction="out"/>
         </method>

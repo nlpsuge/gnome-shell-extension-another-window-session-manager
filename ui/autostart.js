@@ -35,7 +35,7 @@ export const AutostartServiceProvider = GObject.registerClass(
             this._log = new Log.Log();
 
             this._autostartDbusXml = new TextDecoder().decode(
-                FileUtils.current_extension_dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.awsm.Autostart.xml').load_contents(null)[1]);
+                FileUtils.current_extension_dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.yawsm.Autostart.xml').load_contents(null)[1]);
 
             this._autostartService = null;
             this._autostartDbusImpl = null;
@@ -43,7 +43,7 @@ export const AutostartServiceProvider = GObject.registerClass(
             // https://gjs.guide/guides/gio/dbus.html#exporting-interfaces
             this._dbusNameOwnerId = Gio.bus_own_name(
                 Gio.BusType.SESSION,
-                'org.gnome.Shell.Extensions.awsm',
+                'org.gnome.Shell.Extensions.yawsm',
                 Gio.BusNameOwnerFlags.NONE,
                 this.onBusAcquired.bind(this),
                 this.onNameAcquired.bind(this),
@@ -61,7 +61,7 @@ export const AutostartServiceProvider = GObject.registerClass(
             // Gio.DBusExportedObject.wrapJSObject(interfaceInfo, jsObj) is a private method of gjs
             // See: https://gitlab.gnome.org/GNOME/gjs/-/blob/master/modules/core/overrides/Gio.js#L391
             this._autostartDbusImpl = Gio.DBusExportedObject.wrapJSObject(this._autostartDbusXml, this._autostartService);
-            this._autostartDbusImpl.export(connection, '/org/gnome/Shell/Extensions/awsm');
+            this._autostartDbusImpl.export(connection, '/org/gnome/Shell/Extensions/yawsm');
 
         }
     
@@ -75,7 +75,7 @@ export const AutostartServiceProvider = GObject.registerClass(
 
         disable() {
             // To avoid the below error
-            // JS ERROR: Gio.IOErrorEnum: An object is already exported for the interface org.gnome.Shell.Extensions.awsm.Autostart at /org/gnome/Shell/Extensions/awsm
+            // JS ERROR: Gio.IOErrorEnum: An object is already exported for the interface org.gnome.Shell.Extensions.yawsm.Autostart at /org/gnome/Shell/Extensions/yawsm
             // when disable and enable this extension
             this._autostartDbusImpl.flush();
             this._autostartDbusImpl.unexport();
@@ -102,7 +102,7 @@ const AutostartService = GObject.registerClass(
             this._sessionName = this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
         }
 
-        // Call this method asynchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestoreSession` 
+        // Call this method asynchronously through `gdbus call --session --dest org.gnome.Shell.Extensions.yawsm --object-path /org/gnome/Shell/Extensions/yawsm --method org.gnome.Shell.Extensions.yawsm.Autostart.RestoreSession` 
         RestoreSession() {
             const enableRestoreSelectedSession = this._settings.get_boolean('enable-autorestore-sessions');
             if (!enableRestoreSelectedSession) {
@@ -111,13 +111,13 @@ const AutostartService = GObject.registerClass(
                     return "Ignoring this operation. RestoreSession is disabled, but RestorePreviousSession is enabled";
                 } 
                 const disabledFeatureMsg = "ERROR: RestoreSession is disabled, please enable it through 'Preferences -> Restore sessions -> Restore selected session at startup'";
-                Main.notify('Another Window Session Manager', disabledFeatureMsg);
+                Main.notify('Yet Another Window Session Manager', disabledFeatureMsg);
                 return disabledFeatureMsg;
             }
 
             const restoringMsg = `Restoring selected session '${this._sessionName}'`;
             this._log.info(restoringMsg);
-            Main.notify('Another Window Session Manager', restoringMsg);
+            Main.notify('Yet Another Window Session Manager', restoringMsg);
             
             this._autostartDialog = new AutostartDialog();
             if (this._settings.get_boolean('restore-at-startup-without-asking')) {
@@ -143,8 +143,8 @@ const AutostartService = GObject.registerClass(
 
         // TODO Press some hotkey (like Ctrl) so this time will not restore the previous session?
         // Call this method asynchronously through, for example: 
-        // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{'removeAfterRestore': <false>}"`
-        // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{}"`
+        // `gdbus call --session --dest org.gnome.Shell.Extensions.yawsm --object-path /org/gnome/Shell/Extensions/yawsm --method org.gnome.Shell.Extensions.yawsm.Autostart.RestorePreviousSession "{'removeAfterRestore': <false>}"`
+        // `gdbus call --session --dest org.gnome.Shell.Extensions.yawsm --object-path /org/gnome/Shell/Extensions/yawsm --method org.gnome.Shell.Extensions.yawsm.Autostart.RestorePreviousSession "{}"`
         RestorePreviousSession(args) {
             let removeAfterRestore = args.removeAfterRestore;
             if (removeAfterRestore) {
@@ -163,14 +163,14 @@ const AutostartService = GObject.registerClass(
                     return "Ignoring this operation. RestorePreviousSession is disabled, but RestoreSession is enabled";
                 }
                 const disabledFeatureMsg = "ERROR: RestorePreviousSession is disabled, please enable it through 'Preferences -> Restore sessions -> Restore previous apps and windows at startup'";
-                Main.notify('Another Window Session Manager', disabledFeatureMsg);
+                Main.notify('Yet Another Window Session Manager', disabledFeatureMsg);
                 return disabledFeatureMsg;
             }
 
             if (!Main.layoutManager._startingUp) {
                 const msg = 'Restoring the previous apps and windows';
                 this._log.info(`${msg}, gnome shell layoutManager has been started up.`);
-                Main.notify('Another Window Session Manager', msg);
+                Main.notify('Yet Another Window Session Manager', msg);
 
                 this._restorePreviousWithDelay(removeAfterRestore);
                 return msg;
@@ -179,11 +179,11 @@ const AutostartService = GObject.registerClass(
 
                 _requiredToRestorePrevious = true;
                 const msg = 'Required to restore the previous apps and windows';
-                Main.notify('Another Window Session Manager', msg);
+                Main.notify('Yet Another Window Session Manager', msg);
                 Main.layoutManager.connect('startup-complete', () => {
                     const msg = 'Restoring the previous apps and windows';
                     this._log.info(`${msg} after startup-complete`);
-                    Main.notify('Another Window Session Manager', msg);
+                    Main.notify('Yet Another Window Session Manager', msg);
                     this._restorePreviousWithDelay(removeAfterRestore);
                 });
                 return msg;
@@ -324,7 +324,7 @@ const AutostartDialog = GObject.registerClass(
     
                 return GLib.SOURCE_REMOVE;
             });
-            GLib.Source.set_name_by_id(this._timerId, '[gnome-shell-extension-another-window-session-manager] this._confirm');
+            GLib.Source.set_name_by_id(this._timerId, '[gnome-shell-extension-yet-another-window-session-manager] this._confirm');
         }
 
         destroy() {
