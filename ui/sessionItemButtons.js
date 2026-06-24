@@ -80,18 +80,24 @@ class SessionItemButtons extends GObject.Object {
             parent: autoRestoreSwitcher,
             markup: 'Restore at startup',
         });
-        autoRestoreSwitcher.connect('clicked', (button, event) => {
+        this._syncingAutostartSwitch = false;
+        this._autostartSwitch.connect('notify::state', () => {
+            if (this._syncingAutostartSwitch)
+                return;
+
             const state = this._autostartSwitch.state;
             if (state) {
                 this._settings.set_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS, this.sessionItem._filename);
-            } else {
+            } else if (this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS) === this.sessionItem._filename) {
                 this._settings.set_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS, '');
             }
         });
 
-        this._settings.connect(`changed::${Constants.PREFS_SETTING_AUTORESTORE_SESSIONS}`, (settings) => {
-            const toggled = this.sessionItem._filename == this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
+        this._settings.connect(`changed::${Constants.PREFS_SETTING_AUTORESTORE_SESSIONS}`, () => {
+            const toggled = this.sessionItem._filename === this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
+            this._syncingAutostartSwitch = true;
             this._autostartSwitch.state = toggled;
+            this._syncingAutostartSwitch = false;
         });
 
         this._addSeparator();
@@ -129,7 +135,7 @@ class SessionItemButtons extends GObject.Object {
 
     _addAutostartSwitcher() {
 
-        const toggled = this.sessionItem._filename == this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
+        const toggled = this.sessionItem._filename === this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
         this._autostartSwitch = new PopupMenu.Switch(toggled);
         this._autostartSwitch.set_style_class_name('toggle-switch yawsm-toggle-switch');
         let button = new St.Button({
@@ -138,7 +144,7 @@ class SessionItemButtons extends GObject.Object {
             x_align: Clutter.ActorAlign.END,
             toggle_mode: true,
             child: this._autostartSwitch,
-            reactive: this.sessionItem._available
+            reactive: true,
         });
         this._autostartSwitch.bind_property('state',
             button, 'checked',
