@@ -158,36 +158,21 @@ export const OpenWindowsTracker = class {
         this._signals.push([windowUntiledId, WindowTilingSupport]);
 
         this._overrideSystemActionsPrototypeMap = new Map();
-        // TODO Users can click the cancel button of EndSessionDialog, and autoclose.js could also call EndSessionDialog.cancel() function，
-        // I don't know how to distinguish them, therefor set `Autoclose.autocloseObject.sessionClosedByUser` to false in cancelled signal will not work.
-        // this._overrideSystemActions();
+        // org.gnome.SessionManager logout-prompt=false skips EndSessionDialog; autoclose.js never runs.
+        if (!new Gio.Settings({schema_id: 'org.gnome.SessionManager'}).get_boolean('logout-prompt'))
+            this._hookSessionEndActions();
     }
 
-    /**
-     * For some apps, like Beyond Compare, if users click the Log Out / Restart / Power Off button,
-     * they will be closed and their session configs that is used to restore its states at startup
-     * will also be removed.
-     *
-     * We prevent that happening here by overriding some functions to set the flag `Autoclose.autocloseObject.sessionClosedByUser`
-     * to `true`, just before continuing to operate via DBus provided by gnome-session.
-     * 
-     * `Autoclose.autocloseObject.sessionClosedByUser` will be set to false while users close or cancel the EndSessionDialog.
-     * 
-     * see: https://bugzilla.gnome.org/show_bug.cgi?id=782786
-     */
-    _overrideSystemActions() {
-        // We call SystemActions.SystemActions once, otherwise SystemActions.SystemActions will be undefined.
-        // A second, SystemActions.SystemActions has value, which is too weird to understand. This issue might be gjs related.
-        SystemActions.SystemActions;
-        let overrideFunctions = ['activateLogout', 'activateRestart', 'activatePowerOff'];
-        overrideFunctions.forEach(funcName => {
-            const originalFunc = SystemActions.SystemActions.prototype[funcName];
+    _hookSessionEndActions() {
+        const proto = Object.getPrototypeOf(SystemActions.getDefault());
+        for (const funcName of ['activateLogout', 'activateRestart', 'activatePowerOff']) {
+            const originalFunc = proto[funcName];
             this._overrideSystemActionsPrototypeMap.set(funcName, originalFunc);
-            SystemActions.SystemActions.prototype[funcName] = function () {
+            proto[funcName] = function () {
                 Autoclose.autocloseObject.sessionClosedByUser = true;
                 Function.callFunc(this, originalFunc);
-            }
-        });
+            };
+        }
     }
 
     _overrideMetaRestart() {
@@ -483,6 +468,7 @@ export const OpenWindowsTracker = class {
 
     _onCancel() {
         this._log.debug(`User cancel endSessionDialog`);
+        Autoclose.autocloseObject.sessionClosedByUser = false;
     }
 
     _onConfirmedLogout(proxy, sender) {
@@ -627,9 +613,10 @@ export const OpenWindowsTracker = class {
             _meta_restart = null;
         }
 
-        if (this._overrideSystemActionsPrototypeMap.size) {
+        if (this._overrideSystemActionsPrototypeMap?.size) {
+            const proto = Object.getPrototypeOf(SystemActions.getDefault());
             this._overrideSystemActionsPrototypeMap.forEach((originalFunc, funcName) => {
-                SystemActions.SystemActions.prototype[funcName] = originalFunc;
+                proto[funcName] = originalFunc;
             });
             this._overrideSystemActionsPrototypeMap.clear();
             this._overrideSystemActionsPrototypeMap = null;
