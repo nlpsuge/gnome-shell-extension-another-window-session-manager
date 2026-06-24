@@ -157,7 +157,7 @@ export const CloseSession = class {
                         }
                     } else {
                         closed = false;
-                        reason = 'it has multiple normal windows and does not in the whitelist';
+                        reason = 'it has multiple normal windows and is not on the whitelist';
                     }
                 }
             }
