@@ -9,7 +9,7 @@ import Clutter from 'gi://Clutter';
 
 import * as EndSessionDialog from 'resource:///org/gnome/shell/ui/endSessionDialog.js';
 
-import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {gettext as _, ngettext} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as Dialog from 'resource:///org/gnome/shell/ui/dialog.js';
@@ -261,11 +261,11 @@ const AutostartDialog = GObject.registerClass(
 
             this._confirmButton = this.addButton({
                 action: () => {
-                    this.close();
                     let signalId = this.connect('closed', () => {
                         this.disconnect(signalId);
                         this._confirm();
                     });
+                    this.close();
                 },
                 label: _('Confirm'),
             });
@@ -308,10 +308,16 @@ const AutostartDialog = GObject.registerClass(
 
         _sync() {
 
-            const displayTime = EndSessionDialog._roundSecondsToInterval(this._totalSecondsToStayOpen,
+            let displayTime;
+            if (EndSessionDialog && typeof EndSessionDialog._roundSecondsToInterval === 'function') {
+                displayTime = EndSessionDialog._roundSecondsToInterval(this._totalSecondsToStayOpen,
                                                                          this._secondsLeft,
                                                                          1);
-            const desc = _.ngettext('\'' + this._sessionName + '\' will be restored in %d second',
+            } else {
+                displayTime = Math.max(0, Math.ceil(this._secondsLeft));
+            }
+
+            const desc = ngettext('\'' + this._sessionName + '\' will be restored in %d second',
                 '\'' + this._sessionName + '\' will be restored in %d seconds', displayTime).format(displayTime);
             this._confirmDialogContent.description = desc;
 
