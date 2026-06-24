@@ -59,7 +59,7 @@ export default class AnotherWindowSessionManagerExtension extends Extension {
             if (!_indicator) {
                 // Remove any stale indicator left over from a previous enable/disable cycle
                 // (e.g. after screen lock/unlock) to avoid "Extension point conflict" error
-                const existingIndicator = Main.panel.statusArea['Another Window Session Manager'];
+                const existingIndicator = Main.panel.statusArea['Yet Another Window Session Manager'];
                 if (existingIndicator) {
                     existingIndicator.destroy();
                 }
