@@ -190,6 +190,8 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
             if (PrefsUtils.getSettings().get_boolean('enable-autorestore-sessions')) {
                 this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
                     FileUtils.autostart_restore_desktop_file_path);
+            } else {
+                this._removeAutostartDesktopFile(FileUtils.autostart_restore_desktop_file_path);
             }
         });
 
@@ -197,6 +199,8 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
             if (PrefsUtils.getSettings().get_boolean('enable-restore-previous-session')) {
                 this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_previous_at_autostart,
                     FileUtils.autostart_restore_previous_desktop_file_path);
+            } else {
+                this._removeAutostartDesktopFile(FileUtils.autostart_restore_previous_desktop_file_path);
             }
         });
 
@@ -207,10 +211,14 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         });
 
         PrefsUtils.getSettings().connect('changed::autostart-delay', (settings) => {
-            this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
-                FileUtils.autostart_restore_desktop_file_path);
-            this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_previous_at_autostart,
-                FileUtils.autostart_restore_previous_desktop_file_path);
+            if (PrefsUtils.getSettings().get_boolean('enable-autorestore-sessions')) {
+                this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_at_autostart,
+                    FileUtils.autostart_restore_desktop_file_path);
+            }
+            if (PrefsUtils.getSettings().get_boolean('enable-restore-previous-session')) {
+                this._installAutostartDesktopFile(FileUtils.desktop_template_path_restore_previous_at_autostart,
+                    FileUtils.autostart_restore_previous_desktop_file_path);
+            }
         });
 
     }
@@ -281,6 +289,19 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         };
         const desktopFileContent = StringUtils.format(FileUtils.loadTemplate(desktopFileTemplate), argument);
         this._installDesktopFileToAutostartDir(targetDesktopFilePath, desktopFileContent);
+    }
+
+    _removeAutostartDesktopFile(desktopFilePath) {
+        const autostartDesktopFile = Gio.File.new_for_path(desktopFilePath);
+        if (!autostartDesktopFile.query_exists(null))
+            return;
+
+        try {
+            autostartDesktopFile.delete(null);
+            this._log.info(`Removed the autostart desktop file: ${desktopFilePath}!`);
+        } catch (e) {
+            this._log.error(e, `Failed to remove the autostart desktop file: ${desktopFilePath}`);
+        }
     }
 
     _installDesktopFileToAutostartDir(desktopFilePath, desktopFileContents) {
