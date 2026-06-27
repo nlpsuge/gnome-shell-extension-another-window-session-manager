@@ -51,8 +51,11 @@ export const SaveSession = class {
             sessionConfig.n_workspace = global.workspace_manager.n_workspaces;
             const focusedWindow = global.display.get_focus_window();
             if (focusedWindow) {
-                const sessionName = `${MetaWindowUtils.getStableWindowId(focusedWindow)}.json`;
-                sessionConfig.focused_window = GLib.build_filenamev([FileUtils.current_session_path, focusedWindow.get_wm_class(), sessionName]);
+                const wmClass = focusedWindow.get_wm_class();
+                if (wmClass) {
+                    const sessionName = `${MetaWindowUtils.getStableWindowId(focusedWindow)}.json`;
+                    sessionConfig.focused_window = GLib.build_filenamev([FileUtils.current_session_path, wmClass, sessionName]);
+                }
             }
             delete sessionConfig.x_session_config_objects;
 
@@ -61,7 +64,8 @@ export const SaveSession = class {
                 session_name: FileUtils.current_session_summary_name
             }, FileUtils.current_session_path, cancellable);
         } catch(error) {
-            this._log.error(error);
+            if (!error?.cause?.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
+                this._log.error(error);
         }
     }
 
