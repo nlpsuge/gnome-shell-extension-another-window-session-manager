@@ -270,7 +270,7 @@ If the template has changed on the main branch since you started, sync your `.po
 msgmerge --update --no-wrap po/de.po po/yet-another-window-session-manager@github.com.pot
 ```
 
-Or use `make sync-po`, which passes `--no-wrap` so existing translations are not re-wrapped to match the template line breaks.
+Or use `make -C build i18n-sync-po`, which passes `--no-wrap` so existing translations are not re-wrapped to match the template line breaks.
 
 Resolve any new or fuzzy entries, then commit the updated `.po` file.
 
@@ -279,7 +279,7 @@ Resolve any new or fuzzy entries, then commit the updated `.po` file.
 To try your translation before opening a pull request, install [gettext-tools](https://www.gnu.org/software/gettext/) and compile the locales:
 
 ```bash
-make compile-locales
+make -C build i18n-compile-locales
 ```
 
 Install the extension (including the generated `locale/` directory), restart GNOME Shell, and open the preferences or panel menu in your locale.

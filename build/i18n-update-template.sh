@@ -24,4 +24,4 @@ xgettext --from-code=UTF-8 \
   ui/prefs-gtk4.ui
 
 echo "Updated ${POT}"
-echo "Next: ./build/sync-po.sh, then edit po/*.po, then ./build/compile-locales.sh"
+echo "Next: ./build/i18n-sync-po.sh, then edit po/*.po, then ./build/i18n-compile-locales.sh"
