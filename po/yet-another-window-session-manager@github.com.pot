@@ -4,7 +4,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Yet Another Window Session Manager 58\n"
+"Project-Id-Version: Yet Another Window Session Manager 59\n"
 "Report-Msgid-Bugs-To: https://github.com/mendres82/gnome-shell-extension-yet-another-window-session-manager/issues\n"
 "POT-Creation-Date: 2026-07-14 10:11+0200\n"
 "PO-Revision-Date: \n"
