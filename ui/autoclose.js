@@ -202,16 +202,24 @@ export const Autoclose = GObject.registerClass(
             }
         }
 
-        destroy() {
+        disable() {
+            if (this._disabled)
+                return;
+            this._disabled = true;
+
             this._restoreEndSessionDialog();
             if (this._runningApplicationListWindow) {
-                this._runningApplicationListWindow.destroyDialog()
+                this._runningApplicationListWindow.disable();
+                this._runningApplicationListWindow = null;
             }
             if (this._retryIdleId) {
                 GLib.source_remove(this._retryIdleId);
                 this._retryIdleId = null;
             }
+        }
 
+        destroy() {
+            this.disable();
         }
 
     });
@@ -308,19 +316,23 @@ const RunningApplicationListWindow = GObject.registerClass({
             });
             this.contentLayout.add_child(this._applicationSection);
 
-            this._appStateChangedId = this._defaultAppSystem.connect('app-state-changed', this._appStateChanged.bind(this));
+            this._defaultAppSystem.connectObject(
+                'app-state-changed', this._appStateChanged.bind(this),
+                this);
             this.showRunningApps();
 
-            this._overViewShowingId = Main.overview.connect('showing', () => {
-                if (this._visibleToUser)
-                    this.hide();
-            });
-            this._overViewHidingId = Main.overview.connect('hidden', () => {
-                if (this._visibleToUser) {
-                    this.show();
-                    this._scheduleUpdatePosition();
-                }
-            });
+            Main.overview.connectObject(
+                'showing', () => {
+                    if (this._visibleToUser)
+                        this.hide();
+                },
+                'hidden', () => {
+                    if (this._visibleToUser) {
+                        this.show();
+                        this._scheduleUpdatePosition();
+                    }
+                },
+                this);
 
         }
 
@@ -358,7 +370,7 @@ const RunningApplicationListWindow = GObject.registerClass({
                 y_expand: true,
                 label,
             });
-            button.connect('clicked', () => action());
+            button.connectObject('clicked', () => action(), this);
 
             buttonInfo['button'] = button;
 
@@ -374,16 +386,14 @@ const RunningApplicationListWindow = GObject.registerClass({
         }
 
         _setInitialKeyFocus(actor) {
-            if (this._initialKeyFocus && this._initialKeyFocusDestroyId) {
-                this._initialKeyFocus.disconnect(this._initialKeyFocusDestroyId);
-            }
+            if (this._initialKeyFocus)
+                this._initialKeyFocus.disconnectObject(this);
 
             this._initialKeyFocus = actor;
 
-            this._initialKeyFocusDestroyId = actor.connect('destroy', () => {
+            actor.connectObject('destroy', () => {
                 this._initialKeyFocus = null;
-                this._initialKeyFocusDestroyId = 0;
-            });
+            }, this);
         }
 
         showToUser() {
@@ -677,21 +687,16 @@ const RunningApplicationListWindow = GObject.registerClass({
             this.state = state
         }
 
-        destroyDialog() {
-            this.hide();
-            super.destroy();
-            if (this._appStateChangedId) {
-                this._defaultAppSystem.disconnect(this._appStateChangedId);
-                this._appStateChangedId = null;
-            }
-            if (this._overViewShowingId) {
-                Main.overview.disconnect(this._overViewShowingId);
-                this._overViewShowingId = null;
-            }
-            if (this._overViewHidingId) {
-                Main.overview.disconnect(this._overViewHidingId);
-                this._overViewHidingId = null;
-            }
+        disable() {
+            if (this._disabled)
+                return;
+            this._disabled = true;
+
+            this._defaultAppSystem.disconnectObject(this);
+            Main.overview.disconnectObject(this);
+            this._initialKeyFocus?.disconnectObject(this);
+            this._initialKeyFocus = null;
+
             if (this._confirmIdleId) {
                 GLib.source_remove(this._confirmIdleId);
                 this._confirmIdleId = null;
@@ -704,6 +709,12 @@ const RunningApplicationListWindow = GObject.registerClass({
                 GLib.source_remove(this._updatePositionIdleId);
                 this._updatePositionIdleId = null;
             }
+            this.hide();
+            super.destroy();
+        }
+
+        destroy() {
+            this.disable();
         }
 
 

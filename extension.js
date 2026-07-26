@@ -101,7 +101,7 @@ export default class AnotherWindowSessionManagerExtension extends Extension {
         WindowTilingSupport.destroy();
         
         if (_autoclose) {
-            _autoclose.destroy();
+            _autoclose.disable();
             _autoclose = null;
         }
     

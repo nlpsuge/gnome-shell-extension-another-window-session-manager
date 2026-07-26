@@ -35,6 +35,11 @@ class PopupMenuButtonItems extends GObject.Object {
         this.buttonItems.push(popupMenuButtonItemSave);
     }
 
+    destroy() {
+        this.buttonItems.forEach(item => item.destroy());
+        this.buttonItems = [];
+    }
+
 });
 
 
@@ -123,7 +128,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
         this._timeline = this.createTimeLine();
 
         // Respond to menu item's 'activate' signal so user don't need to click the icon whose size is too small to find to click
-        this.connect('activate', this._onActivate.bind(this));
+        this.connectObject('activate', this._onActivate.bind(this), this);
 
     }
 
@@ -142,7 +147,7 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     _addYesAndNoButtons() {
         super.createYesAndNoButtons();
         
-        this.yesButton.connect('clicked', () => {
+        this.yesButton.connectObject('clicked', () => {
             // TODO Do this when enable_close_by_rules is true? 
             this._parent.close();
             if (Main.overview.visible) {
@@ -156,21 +161,23 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
             // Set the actor the timeline is associated with to make sure Clutter.Timeline works normally.
             // Set the actor in new Clutter.Timeline don't work
             this._timeline.set_actor(this.closingLabel);
-            this._timeline.connect('new-frame', (_timeline, _frame) => {
-                this.closingLabel.show();
-            });
+            this._timeline.disconnectObject(this);
+            this._timeline.connectObject(
+                'new-frame', (_timeline, _frame) => {
+                    this.closingLabel.show();
+                },
+                'completed', () => {
+                    this._timeline.stop();
+                    this.closingLabel.hide();
+                    this.iconDescriptionLabel.show();
+                },
+                this);
             this._timeline.start();
-            this._timeline.connect('completed', () => {
-                this._timeline.stop();
-                this.closingLabel.hide();
-                this.iconDescriptionLabel.show();
-            });
+        }, this);
 
-        });
-
-        this.noButton.connect('clicked', () => {
+        this.noButton.connectObject('clicked', () => {
             this._hideConfirm();
-        });
+        }, this);
 
         this.actor.add_child(this.yesButton);
         this.actor.add_child(this.noButton);
@@ -190,9 +197,9 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     }
 
     _createButton(iconSymbolic) {
-        const closeButton = super.createButton(iconSymbolic);
-        this.actor.add_child(closeButton);
-        closeButton.connect('clicked', this._onClicked.bind(this));
+        this._closeButton = super.createButton(iconSymbolic);
+        this.actor.add_child(this._closeButton);
+        this._closeButton.connectObject('clicked', this._onClicked.bind(this), this);
     }
 
     _onClicked(button, event) {
@@ -218,14 +225,15 @@ class PopupMenuButtonItemClose extends PopupMenuButtonItem {
     }
 
     destroy() {
-        // TODO Nullify others created objects?
-
-        // TODO Also disconnect new-frame and completed?
+        this.disconnectObject(this);
+        this.yesButton?.disconnectObject(this);
+        this.noButton?.disconnectObject(this);
+        this._closeButton?.disconnectObject(this);
+        this._timeline?.disconnectObject(this);
         if (this._timeline) {
             this._timeline.stop();
             this._timeline = null;
         }
-
     }
 
 });
@@ -255,21 +263,21 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this._addSavingPrompt();
 
         // Respond to menu item's 'activate' signal so user don't need to click the icon whose size is too small to find to click
-        this.connect('activate', this._onActivate.bind(this));
+        this.connectObject('activate', this._onActivate.bind(this), this);
 
     }
 
     _addYesAndNoButtons() {
         super.createYesAndNoButtons();
         
-        this.yesButton.connect('clicked', this._onClickedYes.bind(this));
-        this.noButton.connect('clicked', () => {
+        this.yesButton.connectObject('clicked', this._onClickedYes.bind(this), this);
+        this.noButton.connectObject('clicked', () => {
             // clear entry
             this.saveCurrentSessionEntry.set_text('');
             this.saveCurrentSessionEntry.hide();
             this.iconDescriptionLabel.show();
             super.hideYesAndNoButtons();
-        });
+        }, this);
 
         this.actor.add_child(this.yesButton);
         this.actor.add_child(this.noButton);
@@ -296,9 +304,9 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     }
 
     _createButton(iconSymbolic) {
-        const saveButton = super.createButton(iconSymbolic);
-        this.actor.add_child(saveButton);
-        saveButton.connect('clicked', this._onClickedBeginSave.bind(this));
+        this._saveButton = super.createButton(iconSymbolic);
+        this.actor.add_child(this._saveButton);
+        this._saveButton.connectObject('clicked', this._onClickedBeginSave.bind(this), this);
     }
 
     _onClickedBeginSave(button, event) {
@@ -321,8 +329,8 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
             y_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
         });
-        const clutterText = this.saveCurrentSessionEntry.clutter_text;
-        clutterText.connect('activate', this._onTextActivate.bind(this));
+        this.saveCurrentSessionEntry.clutter_text.connectObject(
+            'activate', this._onTextActivate.bind(this), this);
         this.actor.add_child(this.saveCurrentSessionEntry);
 
     }
@@ -375,19 +383,21 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
         this.iconDescriptionLabel.hide();
         this.savingLabel.set_text(message);
         this._timeline.set_actor(this.savingLabel);
-        const newFrameId = this._timeline.connect('new-frame', (_timeline, _frame) => {
-            this._timeline.disconnect(newFrameId);
-            this.savingLabel.show();
-            this.hideYesAndNoButtons();
-        });
+        this._timeline.disconnectObject(this);
+        this._timeline.connectObject(
+            'new-frame', (_timeline, _frame) => {
+                this.savingLabel.show();
+                this.hideYesAndNoButtons();
+            },
+            'completed', () => {
+                this._timeline.disconnectObject(this);
+                this._timeline.stop();
+                this.savingLabel.hide();
+                this.saveCurrentSessionEntry.show();
+                this.showYesAndNoButtons();
+            },
+            this);
         this._timeline.start();
-        const completedId = this._timeline.connect('completed', () => {
-            this._timeline.disconnect(completedId);
-            this._timeline.stop();
-            this.savingLabel.hide();
-            this.saveCurrentSessionEntry.show();
-            this.showYesAndNoButtons();
-        });
     }
 
     _canSave(sessionName) {
@@ -406,14 +416,16 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     }
 
     destroy() {
-        // TODO Nullify others created objects?
-
-        // TODO Also disconnect new-frame and completed?
+        this.disconnectObject(this);
+        this.yesButton?.disconnectObject(this);
+        this.noButton?.disconnectObject(this);
+        this._saveButton?.disconnectObject(this);
+        this.saveCurrentSessionEntry?.clutter_text.disconnectObject(this);
+        this._timeline?.disconnectObject(this);
         if (this._timeline) {
             this._timeline.stop();
             this._timeline = null;
         }
-
     }
     
 

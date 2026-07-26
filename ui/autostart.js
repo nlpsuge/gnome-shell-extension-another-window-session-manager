@@ -102,7 +102,7 @@ export const AutostartServiceProvider = GObject.registerClass(
             }
 
             if (this._autostartService) {
-                this._autostartService._disable();
+                this._autostartService.disable();
                 this._autostartService = null;
             }
         }
@@ -227,7 +227,7 @@ const AutostartService = GObject.registerClass(
                 });
         }
 
-        _disable() {
+        disable() {
             if (this._autostartDialog) {
                 this._autostartDialog.destroy();
                 this._autostartDialog = null;
@@ -240,6 +240,7 @@ const AutostartService = GObject.registerClass(
                 GLib.Source.remove(this._idleIdOpenRestoreSessionDialog);
                 this._idleIdOpenRestoreSessionDialog = null;
             }
+            this._settings = null;
         }
 
     });
@@ -389,6 +390,7 @@ const AutostartDialog = GObject.registerClass(
                 this._moveWindowsFallbackSourceId = 0;
             }
             this._secondsLeft = 0;
+            this._settings = null;
         }
 
 

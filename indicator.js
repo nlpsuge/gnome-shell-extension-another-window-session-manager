@@ -368,6 +368,11 @@ class AwsIndicator extends PanelMenu.Button {
             this._log = null;
         }
 
+        if (this._popupMenuButtonItems) {
+            this._popupMenuButtonItems.destroy();
+            this._popupMenuButtonItems = null;
+        }
+
         super.destroy();
 
         this._isDestroyed = true;
