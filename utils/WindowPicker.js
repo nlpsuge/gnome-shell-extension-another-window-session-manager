@@ -32,9 +32,22 @@ export const WindowPickerServiceProvider = class WindowPickerServiceProvider {
   // ------------------------------------------------------------------------- constructor
 
   constructor() {
-    const iFace = new TextDecoder().decode(
-      FileUtils.current_extension_dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.yawsm.PickWindow.xml').load_contents(null)[1]);
-    this._dbus = Gio.DBusExportedObject.wrapJSObject(iFace, this);
+    this._dbus = null;
+    const ifaceFile = FileUtils.current_extension_dir
+      .get_child('dbus-interfaces')
+      .get_child('org.gnome.Shell.Extensions.yawsm.PickWindow.xml');
+    this._ifaceReady = new Promise((resolve, reject) => {
+      ifaceFile.load_contents_async(null, (file, asyncResult) => {
+        try {
+          const [, contents] = file.load_contents_finish(asyncResult);
+          this._dbus = Gio.DBusExportedObject.wrapJSObject(
+            new TextDecoder().decode(contents), this);
+          resolve();
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
   }
 
   // --------------------------------------------------------------------- D-Bus interface
@@ -110,22 +123,26 @@ export const WindowPickerServiceProvider = class WindowPickerServiceProvider {
 
   // Call this to make the window-picking API available on the D-Bus.
   enable() {
-    // Defensively unexport first: after a rapid disable/enable cycle (e.g.
-    // suspend/resume, screen lock/unlock), the previous export may still be
-    // registered.  Calling unexport() on an already-unexported object is
-    // harmless, but calling export() on an already-exported path throws:
-    //   Gio.IOErrorEnum: An object is already exported for the interface
-    //   org.gnome.Shell.Extensions.awsm.PickWindow at /org/gnome/shell/extensions/awsm
-    try {
-      this._dbus.unexport();
-    } catch (_e) {
-      // Not exported yet — expected on first enable()
-    }
-    this._dbus.export(Gio.DBus.session, '/org/gnome/shell/extensions/yawsm');
+    this._ifaceReady.then(() => {
+      // Defensively unexport first: after a rapid disable/enable cycle (e.g.
+      // suspend/resume, screen lock/unlock), the previous export may still be
+      // registered.  Calling unexport() on an already-unexported object is
+      // harmless, but calling export() on an already-exported path throws:
+      //   Gio.IOErrorEnum: An object is already exported for the interface
+      //   org.gnome.Shell.Extensions.awsm.PickWindow at /org/gnome/shell/extensions/awsm
+      try {
+        this._dbus.unexport();
+      } catch (_e) {
+        // Not exported yet — expected on first enable()
+      }
+      this._dbus.export(Gio.DBus.session, '/org/gnome/shell/extensions/yawsm');
+    }).catch(e => logError(e, 'Failed to load PickWindow dbus interface!'));
   }
 
   // Call this to stop this D-Bus again.
   destroy() {
+    if (!this._dbus)
+      return;
     try {
       this._dbus.unexport();
     } catch (_e) {

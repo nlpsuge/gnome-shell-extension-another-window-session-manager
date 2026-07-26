@@ -228,9 +228,11 @@ export const RestoreSession = class {
                         }
 
                         const launchAppTemplate = FileUtils.desktop_template_launch_app_shell_script;
-                        const launchAppShellScript = StringUtils.format(FileUtils.loadTemplate(launchAppTemplate), {cmdString});
-                        this._log.info(`Launching ${app_name} via command line ${cmdString}!`);
-                        SubprocessUtils.trySpawnCmdstr(`bash -c '${launchAppShellScript}'`).then(
+                        FileUtils.loadTemplate(launchAppTemplate).then(template => {
+                            const launchAppShellScript = StringUtils.format(template, {cmdString});
+                            this._log.info(`Launching ${app_name} via command line ${cmdString}!`);
+                            return SubprocessUtils.trySpawnCmdstr(`bash -c '${launchAppShellScript}'`);
+                        }).then(
                             ([success, status, stdoutInputStream, stderrInputStream]) => {
                                 if (success) {
                                     stdoutInputStream.read_line_async(

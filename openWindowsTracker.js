@@ -571,30 +571,39 @@ export const OpenWindowsTracker = class {
     }
 
     _onNameAppearedGnomeShell() {
-        const EndSessionDialogIface = new TextDecoder().decode(
-            FileUtils.current_extension_dir.get_child('dbus-interfaces').get_child('org.gnome.SessionManager.EndSessionDialog.xml').load_contents(null)[1]);
-        const EndSessionDialogProxy = Gio.DBusProxy.makeProxyWrapper(EndSessionDialogIface);
+        const ifaceFile = FileUtils.current_extension_dir
+            .get_child('dbus-interfaces')
+            .get_child('org.gnome.SessionManager.EndSessionDialog.xml');
+        ifaceFile.load_contents_async(null, (file, asyncResult) => {
+            try {
+                const [, contents] = file.load_contents_finish(asyncResult);
+                const EndSessionDialogIface = new TextDecoder().decode(contents);
+                const EndSessionDialogProxy = Gio.DBusProxy.makeProxyWrapper(EndSessionDialogIface);
 
-        this._endSessionProxy = new EndSessionDialogProxy(Gio.DBus.session,
-            'org.gnome.Shell',
-            '/org/gnome/SessionManager/EndSessionDialog',
-            (proxy, error) => {
-                // If `error` is not `null` it will be an Error object indicating the
-                // failure, and `proxy` will be `null` in this case.
-                if (error !== null) {
-                    this._log.error(new Error(error), 'Failed to create the EndSessionDialog dbus proxy!');
-                    return;
-                }
+                this._endSessionProxy = new EndSessionDialogProxy(Gio.DBus.session,
+                    'org.gnome.Shell',
+                    '/org/gnome/SessionManager/EndSessionDialog',
+                    (proxy, error) => {
+                        // If `error` is not `null` it will be an Error object indicating the
+                        // failure, and `proxy` will be `null` in this case.
+                        if (error !== null) {
+                            this._log.error(new Error(error), 'Failed to create the EndSessionDialog dbus proxy!');
+                            return;
+                        }
 
-                this._confirmedLogoutId = this._endSessionProxy.connectSignal('ConfirmedLogout', this._onConfirmedLogout.bind(this));
-                this._confirmedRebootId = this._endSessionProxy.connectSignal('ConfirmedReboot', this._onConfirmedReboot.bind(this));
-                this._confirmedShutdownId = this._endSessionProxy.connectSignal('ConfirmedShutdown', this._onConfirmedShutdown.bind(this));
-                this._closedId = this._endSessionProxy.connectSignal('Closed', this._onClose.bind(this));
-                this._canceledId = this._endSessionProxy.connectSignal('Canceled', this._onCancel.bind(this));
-            },
-            null,
-            Gio.DBusProxyFlags.NONE
-        );
+                        this._confirmedLogoutId = this._endSessionProxy.connectSignal('ConfirmedLogout', this._onConfirmedLogout.bind(this));
+                        this._confirmedRebootId = this._endSessionProxy.connectSignal('ConfirmedReboot', this._onConfirmedReboot.bind(this));
+                        this._confirmedShutdownId = this._endSessionProxy.connectSignal('ConfirmedShutdown', this._onConfirmedShutdown.bind(this));
+                        this._closedId = this._endSessionProxy.connectSignal('Closed', this._onClose.bind(this));
+                        this._canceledId = this._endSessionProxy.connectSignal('Canceled', this._onCancel.bind(this));
+                    },
+                    null,
+                    Gio.DBusProxyFlags.NONE
+                );
+            } catch (e) {
+                this._log.error(e, 'Failed to load EndSessionDialog dbus interface!');
+            }
+        });
     }
 
     _onNameVanishedGnomeShell(connection, name) {

@@ -333,7 +333,7 @@ export const SaveSession = class {
             };
 
             const desktopFileName = '__' + appName + '.desktop';
-            const desktopFileContent = StringUtils.format(FileUtils.loadDesktopTemplate(cancellable), argument);
+            const desktopFileContent = StringUtils.format(await FileUtils.loadDesktopTemplate(cancellable), argument);
             if (!desktopFileContent) {
                 const errMsg = `Failed to generate a .desktop file ${desktopFileName} using ${JSON.stringify(argument)}`;
                 this._log.error(new Error(errMsg));

@@ -33,23 +33,32 @@ export const AutostartServiceProvider = GObject.registerClass(
 
             this._log = new Log.Log();
 
-            this._autostartDbusXml = new TextDecoder().decode(
-                FileUtils.current_extension_dir.get_child('dbus-interfaces').get_child('org.gnome.Shell.Extensions.yawsm.Autostart.xml').load_contents(null)[1]);
-
+            this._autostartDbusXml = null;
             this._autostartService = null;
             this._autostartDbusImpl = null;
+            this._dbusNameOwnerId = 0;
 
-            // https://gjs.guide/guides/gio/dbus.html#exporting-interfaces
-            this._dbusNameOwnerId = Gio.bus_own_name(
-                Gio.BusType.SESSION,
-                'org.gnome.Shell.Extensions.yawsm',
-                Gio.BusNameOwnerFlags.NONE,
-                this.onBusAcquired.bind(this),
-                this.onNameAcquired.bind(this),
-                this.onNameLost.bind(this),
-            );
-            
+            const ifaceFile = FileUtils.current_extension_dir
+                .get_child('dbus-interfaces')
+                .get_child('org.gnome.Shell.Extensions.yawsm.Autostart.xml');
+            ifaceFile.load_contents_async(null, (file, asyncResult) => {
+                try {
+                    const [, contents] = file.load_contents_finish(asyncResult);
+                    this._autostartDbusXml = new TextDecoder().decode(contents);
 
+                    // https://gjs.guide/guides/gio/dbus.html#exporting-interfaces
+                    this._dbusNameOwnerId = Gio.bus_own_name(
+                        Gio.BusType.SESSION,
+                        'org.gnome.Shell.Extensions.yawsm',
+                        Gio.BusNameOwnerFlags.NONE,
+                        this.onBusAcquired.bind(this),
+                        this.onNameAcquired.bind(this),
+                        this.onNameLost.bind(this),
+                    );
+                } catch (e) {
+                    this._log.error(e, 'Failed to load Autostart dbus interface!');
+                }
+            });
         }
 
         onBusAcquired(connection, name) {

@@ -241,17 +241,25 @@ export function loadDesktopTemplate(cancellable = null) {
 
 export function loadTemplate(path, cancellable = null) {
     const desktop_template_file = Gio.File.new_for_path(path);
-    let [success, contents] = desktop_template_file.load_contents(cancellable);
-    if (success) {
-        if (contents instanceof Uint8Array) {
-            return new TextDecoder().decode(contents);
-        } else {
-            // Unreachable code
-            return contents;
-        }
-    }
-
-    return '';
+    return new Promise((resolve, reject) => {
+        desktop_template_file.load_contents_async(cancellable, (file, asyncResult) => {
+            try {
+                const [success, contents] = file.load_contents_finish(asyncResult);
+                if (success) {
+                    if (contents instanceof Uint8Array) {
+                        resolve(new TextDecoder().decode(contents));
+                    } else {
+                        // Unreachable code
+                        resolve(contents);
+                    }
+                } else {
+                    resolve('');
+                }
+            } catch (e) {
+                reject(e);
+            }
+        });
+    });
 }
 
 /**

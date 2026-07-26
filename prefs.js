@@ -290,11 +290,11 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         this.auto_close_session_switch = this._builder.get_object('auto_close_session_switch');
     }
 
-    _installAutostartDesktopFile(desktopFileTemplate, targetDesktopFilePath) {
+    async _installAutostartDesktopFile(desktopFileTemplate, targetDesktopFilePath) {
         const argument = {
             autostartDelay: PrefsUtils.getSettings().get_int('autostart-delay'),
         };
-        const desktopFileContent = StringUtils.format(FileUtils.loadTemplate(desktopFileTemplate), argument);
+        const desktopFileContent = StringUtils.format(await FileUtils.loadTemplate(desktopFileTemplate), argument);
         this._installDesktopFileToAutostartDir(targetDesktopFilePath, desktopFileContent);
     }
 
