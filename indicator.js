@@ -24,6 +24,7 @@ import * as IconFinder from './utils/iconFinder.js';
 import {PrefsUtils} from './utils/prefsUtils.js';
 import * as Log from './utils/log.js';
 import * as Signal from './utils/signal.js';
+import * as MetaWindowUtils from './utils/metaWindowUtils.js';
 
 
 export const AwsIndicator = GObject.registerClass(
@@ -80,7 +81,7 @@ class AwsIndicator extends PanelMenu.Button {
 
     // TODO Move this method and related code to a single .js file
     async _windowCreated(display, metaWindow, userData) {
-        if (!Meta.is_wayland_compositor()) {
+        if (!MetaWindowUtils.isWaylandCompositor()) {
             // We call createEnoughWorkspaceAndMoveWindows() if and only if all conditions checked.
             
             // But we give some windows (such as the OS running in VirtualBox) a chance to connect `first-frame` and `shown` signals.

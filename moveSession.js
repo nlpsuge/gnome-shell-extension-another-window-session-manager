@@ -12,6 +12,7 @@ import * as UiHelper from './ui/uiHelper.js';
 import * as FileUtils from './utils/fileUtils.js';
 import * as Log from './utils/log.js';
 import * as DateUtils from './utils/dateUtils.js';
+import * as MetaWindowUtils from './utils/metaWindowUtils.js';
 import { shellVersion } from './constants.js';
 
 import {WindowTilingSupport} from './windowTilingSupport.js';
@@ -369,7 +370,7 @@ export const MoveSession = class {
                 if (currentMetaMaximized) {
                     metaWindow.set_unmaximize_flags(Meta.MaximizeFlags.BOTH);
                     metaWindow.unmaximize();
-                    if (Meta.is_wayland_compositor() && !currentMetaMaximized) {
+                    if (MetaWindowUtils.isWaylandCompositor() && !currentMetaMaximized) {
                         delay = true;
                     }
                 }
@@ -380,7 +381,7 @@ export const MoveSession = class {
                 const currentMetaMaximized = metaWindow.get_maximized();
                 if (currentMetaMaximized) {
                     metaWindow.unmaximize(currentMetaMaximized);
-                    if (Meta.is_wayland_compositor() && currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
+                    if (MetaWindowUtils.isWaylandCompositor() && currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
                         delay = true;
                     }
                 }

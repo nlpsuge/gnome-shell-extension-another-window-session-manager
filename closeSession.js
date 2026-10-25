@@ -12,6 +12,7 @@ import {PrefsUtils} from './utils/prefsUtils.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import * as DateUtils from './utils/dateUtils.js';
 import * as Function from './utils/function.js';
+import * as MetaWindowUtils from './utils/metaWindowUtils.js';
 
 import * as Constants from './constants.js';
 
@@ -486,7 +487,7 @@ export const CloseSession = class {
         }
 
         let windows;
-        if (Meta.is_wayland_compositor()) {
+        if (MetaWindowUtils.isWaylandCompositor()) {
             windows = this._sortWindowsOnWayland(app);
         } else {
             windows = this._sortWindowsOnX11(app);

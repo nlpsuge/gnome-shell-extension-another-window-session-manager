@@ -4,6 +4,18 @@ import Meta from 'gi://Meta';
 
 
 /**
+ * Whether GNOME Shell runs as a Wayland compositor
+ *
+ * GNOME 50 dropped the X11 session and removed Meta.is_wayland_compositor(),
+ * so it is always Wayland there
+ *
+ * @returns {boolean}
+ */
+export const isWaylandCompositor = function() {
+    return Meta.is_wayland_compositor?.() ?? true;
+}
+
+/**
  * Get the stable window id, don't change even after gnome shell is restarted
  * 
  * On X11, return xid; On Wayland, return id
@@ -11,7 +23,7 @@ import Meta from 'gi://Meta';
  * @returns stable window id
  */
 export const getStableWindowId = function(metaWindow) {
-    return Meta.is_wayland_compositor() ? metaWindow.get_id() : metaWindow.get_description();
+    return isWaylandCompositor() ? metaWindow.get_id() : metaWindow.get_description();
 }
 
 export const isSurfaceActor = function(clutterActor) {
