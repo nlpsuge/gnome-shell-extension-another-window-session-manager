@@ -1,3 +1,8 @@
+function __awsmIsWayland() {
+    if (typeof Meta.is_wayland_compositor === 'function')
+        return __awsmIsWayland();
+    return global.context.get_wayland_compositor() !== null;
+}
 'use strict';
 
 import GObject from 'gi://GObject';
@@ -80,7 +85,7 @@ class AwsIndicator extends PanelMenu.Button {
 
     // TODO Move this method and related code to a single .js file
     async _windowCreated(display, metaWindow, userData) {
-        if (!Meta.is_wayland_compositor()) {
+        if (!__awsmIsWayland()) {
             // We call createEnoughWorkspaceAndMoveWindows() if and only if all conditions checked.
             
             // But we give some windows (such as the OS running in VirtualBox) a chance to connect `first-frame` and `shown` signals.

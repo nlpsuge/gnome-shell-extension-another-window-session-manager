@@ -1,3 +1,8 @@
+function __awsmIsWayland() {
+    if (typeof Meta.is_wayland_compositor === 'function')
+        return __awsmIsWayland();
+    return global.context.get_wayland_compositor() !== null;
+}
 'use strict';
 
 import Gio from 'gi://Gio';
@@ -270,7 +275,7 @@ export const SaveSession = class {
         sessionConfigObject.windows_count = runningShellApp.get_n_windows();
         sessionConfigObject.fullscreen = metaWindow.is_fullscreen();
         sessionConfigObject.minimized = metaWindow.minimized;
-        sessionConfigObject.compositor_type = Meta.is_wayland_compositor() ? 'Wayland' : 'X11'
+        sessionConfigObject.compositor_type = __awsmIsWayland() ? 'Wayland' : 'X11'
 
         const frameRect = metaWindow.get_frame_rect();
         let window_position = sessionConfigObject.window_position;

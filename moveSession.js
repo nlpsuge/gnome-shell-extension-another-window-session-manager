@@ -1,3 +1,8 @@
+function __awsmIsWayland() {
+    if (typeof Meta.is_wayland_compositor === 'function')
+        return __awsmIsWayland();
+    return global.context.get_wayland_compositor() !== null;
+}
 'use strict';
 
 import Gio from 'gi://Gio';
@@ -369,7 +374,7 @@ export const MoveSession = class {
                 if (currentMetaMaximized) {
                     metaWindow.set_unmaximize_flags(Meta.MaximizeFlags.BOTH);
                     metaWindow.unmaximize();
-                    if (Meta.is_wayland_compositor() && !currentMetaMaximized) {
+                    if (__awsmIsWayland() && !currentMetaMaximized) {
                         delay = true;
                     }
                 }
@@ -380,7 +385,7 @@ export const MoveSession = class {
                 const currentMetaMaximized = metaWindow.get_maximized();
                 if (currentMetaMaximized) {
                     metaWindow.unmaximize(currentMetaMaximized);
-                    if (Meta.is_wayland_compositor() && currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
+                    if (__awsmIsWayland() && currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
                         delay = true;
                     }
                 }

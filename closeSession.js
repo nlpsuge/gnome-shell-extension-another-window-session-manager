@@ -1,3 +1,8 @@
+function __awsmIsWayland() {
+    if (typeof Meta.is_wayland_compositor === 'function')
+        return __awsmIsWayland();
+    return global.context.get_wayland_compositor() !== null;
+}
 'use strict';
 
 import Gio from 'gi://Gio';
@@ -486,7 +491,7 @@ export const CloseSession = class {
         }
 
         let windows;
-        if (Meta.is_wayland_compositor()) {
+        if (__awsmIsWayland()) {
             windows = this._sortWindowsOnWayland(app);
         } else {
             windows = this._sortWindowsOnX11(app);
