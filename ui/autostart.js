@@ -143,6 +143,25 @@ const AutostartService = GObject.registerClass(
 
         // TODO Press some hotkey (like Ctrl) so this time will not restore the previous session?
         // Call this method asynchronously through, for example: 
+        // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.ForceMoveWindows "'start'"`
+        async ForceMoveWindows(sessionName) {
+            let name = sessionName;
+            if (name instanceof GLib.Variant) {
+                name = name.get_string()[0];
+            }
+            if (!name || name.length === 0) {
+                name = this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
+            }
+            this._log.info(`Force moving windows of running apps to session '${name}'`);
+            try {
+                await RestoreSession.forceMoveWindows(name);
+                return `Moved windows of running apps to session '${name}'`;
+            } catch (e) {
+                this._log.error(e, 'ForceMoveWindows failed');
+                return `ERROR: ${e.message}`;
+            }
+        }
+
         // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{'removeAfterRestore': <false>}"`
         // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{}"`
         RestorePreviousSession(args) {

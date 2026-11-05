@@ -13,6 +13,7 @@ import * as RestoreSession from '../restoreSession.js';
 
 import * as FileUtils from '../utils/fileUtils.js';
 import * as Log from '../utils/log.js';
+import {PrefsUtils} from '../utils/prefsUtils.js';
 
 import {Button} from './button.js';
 
@@ -32,6 +33,8 @@ class PopupMenuButtonItems extends GObject.Object {
         
         this.buttonItems.push(popupMenuButtonItemClose);
         this.buttonItems.push(popupMenuButtonItemSave);
+        const popupMenuButtonItemForceMove = new PopupMenuButtonItemForceMove('view-refresh-symbolic.svg');
+        this.buttonItems.push(popupMenuButtonItemForceMove);
     }
 
 });
@@ -397,3 +400,41 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
     
 
 });
+
+class PopupMenuButtonItemForceMove extends PopupMenuButtonItem {
+
+    _init(iconSymbolic) {
+        super._init();
+        this._createButton(iconSymbolic);
+        this.addIconDescription('Move windows to saved positions (force)');
+        this._addYesAndNoButtons();
+
+        this._log = new Log.Log();
+
+        this.label.text = 'Move windows to saved positions (force)';
+
+        this.yesButton.connect('clicked', this._onClickedYes.bind(this));
+        this.noButton.connect('clicked', () => {
+            super.hideYesAndNoButtons();
+        });
+        this.actor.add_child(this.yesButton);
+        this.actor.add_child(this.noButton);
+
+        this.connect('activate', () => {
+            this.showYesAndNoButtons();
+        });
+    }
+
+    async _onClickedYes() {
+        try {
+            const settings = PrefsUtils.getSettings();
+            const sessionName = settings.get_string('autorestore-sessions');
+            this.hideYesAndNoButtons();
+            await RestoreSession.forceMoveWindows(sessionName);
+            Main.notify('Another Window Session Manager', `Moved windows to saved positions of session '${sessionName}'`);
+        } catch (e) {
+            this._log.error(e, 'Force move failed');
+            Main.notify('Another Window Session Manager', `Force move failed: ${e.message}`);
+        }
+    }
+}

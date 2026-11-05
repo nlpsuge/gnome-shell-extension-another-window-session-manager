@@ -113,7 +113,7 @@ export const RestoreSession = class {
 
             if (this._appIsRunning(shellApp)) {
                 this._log.debug(`${shellApp.get_name()} is already running, moving its existing windows`)
-                runningAppsToMove.push({shellApp, sessionConfigObject});
+                runningAppsToMove.push({shellApp, sessionConfigObject: session_config_object});
                 return false;
             }
 
@@ -402,4 +402,53 @@ export const RestoreSession = class {
         
     }
 
+}
+
+// Force-move the windows of RUNNING apps to the positions saved in a session,
+// regardless of whether the app was launched by this extension.
+export async function forceMoveWindows(sessionName) {
+    try {
+        const sessions_path = FileUtils.get_sessions_path();
+        const session_file_path = GLib.build_filenamev([sessions_path, sessionName]);
+        if (!GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
+            throw new Error(`Session file not found: ${session_file_path}`);
+        }
+        const session_file = Gio.File.new_for_path(session_file_path);
+        let [success, contents] = session_file.load_contents(null);
+        if (!success) {
+            throw new Error(`Failed to load ${session_file_path}`);
+        }
+        const session_config = FileUtils.getJsonObj(contents);
+        const objects = session_config.x_session_config_objects;
+        if (!(objects && objects.length)) {
+            throw new Error(`Session has no windows: ${session_file_path}`);
+        }
+
+        const moveSession = new MoveSession.MoveSession();
+        const appSystem = Shell.AppSystem.get_default();
+
+        // Group saved windows by desktop_file_id so moveWindowsByShellApp can match them
+        const byApp = new Map();
+        objects.forEach(o => {
+            const key = o.desktop_file_id || o.wm_class;
+            if (!key) return;
+            if (!byApp.has(key)) byApp.set(key, []);
+            byApp.get(key).push(o);
+        });
+
+        for (const [appId, savedWindows] of byApp) {
+            const shellApp = appSystem.lookup_app(appId);
+            if (!shellApp || !shellApp.get_windows().length) {
+                Log.Log.getDefault().info(`Force move: no running windows for ${appId}, skipping`);
+                continue;
+            }
+            Log.Log.getDefault().info(`Force move: moving windows of ${shellApp.get_name()}`);
+            await moveSession.moveWindowsByShellApp(shellApp, savedWindows);
+        }
+        Log.Log.getDefault().info('Force move: done');
+        return `Force moved windows of running apps to session '${sessionName}'`;
+    } catch (e) {
+        Log.Log.getDefault().error(e, 'Force move failed');
+        throw e;
+    }
 }
