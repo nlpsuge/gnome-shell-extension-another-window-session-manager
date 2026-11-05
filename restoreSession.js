@@ -10,6 +10,7 @@ import {PrefsUtils} from './utils/prefsUtils.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import * as DateUtils from './utils/dateUtils.js';
 import * as StringUtils from './utils/stringUtils.js';
+import * as MoveSession from './moveSession.js';
 
 
 export const restoreSessionObject = {
@@ -99,6 +100,7 @@ export const RestoreSession = class {
             return;
         }
 
+        const runningAppsToMove = [];
         session_config_objects = session_config_objects.filter(session_config_object => {
             const desktop_file_id = session_config_object.desktop_file_id;
             if (!desktop_file_id) {
@@ -110,12 +112,22 @@ export const RestoreSession = class {
             }
 
             if (this._appIsRunning(shellApp)) {
-                this._log.debug(`${shellApp.get_name()} is already running`)
+                this._log.debug(`${shellApp.get_name()} is already running, moving its existing windows`)
+                runningAppsToMove.push({shellApp, sessionConfigObject});
                 return false;
             }
 
             return true;
         });
+        // Move existing windows of already-running apps into their saved positions
+        if (runningAppsToMove.length) {
+            const moveSession = new MoveSession.MoveSession();
+            runningAppsToMove.forEach(({shellApp, sessionConfigObject}) => {
+                moveSession.moveWindowsByShellApp(shellApp, [sessionConfigObject]).catch(e =>
+                    this._log.error(e, `Failed to move windows of already running ${shellApp.get_name()}`));
+            });
+        }
+
         if (session_config_objects.length === 0) return;
 
         this._restoreOneSession(session_config_objects.shift());
