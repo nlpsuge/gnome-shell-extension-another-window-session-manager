@@ -401,6 +401,7 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
 });
 
+const PopupMenuButtonItemForceMove = GObject.registerClass(
 class PopupMenuButtonItemForceMove extends PopupMenuButtonItem {
 
     _init(iconSymbolic) {
@@ -438,3 +439,4 @@ class PopupMenuButtonItemForceMove extends PopupMenuButtonItem {
         }
     }
 }
+);
