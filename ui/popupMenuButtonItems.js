@@ -406,7 +406,7 @@ class PopupMenuButtonItemForceMove extends PopupMenuButtonItem {
 
     _init(iconSymbolic) {
         super._init();
-        this._createButton(iconSymbolic);
+        this.actor.add_child(this.createButton(iconSymbolic));
         this.addIconDescription('Move windows to saved positions (force)');
         this._addYesAndNoButtons();
 
