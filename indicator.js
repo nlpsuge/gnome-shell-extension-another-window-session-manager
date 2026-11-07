@@ -21,6 +21,8 @@ import * as MoveSession from './moveSession.js';
 import * as RestoreSession from './restoreSession.js';
 import * as Constants from './constants.js';
 
+import {NO_PLACE_DELAY_MS} from './model/placeRule.js';
+import * as UiHelper from './ui/uiHelper.js';
 import * as FileUtils from './utils/fileUtils.js';
 import * as SessionItem from './ui/sessionItem.js';
 import * as SearchSessionItem from './ui/searchSessionItem.js';
@@ -76,6 +78,7 @@ class AwsIndicator extends PanelMenu.Button {
         this._moveSession = new MoveSession.MoveSession();
 
         this._metaWindowConnectIds = [];
+        this._alwaysPlaceTimeouts = new Map();
         this._display = global.display;
         this._displayId = this._display.connect('window-created', this._windowCreated.bind(this));
 
@@ -149,6 +152,8 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
 
+            this._scheduleAlwaysPlace(metaWindow);
+
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> first-frame: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
@@ -183,6 +188,8 @@ class AwsIndicator extends PanelMenu.Button {
                 return;
             }
 
+            this._scheduleAlwaysPlace(metaWindow);
+
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> shown: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
 
@@ -215,6 +222,7 @@ class AwsIndicator extends PanelMenu.Button {
         let unmanagingId = metaWindow.connect('unmanaging', () => {
             // Fix ../gobject/gsignal.c:2732: instance '0x55629xxxxxx' has no handler with id '11000' when disable this extension right after restore apps
             this._signal.disconnectSafely(metaWindowActor, firstFrameId);
+            this._cancelAlwaysPlaceTimeout(metaWindow);
         });
 
         // The window title might be changing multiple times while the app is starting. 
@@ -235,6 +243,8 @@ class AwsIndicator extends PanelMenu.Button {
             if (!shellApp) {
                 return;
             }
+
+            this._scheduleAlwaysPlace(metaWindow);
 
             // NOTE: The title of a dialog (for example a close warning dialog, like gnome-terminal) attached to a window is ''
             this._log.debug(`window-created -> title changed: ${shellApp.get_name()} -> ${metaWindow.get_title()}`);
@@ -547,6 +557,68 @@ class AwsIndicator extends PanelMenu.Button {
         }
     }
 
+    _scheduleAlwaysPlace(metaWindow) {
+        if (this._isDestroyed || !metaWindow) {
+            return;
+        }
+        if (!this._alwaysPlaceEnabled()) {
+            return;
+        }
+        if (metaWindow._aboutToClose || UiHelper.ignoreWindows(metaWindow)) {
+            return;
+        }
+
+        const match = this._moveSession.matchPlaceRule(metaWindow);
+        if (!match) {
+            return;
+        }
+        if (metaWindow._awsmPlaceKey === match.key) {
+            return;
+        }
+
+        this._cancelAlwaysPlaceTimeout(metaWindow);
+        metaWindow._awsmPlaceKey = match.key;
+
+        const apply = () => {
+            if (this._isDestroyed || metaWindow._awsmPlaceKey !== match.key) {
+                return;
+            }
+            if (!this._alwaysPlaceEnabled()) {
+                return;
+            }
+            this._moveSession.placeWindowFromRule(metaWindow, match.rule, match.delayMs).catch(e => {
+                this._log.error(e);
+            });
+        };
+
+        if (match.delayMs <= NO_PLACE_DELAY_MS) {
+            apply();
+            return;
+        }
+
+        const id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, match.delayMs, () => {
+            this._alwaysPlaceTimeouts.delete(metaWindow);
+            apply();
+            return GLib.SOURCE_REMOVE;
+        });
+        this._alwaysPlaceTimeouts.set(metaWindow, id);
+    }
+
+    _alwaysPlaceEnabled() {
+        return this._settings.get_boolean(Constants.PREFS_SETTING_ALWAYS_PLACE_WINDOWS);
+    }
+
+    _cancelAlwaysPlaceTimeout(metaWindow) {
+        if (!this._alwaysPlaceTimeouts || !metaWindow) {
+            return;
+        }
+        const id = this._alwaysPlaceTimeouts.get(metaWindow);
+        if (id) {
+            GLib.Source.remove(id);
+            this._alwaysPlaceTimeouts.delete(metaWindow);
+        }
+    }
+
     destroy() {
         if (this.monitors) {
             this.monitors.forEach ((monitor) => {
@@ -568,6 +640,13 @@ class AwsIndicator extends PanelMenu.Button {
             this._metaWindowConnectIds = null;
         }
         
+        if (this._alwaysPlaceTimeouts) {
+            for (const id of this._alwaysPlaceTimeouts.values()) {
+                GLib.Source.remove(id);
+            }
+            this._alwaysPlaceTimeouts = null;
+        }
+
         if (this._displayId) {
             this._display.disconnect(this._displayId);
             this._displayId = 0;

@@ -1,7 +1,9 @@
 'use strict';
 
-import * as Config from 'resource:///org/gnome/shell/misc/config.js';
-export const shellVersion = parseFloat(Config.PACKAGE_VERSION);
+// Setting ids and Gdk masks only. Do not import Shell resources here:
+// prefs.js loads this module outside gnome-shell, where
+// resource:///org/gnome/shell/ is not registered. Shell version lives in
+// shellVersion.js.
 
 /*
  * GdkModifierType
@@ -16,6 +18,7 @@ export const GDK_META_MASK     = 1 << 28;
 
 /* prefs settings */
 export const PREFS_SETTING_AUTORESTORE_SESSIONS = 'autorestore-sessions';
+export const PREFS_SETTING_ALWAYS_PLACE_WINDOWS = 'enable-always-place-windows';
 
 
 

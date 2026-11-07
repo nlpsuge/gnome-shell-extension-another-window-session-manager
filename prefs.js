@@ -12,6 +12,7 @@ import * as FileUtils from './utils/fileUtils.js';
 import * as Log from './utils/log.js';
 import {prefsUtilsInit, prefsUtilsDestroy, PrefsUtils} from './utils/prefsUtils.js';
 import * as StringUtils from './utils/stringUtils.js';
+import {PREFS_SETTING_ALWAYS_PLACE_WINDOWS} from './constants.js';
 
 import * as PrefsCloseWindow from './prefsCloseWindow.js';
 
@@ -98,6 +99,13 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
         PrefsUtils.getSettings().bind(
             'enable-save-session-notification',
             this.save_session_notification_switch,
+            'active',
+            Gio.SettingsBindFlags.DEFAULT
+        );
+
+        PrefsUtils.getSettings().bind(
+            PREFS_SETTING_ALWAYS_PLACE_WINDOWS,
+            this.always_place_windows_switch,
             'active',
             Gio.SettingsBindFlags.DEFAULT
         );
@@ -248,6 +256,8 @@ export default class AnotherWindowSessionManagerPreferences extends ExtensionPre
             this.restore_previous_delay_spinbutton.set_sensitive(active);
         });
         
+        this.always_place_windows_switch = this._builder.get_object('always_place_windows_switch');
+
         this.restore_at_startup_switch = this._builder.get_object('restore_at_startup_switch');
         this.restore_at_startup_switch.connect('notify::active', (widget) => {
             const active = widget.active;

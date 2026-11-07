@@ -13,6 +13,7 @@ import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as SessionConfig from './model/sessionConfig.js';
+import {PLACE_DELAY_FIELD, samePlaceSlot} from './model/placeRule.js';
 
 import * as UiHelper from './ui/uiHelper.js';
 
@@ -23,7 +24,7 @@ import * as CommonError from './utils/CommonError.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import {PrefsUtils} from './utils/prefsUtils.js';
 import * as StringUtils from './utils/stringUtils.js';
-import { shellVersion } from './constants.js';
+import { shellVersion } from './shellVersion.js';
 
 
 export const SaveSession = class {
@@ -75,7 +76,8 @@ export const SaveSession = class {
             this._log.debug(`Generating session ${sessionName}`);
 
             const sessionConfig = await this._buildSession(sessionName);
-    
+            this._copyPlaceDelays(sessionConfig, sessionName, baseDir);
+
             sessionConfig.x_session_config_objects = sessionConfig.sort();
             
             if (backup) {
@@ -374,6 +376,51 @@ export const SaveSession = class {
         }
 
         return [true, sessionConfigObject];
+    }
+
+    /**
+     * A re-save rewrites the session file. Keep hand-edited place_delay_ms
+     * values, matched by desktop id (or wm_class) plus title.
+     */
+    _copyPlaceDelays(sessionConfig, sessionName, baseDir) {
+        const sessionsPath = FileUtils.get_sessions_path(baseDir);
+        const sessionFilePath = GLib.build_filenamev([sessionsPath, sessionName]);
+        if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
+            return;
+        }
+
+        let oldSession;
+        try {
+            const [ok, contents] = Gio.File.new_for_path(sessionFilePath).load_contents(null);
+            if (!ok) {
+                return;
+            }
+            oldSession = FileUtils.getJsonObj(contents);
+        } catch (e) {
+            this._log.error(e);
+            return;
+        }
+
+        if (Number.isFinite(oldSession[PLACE_DELAY_FIELD])) {
+            sessionConfig[PLACE_DELAY_FIELD] = oldSession[PLACE_DELAY_FIELD];
+        }
+
+        const oldObjects = Array.isArray(oldSession.x_session_config_objects)
+            ? oldSession.x_session_config_objects
+            : [];
+        const used = new Set();
+        for (const obj of sessionConfig.x_session_config_objects) {
+            const index = oldObjects.findIndex((oldObj, i) => {
+                return !used.has(i)
+                    && Number.isFinite(oldObj[PLACE_DELAY_FIELD])
+                    && samePlaceSlot(oldObj, obj);
+            });
+            if (index === -1) {
+                continue;
+            }
+            used.add(index);
+            obj[PLACE_DELAY_FIELD] = oldObjects[index][PLACE_DELAY_FIELD];
+        }
     }
 
     async backupExistingSessionIfNecessary(sessionName, baseDir) {

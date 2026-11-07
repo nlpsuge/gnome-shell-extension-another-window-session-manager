@@ -662,6 +662,72 @@
           </object>
         </child>
         <child>
+          <object class="GtkFrame" id="always_place_windows_frame">
+            <property name="margin-top">30</property>
+            <property name="child">
+              <object class="GtkListBox">
+                <property name="selection-mode">none</property>
+                <child>
+                  <object class="GtkListBoxRow">
+                    <property name="focusable">true</property>
+                    <property name="child">
+                      <object class="GtkGrid">
+                        <property name="margin-top">12</property>
+                        <property name="margin-bottom">12</property>
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">32</property>
+                        <property name="margin_start">6</property>
+                        <property name="margin_end">6</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="hexpand">true</property>
+                            <property name="label" translatable="yes">Always place windows from the saved session</property>
+                            <property name="use-markup">true</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">0</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkSwitch" id="always_place_windows_switch">
+                            <property name="focusable">true</property>
+                            <property name="active">false</property>
+                            <property name="halign">end</property>
+                            <property name="valign">center</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">0</property>
+                              <property name="row-span">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="hexpand">true</property>
+                            <property name="label" translatable="yes">Does not launch apps. A new window that matches an entry in the session named for restore-at-startup is moved to that monitor, workspace, and size. Wait before moving is place_delay_ms in that file, in milliseconds.</property>
+                            <property name="wrap">true</property>
+                            <property name="use-markup">true</property>
+                            <property name="xalign">0</property>
+                            <style>
+                              <class name="dim-label"/>
+                            </style>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </property>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
           <object class="GtkFrame" id="restore_window_tiling_frame">
             <property name="margin-top">30</property>
             <property name="child">
