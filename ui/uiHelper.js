@@ -2,21 +2,35 @@
 
 import Meta from 'gi://Meta';
 
+// Close still uses these. A Wayland dialog is often NORMAL, so this list
+// alone is not enough to decide what always-place may touch.
+const DIALOG_WINDOW_TYPES = [
+    Meta.WindowType.DIALOG,
+    Meta.WindowType.MODAL_DIALOG,
+];
+
+// Accessory toplevels. Parent is the Wayland signal; type is the X11 one.
+const CHILD_WINDOW_TYPES = [
+    ...DIALOG_WINDOW_TYPES,
+    Meta.WindowType.UTILITY,
+    Meta.WindowType.MENU,
+    Meta.WindowType.SPLASHSCREEN,
+];
 
 export function isDialog(metaWindow) {
-    const dialogTypes = [
-        // 3
-        Meta.WindowType.DIALOG,
-        // 4
-        Meta.WindowType.MODAL_DIALOG,
-    ];
-    const winType = metaWindow.get_window_type();
-    return dialogTypes.includes(winType) &&
+    return DIALOG_WINDOW_TYPES.includes(metaWindow.get_window_type()) &&
         metaWindow.get_transient_for() != null;
 }
 
+function isChildWindow(metaWindow) {
+    if (metaWindow.get_transient_for() != null) {
+        return true;
+    }
+    return CHILD_WINDOW_TYPES.includes(metaWindow.get_window_type());
+}
+
 export function ignoreWindows(metaWindow) {
-    if (isDialog(metaWindow)) {
+    if (isChildWindow(metaWindow)) {
         return true;
     }
 
@@ -31,6 +45,6 @@ export function ignoreWindows(metaWindow) {
     if (metaWindow.is_override_redirect()) {
         return true;
     }
-       
+
     return false;
 }
