@@ -7,8 +7,6 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Clutter from 'gi://Clutter';
 
-import * as EndSessionDialog from 'resource:///org/gnome/shell/ui/endSessionDialog.js';
-
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -25,6 +23,19 @@ import * as FileUtils from '../utils/fileUtils.js';
 
 
 let _requiredToRestorePrevious = false;
+
+// Same rounding as gnome-shell ui/endSessionDialog.js. Not exported, so do not call it on the module.
+function _roundSecondsToInterval(totalSeconds, secondsLeft, interval) {
+    let time = Math.ceil(secondsLeft);
+    if (time <= interval)
+        return time;
+    time += interval - 1;
+    if (time > totalSeconds)
+        time = Math.ceil(totalSeconds);
+    else
+        time -= time % interval;
+    return time;
+}
 
 export const AutostartServiceProvider = GObject.registerClass(
     class AutostartServiceProvider extends GObject.Object {
@@ -314,9 +325,10 @@ const AutostartDialog = GObject.registerClass(
 
         _sync() {
 
-            const displayTime = EndSessionDialog._roundSecondsToInterval(this._totalSecondsToStayOpen,
-                                                                         this._secondsLeft,
-                                                                         1);
+            // Shell keeps this helper private. It is not exported from endSessionDialog.js.
+            const displayTime = _roundSecondsToInterval(this._totalSecondsToStayOpen,
+                                                        this._secondsLeft,
+                                                        1);
             const desc = _.ngettext('\'' + this._sessionName + '\' will be restored in %d second',
                 '\'' + this._sessionName + '\' will be restored in %d seconds', displayTime).format(displayTime);
             this._confirmDialogContent.description = desc;

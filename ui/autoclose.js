@@ -21,7 +21,9 @@ import * as Log from '../utils/log.js';
 
 let GTop = null;
 try {
-    GTop = await import('gi://GTop');
+    // Dynamic import returns the module record `{ default }`, not the GI namespace.
+    // `new GTop.glibtop_proc_state()` throws "is not a constructor" without `.default`.
+    GTop = (await import('gi://GTop')).default;
 } catch (e) {
     Log.Log.getDefault().error(e, `GTop is not installed, I highly recommend to install it, so that a process can be closed safely. How to install it? Please visit: https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#dependencies .`);
 }
@@ -603,7 +605,6 @@ const RunningApplicationListWindow = GObject.registerClass({
         _checkRunningPidState() {
             try {
                 const pidStateMap = new Map();
-                // TODO Fixme: TypeError: GTop.glibtop_proc_state is not a constructor
                 let state = new GTop.glibtop_proc_state();
                 for (const [pid, app] of this._pidsMap) {
                     GTop.glibtop_get_proc_state(state, pid);

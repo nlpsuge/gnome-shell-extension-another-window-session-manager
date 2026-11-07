@@ -33,7 +33,7 @@ class PopupMenuButtonItems extends GObject.Object {
         
         this.buttonItems.push(popupMenuButtonItemClose);
         this.buttonItems.push(popupMenuButtonItemSave);
-        const popupMenuButtonItemForceMove = new PopupMenuButtonItemForceMove('view-refresh-symbolic.svg');
+        const popupMenuButtonItemForceMove = new PopupMenuButtonItemForceMove();
         this.buttonItems.push(popupMenuButtonItemForceMove);
     }
 
@@ -401,42 +401,30 @@ class PopupMenuButtonItemSave extends PopupMenuButtonItem {
 
 });
 
+// Plain menu item. Do not extend PopupMenuButtonItem: Close and Save own
+// _createButton/_addYesAndNoButtons, and calling those from here takes the
+// extension to State: ERROR before the panel icon exists.
 const PopupMenuButtonItemForceMove = GObject.registerClass(
-class PopupMenuButtonItemForceMove extends PopupMenuButtonItem {
+class PopupMenuButtonItemForceMove extends PopupMenu.PopupMenuItem {
 
-    _init(iconSymbolic) {
-        super._init();
-        this.actor.add_child(this.createButton(iconSymbolic));
-        this.addIconDescription('Move windows to saved positions (force)');
-        this._addYesAndNoButtons();
+    _init() {
+        super._init('Move windows to saved positions (force)');
 
         this._log = new Log.Log();
 
-        this.label.text = 'Move windows to saved positions (force)';
-
-        this.yesButton.connect('clicked', this._onClickedYes.bind(this));
-        this.noButton.connect('clicked', () => {
-            super.hideYesAndNoButtons();
-        });
-        this.actor.add_child(this.yesButton);
-        this.actor.add_child(this.noButton);
-
         this.connect('activate', () => {
-            this.showYesAndNoButtons();
+            this._forceMove().catch(e => {
+                this._log.error(e, 'Force move failed');
+                Main.notify('Another Window Session Manager', `Force move failed: ${e.message}`);
+            });
         });
     }
 
-    async _onClickedYes() {
-        try {
-            const settings = PrefsUtils.getSettings();
-            const sessionName = settings.get_string('autorestore-sessions');
-            this.hideYesAndNoButtons();
-            await RestoreSession.forceMoveWindows(sessionName);
-            Main.notify('Another Window Session Manager', `Moved windows to saved positions of session '${sessionName}'`);
-        } catch (e) {
-            this._log.error(e, 'Force move failed');
-            Main.notify('Another Window Session Manager', `Force move failed: ${e.message}`);
-        }
+    async _forceMove() {
+        const settings = PrefsUtils.getSettings();
+        const sessionName = settings.get_string('autorestore-sessions');
+        await RestoreSession.forceMoveWindows(sessionName);
+        Main.notify('Another Window Session Manager', `Moved windows to saved positions of session '${sessionName}'`);
     }
 }
 );
