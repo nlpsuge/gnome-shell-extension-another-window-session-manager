@@ -3,6 +3,11 @@
 // Hand-edited on a session file. Not a GSetting.
 export const PLACE_DELAY_FIELD = 'place_delay_ms';
 
+// Optional per-window regex (a JS RegExp source string) tested against the
+// open window's title. Lets one entry cover titles that embed a URL or other
+// variable part, e.g. DevTools: "^DevTools( - .*)?$".
+export const PLACE_TITLE_PATTERN_FIELD = 'window_title_pattern';
+
 export const NO_PLACE_DELAY_MS = 0;
 
 // A typo must not leave a timeout pending for hours.
@@ -30,6 +35,28 @@ export function samePlaceSlot(left, right) {
         return false;
     }
     return ruleMatchesApp(left, right.desktop_file_id, right.wm_class);
+}
+
+// Exact window_title equality keeps working when no pattern is set. A set
+// pattern is a JS RegExp source tested against the open title. An invalid
+// pattern never matches and never throws: matching runs on window-created,
+// where a throw would take the extension to State: ERROR.
+export function titleMatchesRule(rule, openTitle) {
+    if (!rule) {
+        return false;
+    }
+    if (rule.window_title && rule.window_title === openTitle) {
+        return true;
+    }
+    const pattern = rule[PLACE_TITLE_PATTERN_FIELD];
+    if (typeof pattern !== 'string' || !pattern) {
+        return false;
+    }
+    try {
+        return new RegExp(pattern).test(openTitle ?? '');
+    } catch {
+        return false;
+    }
 }
 
 export function sessionPlaceDelayMs(session) {

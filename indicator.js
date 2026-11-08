@@ -561,15 +561,20 @@ class AwsIndicator extends PanelMenu.Button {
         if (this._isDestroyed || !metaWindow) {
             return;
         }
+        // TEMP DEBUG: log every candidate before any skip decision.
+        UiHelper.logPlaceCandidate(metaWindow, 'schedule-entry', this._windowTracker);
         if (!this._alwaysPlaceEnabled()) {
+            UiHelper.logPlaceCandidate(metaWindow, 'schedule-skip always-place-off', this._windowTracker);
             return;
         }
         if (metaWindow._aboutToClose || UiHelper.ignoreWindows(metaWindow)) {
+            UiHelper.logPlaceCandidate(metaWindow, `schedule-skip ignored aboutToClose=${!!metaWindow._aboutToClose}`, this._windowTracker);
             return;
         }
 
         const match = this._moveSession.matchPlaceRule(metaWindow);
         if (!match) {
+            UiHelper.logPlaceCandidate(metaWindow, 'schedule-no-match', this._windowTracker);
             return;
         }
         if (metaWindow._awsmPlaceKey === match.key) {

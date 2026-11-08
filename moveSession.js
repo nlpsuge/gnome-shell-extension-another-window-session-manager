@@ -25,6 +25,7 @@ import {
     resolvePlaceDelayMs,
     ruleMatchesApp,
     sessionPlaceDelayMs,
+    titleMatchesRule,
 } from './model/placeRule.js';
 
 // Mutter applies unmaximize on a later frame. Restoring geometry in the same
@@ -297,7 +298,7 @@ export const MoveSession = class {
             const open_window_workspace_index = metaWindow.get_workspace().index();
             const desktop_number = saved_window_session.desktop_number;
 
-            if (windows_count === 1 || title === saved_window_session.window_title) {
+            if (windows_count === 1 || titleMatchesRule(saved_window_session, title)) {
                 if (open_window_workspace_index === desktop_number) {
                     if (this._log.isDebug()) {
                         const shellApp = this._windowTracker.get_window_app(metaWindow);
@@ -479,7 +480,7 @@ export const MoveSession = class {
                 const open_window_workspace_index = open_window.get_workspace().index();
                 const desktop_number = saved_window_session.desktop_number;
 
-                if (windows_count === 1 || title === saved_window_session.window_title) {
+                if (windows_count === 1 || titleMatchesRule(saved_window_session, title)) {
                     if (open_window_workspace_index === desktop_number) {
                         this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
                         this._restoreWindowStates(open_window, saved_window_session, true);
@@ -534,6 +535,8 @@ export const MoveSession = class {
             return null;
         }
         if (UiHelper.ignoreWindows(metaWindow)) {
+            // TEMP DEBUG: why a second window of the same app is skipped.
+            UiHelper.logPlaceCandidate(metaWindow, 'match-skip ignored', this._windowTracker);
             return null;
         }
 
@@ -555,15 +558,29 @@ export const MoveSession = class {
             return null;
         }
 
-        const titleHits = indexed.filter(({rule}) => rule.window_title && rule.window_title === title);
+        const exactHits = indexed.filter(({rule}) => rule.window_title && rule.window_title === title);
         let chosen = null;
-        if (titleHits.length >= 1) {
-            chosen = titleHits[0];
+        let how = '';
+        if (exactHits.length >= 1) {
+            chosen = exactHits[0];
+            how = `title-hit rule#${chosen.index}`;
         } else if (indexed.length === 1) {
             chosen = indexed[0];
+            how = `single-rule rule#${chosen.index}`;
         } else {
-            return null;
+            const patternHits = indexed.filter(({rule}) => titleMatchesRule(rule, title));
+            if (patternHits.length >= 1) {
+                chosen = patternHits[0];
+                how = `pattern-hit rule#${chosen.index}`;
+            } else {
+                // TEMP DEBUG: several saved entries, title matches none yet.
+                UiHelper.logPlaceCandidate(metaWindow, `match-pending ${indexed.length}-rules-no-title-hit`, this._windowTracker);
+                return null;
+            }
         }
+
+        // TEMP DEBUG: which saved entry this window will be forced into.
+        UiHelper.logPlaceCandidate(metaWindow, `match-chosen ${how}`, this._windowTracker);
 
         return {
             rule: chosen.rule,
@@ -575,6 +592,8 @@ export const MoveSession = class {
     async placeWindowFromRule(metaWindow, savedRule, delayMs) {
         try {
             if (!metaWindow || UiHelper.ignoreWindows(metaWindow)) {
+                // TEMP DEBUG: window became a child/override-redirect during the delay.
+                UiHelper.logPlaceCandidate(metaWindow, 'place-skip ignored', this._windowTracker);
                 return;
             }
 

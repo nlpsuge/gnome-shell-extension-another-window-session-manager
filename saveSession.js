@@ -13,7 +13,7 @@ import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as SessionConfig from './model/sessionConfig.js';
-import {PLACE_DELAY_FIELD, samePlaceSlot} from './model/placeRule.js';
+import {PLACE_DELAY_FIELD, PLACE_TITLE_PATTERN_FIELD, samePlaceSlot} from './model/placeRule.js';
 
 import * as UiHelper from './ui/uiHelper.js';
 
@@ -76,7 +76,7 @@ export const SaveSession = class {
             this._log.debug(`Generating session ${sessionName}`);
 
             const sessionConfig = await this._buildSession(sessionName);
-            this._copyPlaceDelays(sessionConfig, sessionName, baseDir);
+            this._copyHandEditedPlaceFields(sessionConfig, sessionName, baseDir);
 
             sessionConfig.x_session_config_objects = sessionConfig.sort();
             
@@ -380,9 +380,10 @@ export const SaveSession = class {
 
     /**
      * A re-save rewrites the session file. Keep hand-edited place_delay_ms
-     * values, matched by desktop id (or wm_class) plus title.
+     * and window_title_pattern values, matched by desktop id (or wm_class)
+     * plus title.
      */
-    _copyPlaceDelays(sessionConfig, sessionName, baseDir) {
+    _copyHandEditedPlaceFields(sessionConfig, sessionName, baseDir) {
         const sessionsPath = FileUtils.get_sessions_path(baseDir);
         const sessionFilePath = GLib.build_filenamev([sessionsPath, sessionName]);
         if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
@@ -412,14 +413,20 @@ export const SaveSession = class {
         for (const obj of sessionConfig.x_session_config_objects) {
             const index = oldObjects.findIndex((oldObj, i) => {
                 return !used.has(i)
-                    && Number.isFinite(oldObj[PLACE_DELAY_FIELD])
+                    && (Number.isFinite(oldObj[PLACE_DELAY_FIELD])
+                        || typeof oldObj[PLACE_TITLE_PATTERN_FIELD] === 'string')
                     && samePlaceSlot(oldObj, obj);
             });
             if (index === -1) {
                 continue;
             }
             used.add(index);
-            obj[PLACE_DELAY_FIELD] = oldObjects[index][PLACE_DELAY_FIELD];
+            if (Number.isFinite(oldObjects[index][PLACE_DELAY_FIELD])) {
+                obj[PLACE_DELAY_FIELD] = oldObjects[index][PLACE_DELAY_FIELD];
+            }
+            if (typeof oldObjects[index][PLACE_TITLE_PATTERN_FIELD] === 'string') {
+                obj[PLACE_TITLE_PATTERN_FIELD] = oldObjects[index][PLACE_TITLE_PATTERN_FIELD];
+            }
         }
     }
 

@@ -77,6 +77,11 @@ export const SessionConfigObject = class {
     // Omit to inherit SessionConfig.place_delay_ms. 0 places as soon as the
     // window can be moved. Hand-edited; there is no preference for this yet.
     place_delay_ms; // int
+    // Optional JS RegExp source tested against the open window's title, e.g.
+    // "^DevTools( - .*)?$" to cover every DevTools window with one entry.
+    // Exact window_title equality is tried first. Hand-edited; kept across
+    // re-saves like place_delay_ms.
+    window_title_pattern; // str
 
     // The index of the monitor that this window is on.
     monitor_number;
