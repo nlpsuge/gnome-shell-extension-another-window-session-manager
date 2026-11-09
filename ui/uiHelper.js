@@ -38,10 +38,6 @@ const WINDOW_TYPE_NAMES = [
     'OVERRIDE_OTHER',
 ];
 
-// TEMP DEBUG (remove before committing the real fix): one greppable tag so
-// `journalctl --user -b -o cat | grep AWSM-PLACE-DEBUG` shows every
-// always-place candidate and why it was skipped or placed.
-const PLACE_DEBUG_TAG = '[AWSM-PLACE-DEBUG]';
 
 function safeCall(fn, fallback) {
     try {
@@ -113,15 +109,7 @@ export function describeWindowForPlaceDebug(metaWindow, windowTracker) {
     return parts.join(' ');
 }
 
-// TEMP DEBUG: unconditional log() (not gated on the debugging-mode pref) so
-// the Geany vs DevTools comparison shows up without toggling settings.
-export function logPlaceCandidate(metaWindow, context, windowTracker) {
-    try {
-        log(`${PLACE_DEBUG_TAG} ${context} | ${describeWindowForPlaceDebug(metaWindow, windowTracker)}`);
-    } catch {
-        // Never let debug logging break placement.
-    }
-}
+
 export function isDialog(metaWindow) {
     return DIALOG_WINDOW_TYPES.includes(metaWindow.get_window_type()) &&
         metaWindow.get_transient_for() != null;
