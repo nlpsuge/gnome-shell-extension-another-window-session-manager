@@ -10,6 +10,7 @@ import {PrefsUtils} from './utils/prefsUtils.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import * as DateUtils from './utils/dateUtils.js';
 import * as StringUtils from './utils/stringUtils.js';
+import * as MoveSession from './moveSession.js';
 
 
 export const restoreSessionObject = {
@@ -99,6 +100,7 @@ export const RestoreSession = class {
             return;
         }
 
+        const runningAppsToMove = [];
         session_config_objects = session_config_objects.filter(session_config_object => {
             const desktop_file_id = session_config_object.desktop_file_id;
             if (!desktop_file_id) {
@@ -110,12 +112,22 @@ export const RestoreSession = class {
             }
 
             if (this._appIsRunning(shellApp)) {
-                this._log.debug(`${shellApp.get_name()} is already running`)
+                this._log.debug(`${shellApp.get_name()} is already running, moving its existing windows`)
+                runningAppsToMove.push({shellApp, sessionConfigObject: session_config_object});
                 return false;
             }
 
             return true;
         });
+        // Move existing windows of already-running apps into their saved positions
+        if (runningAppsToMove.length) {
+            const moveSession = new MoveSession.MoveSession();
+            runningAppsToMove.forEach(({shellApp, sessionConfigObject}) => {
+                moveSession.moveWindowsByShellApp(shellApp, [sessionConfigObject]).catch(e =>
+                    this._log.error(e, `Failed to move windows of already running ${shellApp.get_name()}`));
+            });
+        }
+
         if (session_config_objects.length === 0) return;
 
         this._restoreOneSession(session_config_objects.shift());
@@ -390,4 +402,53 @@ export const RestoreSession = class {
         
     }
 
+}
+
+// Force-move the windows of RUNNING apps to the positions saved in a session,
+// regardless of whether the app was launched by this extension.
+export async function forceMoveWindows(sessionName) {
+    try {
+        const sessions_path = FileUtils.get_sessions_path();
+        const session_file_path = GLib.build_filenamev([sessions_path, sessionName]);
+        if (!GLib.file_test(session_file_path, GLib.FileTest.EXISTS)) {
+            throw new Error(`Session file not found: ${session_file_path}`);
+        }
+        const session_file = Gio.File.new_for_path(session_file_path);
+        let [success, contents] = session_file.load_contents(null);
+        if (!success) {
+            throw new Error(`Failed to load ${session_file_path}`);
+        }
+        const session_config = FileUtils.getJsonObj(contents);
+        const objects = session_config.x_session_config_objects;
+        if (!(objects && objects.length)) {
+            throw new Error(`Session has no windows: ${session_file_path}`);
+        }
+
+        const moveSession = new MoveSession.MoveSession();
+        const appSystem = Shell.AppSystem.get_default();
+
+        // Group saved windows by desktop_file_id so moveWindowsByShellApp can match them
+        const byApp = new Map();
+        objects.forEach(o => {
+            const key = o.desktop_file_id || o.wm_class;
+            if (!key) return;
+            if (!byApp.has(key)) byApp.set(key, []);
+            byApp.get(key).push(o);
+        });
+
+        for (const [appId, savedWindows] of byApp) {
+            const shellApp = appSystem.lookup_app(appId);
+            if (!shellApp || !shellApp.get_windows().length) {
+                Log.Log.getDefault().info(`Force move: no running windows for ${appId}, skipping`);
+                continue;
+            }
+            Log.Log.getDefault().info(`Force move: moving windows of ${shellApp.get_name()}`);
+            await moveSession.moveWindowsByShellApp(shellApp, savedWindows);
+        }
+        Log.Log.getDefault().info('Force move: done');
+        return `Force moved windows of running apps to session '${sessionName}'`;
+    } catch (e) {
+        Log.Log.getDefault().error(e, 'Force move failed');
+        throw e;
+    }
 }

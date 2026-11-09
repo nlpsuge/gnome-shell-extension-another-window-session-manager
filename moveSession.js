@@ -1,3 +1,8 @@
+function __awsmIsWayland() {
+    if (typeof Meta.is_wayland_compositor === 'function')
+        return __awsmIsWayland();
+    return global.context.get_wayland_compositor() !== null;
+}
 'use strict';
 
 import Gio from 'gi://Gio';
@@ -12,9 +17,22 @@ import * as UiHelper from './ui/uiHelper.js';
 import * as FileUtils from './utils/fileUtils.js';
 import * as Log from './utils/log.js';
 import * as DateUtils from './utils/dateUtils.js';
-import { shellVersion } from './constants.js';
+import { PrefsUtils } from './utils/prefsUtils.js';
+import { PREFS_SETTING_ALWAYS_PLACE_WINDOWS, PREFS_SETTING_AUTORESTORE_SESSIONS } from './constants.js';
+import { shellVersion } from './shellVersion.js';
+import {
+    ALL_WORKSPACES_DESKTOP_NUMBER,
+    resolvePlaceDelayMs,
+    ruleMatchesApp,
+    sessionPlaceDelayMs,
+    titleMatchesRule,
+} from './model/placeRule.js';
 
-import {WindowTilingSupport} from './windowTilingSupport.js';
+// Mutter applies unmaximize on a later frame. Restoring geometry in the same
+// turn is ignored on Wayland. https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/25
+const UNMAXIMIZE_BEFORE_GEOMETRY_RESTORE_MS = 500;
+
+import { WindowTilingSupport } from './windowTilingSupport.js';
 
 
 export const MoveSession = class {
@@ -29,6 +47,9 @@ export const MoveSession = class {
         this._sourceIds = [];
 
         this._delayRestoreGeometryId = 0;
+
+        this._placeRulesCache = null;
+        this._loggedMissingPlaceSession = false;
 
     }
 
@@ -67,7 +88,7 @@ export const MoveSession = class {
             const running_apps = this._defaultAppSystem.get_running();
             for (const shellApp of running_apps) {
                 await this.moveWindowsByShellApp(shellApp, session_config_objects);
-            }   
+            }
         } catch (error) {
             Log.Log.getDefault().error(error);
         }
@@ -76,23 +97,23 @@ export const MoveSession = class {
     async moveWindowsByShellApp(shellApp, saved_window_sessions) {
         try {
             const interestingWindows = this._getAutoMoveInterestingWindows(shellApp, saved_window_sessions);
-        
+
             if (!interestingWindows.length) {
                 return;
             }
-        
+
             for (const interestingWindow of interestingWindows) {
                 const metaWindow = interestingWindow.open_window;
                 if (UiHelper.ignoreWindows(metaWindow)) continue;
-    
+
                 const saved_window_session = interestingWindow.saved_window_session;
                 const title = metaWindow.get_title();
                 const desktop_number = saved_window_session.desktop_number;
-    
+
                 try {
                     await this._restoreWindowStates(metaWindow, saved_window_session);
                     this._createEnoughWorkspace(desktop_number);
-    
+
                     // Sticky windows don't need moving, in fact moving would unstick them
                     // See: https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/gnome-41/js/ui/windowManager.js#L1070
                     const is_sticky = saved_window_session.window_state.is_sticky;
@@ -102,17 +123,17 @@ export const MoveSession = class {
                         this._log.debug(`Auto move ${shellApp.get_name()} - ${title} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
                         this._changeWorkspace(metaWindow, desktop_number);
                     }
-    
+
                     // restore window state if necessary due to moving windows could lost window state
                     this._restoreWindowState(metaWindow, saved_window_session);
-    
+
                 } catch (e) {
                     // I just don't want one failure breaks the loop
-    
+
                     this._log.error(e, `Failed to move window ${title} for ${shellApp.get_name()} automatically`);
                 }
                 saved_window_session.moved = true;
-            }   
+            }
         } catch (error) {
             this._log.error(error, shellApp ? shellApp.get_name() : 'This app may be closed.');
         }
@@ -189,7 +210,7 @@ export const MoveSession = class {
                 metaWindow.move_to_monitor(toMonitorIndex);
             });
         }
-        
+
         return Promise.resolve(metaWindow);
     }
 
@@ -201,14 +222,14 @@ export const MoveSession = class {
             if (!saved_window_session) {
                 return null;
             }
-    
+
             if (saved_window_session.moved) {
                 this._restoreWindowStates(metaWindow, saved_window_session);
                 return saved_window_session;
             }
-    
+
             await this._restoreMonitor(metaWindow, saved_window_session);
-    
+
             const desktop_number = saved_window_session.desktop_number;
             this._createEnoughWorkspace(desktop_number);
             if (this._log.isDebug()) {
@@ -216,7 +237,7 @@ export const MoveSession = class {
                 this._log.debug(`CEWM: Moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktop_number} from ${metaWindow.get_workspace().index()}`);
             }
             this._changeWorkspace(metaWindow, desktop_number);
-            return saved_window_session;   
+            return saved_window_session;
         } catch (error) {
             this._log.error(error, metaWindow ? metaWindow.get_title() : 'This window may be destroyed.');
         }
@@ -277,7 +298,7 @@ export const MoveSession = class {
             const open_window_workspace_index = metaWindow.get_workspace().index();
             const desktop_number = saved_window_session.desktop_number;
 
-            if (windows_count === 1 || title === saved_window_session.window_title) {
+            if (windows_count === 1 || titleMatchesRule(saved_window_session, title)) {
                 if (open_window_workspace_index === desktop_number) {
                     if (this._log.isDebug()) {
                         const shellApp = this._windowTracker.get_window_app(metaWindow);
@@ -369,7 +390,7 @@ export const MoveSession = class {
                 if (currentMetaMaximized) {
                     metaWindow.set_unmaximize_flags(Meta.MaximizeFlags.BOTH);
                     metaWindow.unmaximize();
-                    if (Meta.is_wayland_compositor() && !currentMetaMaximized) {
+                    if (__awsmIsWayland() && !currentMetaMaximized) {
                         delay = true;
                     }
                 }
@@ -380,7 +401,7 @@ export const MoveSession = class {
                 const currentMetaMaximized = metaWindow.get_maximized();
                 if (currentMetaMaximized) {
                     metaWindow.unmaximize(currentMetaMaximized);
-                    if (Meta.is_wayland_compositor() && currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
+                    if (__awsmIsWayland() && currentMetaMaximized !== Meta.MaximizeFlags.BOTH) {
                         delay = true;
                     }
                 }
@@ -390,10 +411,12 @@ export const MoveSession = class {
         if (delay) {
             // Fix: https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager/issues/25
             // TODO Note that this is not a perfect solution to address the above issue.
-            this._delayRestoreGeometryId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+            // Per-call id so two windows placing at once do not cancel each other.
+            const id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, UNMAXIMIZE_BEFORE_GEOMETRY_RESTORE_MS, () => {
                 this._moveResizeFrame(metaWindow, saved_window_session);
                 return GLib.SOURCE_REMOVE;
             });
+            this._sourceIds.push(id);
         } else {
             this._moveResizeFrame(metaWindow, saved_window_session);
         }
@@ -409,9 +432,9 @@ export const MoveSession = class {
 
             const currentMonitor = metaWindow.get_monitor();
             const rectWorkArea = metaWindow.get_work_area_for_monitor(currentMonitor);
-            
+
             // For more info about the below issue see also: https://github.com/Leleat/Tiling-Assistant/blob/1e4176a9a7037ee5dd0612e4c9f9dbe45d4e67cf/tiling-assistant%40leleat-on-github/src/extension/tilingWindowManager.js#L186-L199
-            
+
             // Move first. Just in case that some apps can only be resized but not moved after `metaWindow.move_resize_frame()`
             metaWindow.move_frame(true, to_x, to_y);
             metaWindow.move_resize_frame(
@@ -419,7 +442,7 @@ export const MoveSession = class {
                 // in which case if `user_op` is false it will move to (0,Y,W,H).
                 true, // user_op
                 to_x,
-                
+
                 // Fix the below issue:
                 // No rect to clip to found!
                 // No rect whose size to clamp to found!
@@ -457,7 +480,7 @@ export const MoveSession = class {
                 const open_window_workspace_index = open_window.get_workspace().index();
                 const desktop_number = saved_window_session.desktop_number;
 
-                if (windows_count === 1 || title === saved_window_session.window_title) {
+                if (windows_count === 1 || titleMatchesRule(saved_window_session, title)) {
                     if (open_window_workspace_index === desktop_number) {
                         this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
                         this._restoreWindowStates(open_window, saved_window_session, true);
@@ -497,6 +520,150 @@ export const MoveSession = class {
         for (let i = workspaceManager.n_workspaces; i <= workspaceNumber; i++) {
             workspaceManager.append_new_workspace(false, 0);
             workspaceManager.get_workspace_by_index(i)._keepAliveId = true;
+        }
+    }
+
+    /**
+     * Match a newly created window against the session named by
+     * `autorestore-sessions`. Does not launch anything. Returns null when the
+     * option is off, the app is not in the file, or several entries exist and
+     * the title has not settled on one of them yet.
+     */
+    matchPlaceRule(metaWindow) {
+        const loaded = this._loadAlwaysPlaceRules();
+        if (!loaded) {
+            return null;
+        }
+        if (UiHelper.ignoreWindows(metaWindow)) {
+            return null;
+        }
+
+        const shellApp = this._windowTracker.get_window_app(metaWindow);
+        if (!shellApp) {
+            return null;
+        }
+
+        const appId = shellApp.get_id();
+        const wmClass = metaWindow.get_wm_class();
+        const title = metaWindow.get_title() || '';
+        const indexed = [];
+        loaded.rules.forEach((rule, index) => {
+            if (ruleMatchesApp(rule, appId, wmClass)) {
+                indexed.push({ rule, index });
+            }
+        });
+        if (!indexed.length) {
+            return null;
+        }
+
+        const exactHits = indexed.filter(({ rule }) => rule.window_title && rule.window_title === title);
+        let chosen = null;
+        let how = '';
+        if (exactHits.length >= 1) {
+            chosen = exactHits[0];
+            how = `title-hit rule#${chosen.index}`;
+        } else if (indexed.length === 1) {
+            chosen = indexed[0];
+            how = `single-rule rule#${chosen.index}`;
+        } else {
+            const patternHits = indexed.filter(({ rule }) => titleMatchesRule(rule, title));
+            if (patternHits.length >= 1) {
+                chosen = patternHits[0];
+                how = `pattern-hit rule#${chosen.index}`;
+            } else {
+                return null;
+            }
+        }
+
+
+        return {
+            rule: chosen.rule,
+            key: `${loaded.path}#${chosen.index}`,
+            delayMs: resolvePlaceDelayMs(loaded.sessionDelayMs, chosen.rule),
+        };
+    }
+
+    async placeWindowFromRule(metaWindow, savedRule, delayMs) {
+        try {
+            if (!metaWindow || UiHelper.ignoreWindows(metaWindow)) {
+                return;
+            }
+
+            const rule = {
+                ...savedRule,
+                window_position: savedRule.window_position ? { ...savedRule.window_position } : undefined,
+                window_state: savedRule.window_state ? { ...savedRule.window_state } : {},
+            };
+            const shellApp = this._windowTracker.get_window_app(metaWindow);
+            this._log.info(`Placing ${shellApp?.get_name()} - ${metaWindow.get_title()} from saved rule (delay ${delayMs}ms)`);
+
+            await this._restoreWindowStates(metaWindow, rule);
+
+            const desktopNumber = rule.desktop_number;
+            if (typeof desktopNumber === 'number' && desktopNumber > ALL_WORKSPACES_DESKTOP_NUMBER) {
+                this._createEnoughWorkspace(desktopNumber);
+                const isSticky = rule.window_state?.is_sticky;
+                if (isSticky && metaWindow.is_on_all_workspaces()) {
+                    this._log.debug(`The window '${metaWindow.get_title()}' is already sticky`);
+                } else if (metaWindow.get_workspace()) {
+                    this._log.debug(`Always-place: moving ${shellApp?.get_name()} - ${metaWindow.get_title()} to workspace ${desktopNumber} from ${metaWindow.get_workspace().index()}`);
+                    this._changeWorkspace(metaWindow, desktopNumber);
+                }
+                this._restoreWindowState(metaWindow, rule);
+            }
+        } catch (error) {
+            this._log.error(error, metaWindow ? metaWindow.get_title() : 'This window may be destroyed.');
+        }
+    }
+
+    _loadAlwaysPlaceRules() {
+        const settings = PrefsUtils.getSettings();
+        if (!settings || !settings.get_boolean(PREFS_SETTING_ALWAYS_PLACE_WINDOWS)) {
+            return null;
+        }
+
+        const sessionName = settings.get_string(PREFS_SETTING_AUTORESTORE_SESSIONS);
+        if (!sessionName) {
+            return null;
+        }
+
+        const path = GLib.build_filenamev([FileUtils.get_sessions_path(), sessionName]);
+        if (!GLib.file_test(path, GLib.FileTest.EXISTS)) {
+            if (!this._loggedMissingPlaceSession) {
+                this._log.warn(`Always place is on, but session file was not found: ${path}`);
+                this._loggedMissingPlaceSession = true;
+            }
+            return null;
+        }
+        this._loggedMissingPlaceSession = false;
+
+        let mtime = 0;
+        try {
+            const info = Gio.File.new_for_path(path).query_info('time::modified', Gio.FileQueryInfoFlags.NONE, null);
+            const tv = info.get_modification_time();
+            mtime = tv.tv_sec * GLib.USEC_PER_SEC + tv.tv_usec;
+        } catch (e) {
+            this._log.error(e);
+        }
+
+        if (this._placeRulesCache && mtime && this._placeRulesCache.path === path && this._placeRulesCache.mtime === mtime) {
+            return this._placeRulesCache;
+        }
+
+        try {
+            const [ok, contents] = Gio.File.new_for_path(path).load_contents(null);
+            if (!ok) {
+                return null;
+            }
+            const session = FileUtils.getJsonObj(contents);
+            const rules = Array.isArray(session.x_session_config_objects) ? session.x_session_config_objects : [];
+            const sessionDelayMs = sessionPlaceDelayMs(session);
+            this._placeRulesCache = { path, mtime, rules, sessionDelayMs };
+            this._log.debug(`Loaded ${rules.length} always-place rules from ${path}`);
+            return this._placeRulesCache;
+        } catch (e) {
+            this._log.error(e);
+            return null;
         }
     }
 

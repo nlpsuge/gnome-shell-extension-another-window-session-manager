@@ -1,3 +1,8 @@
+function __awsmIsWayland() {
+    if (typeof Meta.is_wayland_compositor === 'function')
+        return __awsmIsWayland();
+    return global.context.get_wayland_compositor() !== null;
+}
 'use strict';
 
 import Gio from 'gi://Gio';
@@ -8,6 +13,7 @@ import Meta from 'gi://Meta';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
 import * as SessionConfig from './model/sessionConfig.js';
+import {PLACE_DELAY_FIELD, PLACE_TITLE_PATTERN_FIELD, samePlaceSlot} from './model/placeRule.js';
 
 import * as UiHelper from './ui/uiHelper.js';
 
@@ -18,7 +24,7 @@ import * as CommonError from './utils/CommonError.js';
 import * as SubprocessUtils from './utils/subprocessUtils.js';
 import {PrefsUtils} from './utils/prefsUtils.js';
 import * as StringUtils from './utils/stringUtils.js';
-import { shellVersion } from './constants.js';
+import { shellVersion } from './shellVersion.js';
 
 
 export const SaveSession = class {
@@ -70,7 +76,8 @@ export const SaveSession = class {
             this._log.debug(`Generating session ${sessionName}`);
 
             const sessionConfig = await this._buildSession(sessionName);
-    
+            this._copyHandEditedPlaceFields(sessionConfig, sessionName, baseDir);
+
             sessionConfig.x_session_config_objects = sessionConfig.sort();
             
             if (backup) {
@@ -270,7 +277,7 @@ export const SaveSession = class {
         sessionConfigObject.windows_count = runningShellApp.get_n_windows();
         sessionConfigObject.fullscreen = metaWindow.is_fullscreen();
         sessionConfigObject.minimized = metaWindow.minimized;
-        sessionConfigObject.compositor_type = Meta.is_wayland_compositor() ? 'Wayland' : 'X11'
+        sessionConfigObject.compositor_type = __awsmIsWayland() ? 'Wayland' : 'X11'
 
         const frameRect = metaWindow.get_frame_rect();
         let window_position = sessionConfigObject.window_position;
@@ -369,6 +376,58 @@ export const SaveSession = class {
         }
 
         return [true, sessionConfigObject];
+    }
+
+    /**
+     * A re-save rewrites the session file. Keep hand-edited place_delay_ms
+     * and window_title_pattern values, matched by desktop id (or wm_class)
+     * plus title.
+     */
+    _copyHandEditedPlaceFields(sessionConfig, sessionName, baseDir) {
+        const sessionsPath = FileUtils.get_sessions_path(baseDir);
+        const sessionFilePath = GLib.build_filenamev([sessionsPath, sessionName]);
+        if (!GLib.file_test(sessionFilePath, GLib.FileTest.EXISTS)) {
+            return;
+        }
+
+        let oldSession;
+        try {
+            const [ok, contents] = Gio.File.new_for_path(sessionFilePath).load_contents(null);
+            if (!ok) {
+                return;
+            }
+            oldSession = FileUtils.getJsonObj(contents);
+        } catch (e) {
+            this._log.error(e);
+            return;
+        }
+
+        if (Number.isFinite(oldSession[PLACE_DELAY_FIELD])) {
+            sessionConfig[PLACE_DELAY_FIELD] = oldSession[PLACE_DELAY_FIELD];
+        }
+
+        const oldObjects = Array.isArray(oldSession.x_session_config_objects)
+            ? oldSession.x_session_config_objects
+            : [];
+        const used = new Set();
+        for (const obj of sessionConfig.x_session_config_objects) {
+            const index = oldObjects.findIndex((oldObj, i) => {
+                return !used.has(i)
+                    && (Number.isFinite(oldObj[PLACE_DELAY_FIELD])
+                        || typeof oldObj[PLACE_TITLE_PATTERN_FIELD] === 'string')
+                    && samePlaceSlot(oldObj, obj);
+            });
+            if (index === -1) {
+                continue;
+            }
+            used.add(index);
+            if (Number.isFinite(oldObjects[index][PLACE_DELAY_FIELD])) {
+                obj[PLACE_DELAY_FIELD] = oldObjects[index][PLACE_DELAY_FIELD];
+            }
+            if (typeof oldObjects[index][PLACE_TITLE_PATTERN_FIELD] === 'string') {
+                obj[PLACE_TITLE_PATTERN_FIELD] = oldObjects[index][PLACE_TITLE_PATTERN_FIELD];
+            }
+        }
     }
 
     async backupExistingSessionIfNecessary(sessionName, baseDir) {

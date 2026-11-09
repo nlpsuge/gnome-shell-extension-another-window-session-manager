@@ -68,6 +68,16 @@
       <description>
       </description>
     </key>
+    <key name='enable-always-place-windows' type="b">
+      <default>false</default>
+      <summary>Force new windows to the geometry saved in the autorestore session</summary>
+      <description>
+      When enabled, a newly created window that matches an entry in the session
+      named by autorestore-sessions is moved to that entry's monitor, workspace,
+      and frame. This does not launch apps. Wait before placing is place_delay_ms
+      in that session file, in milliseconds, not a preference.
+      </description>
+    </key>
     <key name='enable-autorestore-sessions' type="b">
       <default>false</default>
       <summary>Enable to restore session(s) on startup</summary>

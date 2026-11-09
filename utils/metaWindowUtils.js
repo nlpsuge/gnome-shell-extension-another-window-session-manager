@@ -1,3 +1,8 @@
+function __awsmIsWayland() {
+    if (typeof Meta.is_wayland_compositor === 'function')
+        return __awsmIsWayland();
+    return global.context.get_wayland_compositor() !== null;
+}
 'use strict';
 
 import Meta from 'gi://Meta';
@@ -11,7 +16,7 @@ import Meta from 'gi://Meta';
  * @returns stable window id
  */
 export const getStableWindowId = function(metaWindow) {
-    return Meta.is_wayland_compositor() ? metaWindow.get_id() : metaWindow.get_description();
+    return __awsmIsWayland() ? metaWindow.get_id() : metaWindow.get_description();
 }
 
 export const isSurfaceActor = function(clutterActor) {

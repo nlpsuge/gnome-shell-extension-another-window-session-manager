@@ -21,7 +21,9 @@ import * as Log from '../utils/log.js';
 
 let GTop = null;
 try {
-    GTop = await import('gi://GTop');
+    // Dynamic import returns the module record `{ default }`, not the GI namespace.
+    // `new GTop.glibtop_proc_state()` throws "is not a constructor" without `.default`.
+    GTop = (await import('gi://GTop')).default;
 } catch (e) {
     Log.Log.getDefault().error(e, `GTop is not installed, I highly recommend to install it, so that a process can be closed safely. How to install it? Please visit: https://github.com/nlpsuge/gnome-shell-extension-another-window-session-manager#dependencies .`);
 }
@@ -279,8 +281,11 @@ const RunningApplicationListWindow = GObject.registerClass({
             this._confirmIdleId = null;
             this._checkProcessStateId = null;
 
-            // wm_class 
-            this._apps_recheck_process_state = new Set(['Microsoft-edge']);
+            // Snapshot of pids taken before closeWindows() so _prepareToConfirm()
+            // can wait for real processes to exit, not just Shell.Apps to close.
+            // (Previously this only tracked Microsoft-edge, so the wait timer saw
+            // an empty map and confirmed logout on the first 200ms tick.)
+            this._pidsMap = new Map();
 
             this._delegate = this;
             this._draggable = DND.makeDraggable(this, {
@@ -301,8 +306,6 @@ const RunningApplicationListWindow = GObject.registerClass({
             this._log = new Log.Log();
 
             this._defaultAppSystem = Shell.AppSystem.get_default();
-            
-            this._pidsMap = new Map();
 
             this._removeFromLayoutIfNecessary(this);
             // Main.layoutManager.modalDialogGroup.add_child(this);
@@ -322,7 +325,10 @@ const RunningApplicationListWindow = GObject.registerClass({
             this._backgroundBin.add_constraint(this._monitorConstraint);
             this.add_child(this._backgroundBin);
 
-            this.backgroundStack.add_child(this);
+            // NOTE: do not add `this` into `backgroundStack` here.
+            // `this` already contains contentLayout/buttonLayout, and adding an
+            // actor to its own descendant trips
+            // `clutter_actor_add_child: assertion 'child->priv->parent == NULL' failed`.
 
 
             // this.dialogLayout = new Dialog.Dialog(this.backgroundStack, null);
@@ -385,14 +391,16 @@ const RunningApplicationListWindow = GObject.registerClass({
         }
 
         updateRunningPids() {
+            // Record pids of every running app. The map is a snapshot: entries
+            // are only removed by _checkRunningPidState() once the process has
+            // exited, so calling this again from the wait timer only adds newly
+            // seen pids and never resurrects confirmed ones.
             this._defaultAppSystem.get_running()
-                .filter(ra => {
-                    return ra.get_windows()
-                             .find(w => this._apps_recheck_process_state.has(w.get_wm_class()));
-                })
                 .forEach(app => {
                     app.get_pids().forEach(pid => {
-                        this._pidsMap.set(pid, app);
+                        if (!this._pidsMap.has(pid)) {
+                            this._pidsMap.set(pid, app);
+                        }
                     });
                 });
         }
@@ -603,7 +611,6 @@ const RunningApplicationListWindow = GObject.registerClass({
         _checkRunningPidState() {
             try {
                 const pidStateMap = new Map();
-                // TODO Fixme: TypeError: GTop.glibtop_proc_state is not a constructor
                 let state = new GTop.glibtop_proc_state();
                 for (const [pid, app] of this._pidsMap) {
                     GTop.glibtop_get_proc_state(state, pid);

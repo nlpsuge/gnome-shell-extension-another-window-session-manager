@@ -73,6 +73,16 @@ export const SessionConfigObject = class {
     desktop_file_id; // str
     // The full .desktop file path
     desktop_file_id_full_path; // str
+    // Milliseconds to wait after this window is matched, before moving it.
+    // Omit to inherit SessionConfig.place_delay_ms. 0 places as soon as the
+    // window can be moved. Hand-edited; there is no preference for this yet.
+    place_delay_ms; // int
+    // Optional JS RegExp source tested against the open window's title, e.g.
+    // "^DevTools( - .*)?$" to cover every DevTools window with one entry.
+    // Exact window_title equality is tried first. Hand-edited; kept across
+    // re-saves like place_delay_ms.
+    window_title_pattern; // str
+
     // The index of the monitor that this window is on.
     monitor_number;
     // TODO Primary monitor can be changed, what if the primary monitor have been changed when restoring apps? The monitor number is the same as saved monitor_number?
@@ -90,6 +100,9 @@ export const SessionConfigObject = class {
 
 export const SessionConfig = class {
     session_name; // str
+    // Default wait, in milliseconds, before always-place moves a matched window.
+    // A window object's own place_delay_ms wins when it is set.
+    place_delay_ms; // int
     session_create_time; // str
     backup_time; // str
     restore_times; // list = []

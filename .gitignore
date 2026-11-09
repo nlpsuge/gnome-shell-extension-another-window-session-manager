@@ -1,3 +1,7 @@
 .vscode
 .history
 .idea
+
+# Local API notes for this machine. Not part of the extension.
+/local-docs/
+AGENTS.md

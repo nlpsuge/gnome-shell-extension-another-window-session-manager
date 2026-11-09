@@ -7,8 +7,6 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Clutter from 'gi://Clutter';
 
-import * as EndSessionDialog from 'resource:///org/gnome/shell/ui/endSessionDialog.js';
-
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -25,6 +23,19 @@ import * as FileUtils from '../utils/fileUtils.js';
 
 
 let _requiredToRestorePrevious = false;
+
+// Same rounding as gnome-shell ui/endSessionDialog.js. Not exported, so do not call it on the module.
+function _roundSecondsToInterval(totalSeconds, secondsLeft, interval) {
+    let time = Math.ceil(secondsLeft);
+    if (time <= interval)
+        return time;
+    time += interval - 1;
+    if (time > totalSeconds)
+        time = Math.ceil(totalSeconds);
+    else
+        time -= time % interval;
+    return time;
+}
 
 export const AutostartServiceProvider = GObject.registerClass(
     class AutostartServiceProvider extends GObject.Object {
@@ -143,6 +154,25 @@ const AutostartService = GObject.registerClass(
 
         // TODO Press some hotkey (like Ctrl) so this time will not restore the previous session?
         // Call this method asynchronously through, for example: 
+        // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.ForceMoveWindows "'start'"`
+        async ForceMoveWindows(sessionName) {
+            let name = sessionName;
+            if (name instanceof GLib.Variant) {
+                name = name.get_string()[0];
+            }
+            if (!name || name.length === 0) {
+                name = this._settings.get_string(Constants.PREFS_SETTING_AUTORESTORE_SESSIONS);
+            }
+            this._log.info(`Force moving windows of running apps to session '${name}'`);
+            try {
+                await RestoreSession.forceMoveWindows(name);
+                return `Moved windows of running apps to session '${name}'`;
+            } catch (e) {
+                this._log.error(e, 'ForceMoveWindows failed');
+                return `ERROR: ${e.message}`;
+            }
+        }
+
         // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{'removeAfterRestore': <false>}"`
         // `gdbus call --session --dest org.gnome.Shell.Extensions.awsm --object-path /org/gnome/Shell/Extensions/awsm --method org.gnome.Shell.Extensions.awsm.Autostart.RestorePreviousSession "{}"`
         RestorePreviousSession(args) {
@@ -295,9 +325,10 @@ const AutostartDialog = GObject.registerClass(
 
         _sync() {
 
-            const displayTime = EndSessionDialog._roundSecondsToInterval(this._totalSecondsToStayOpen,
-                                                                         this._secondsLeft,
-                                                                         1);
+            // Shell keeps this helper private. It is not exported from endSessionDialog.js.
+            const displayTime = _roundSecondsToInterval(this._totalSecondsToStayOpen,
+                                                        this._secondsLeft,
+                                                        1);
             const desc = _.ngettext('\'' + this._sessionName + '\' will be restored in %d second',
                 '\'' + this._sessionName + '\' will be restored in %d seconds', displayTime).format(displayTime);
             this._confirmDialogContent.description = desc;
