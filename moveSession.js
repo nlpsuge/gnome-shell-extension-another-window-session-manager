@@ -266,30 +266,95 @@ export const MoveSession = class {
         }
     }
 
-    _getOneMatchedSavedWindow(metaWindow, saved_window_sessions) {
-        saved_window_sessions = saved_window_sessions.filter(saved_window_session => {
-            return !saved_window_session.moved;
-        });
+    /**
+     * Pair an app's open windows with its saved window sessions.
+     *
+     * Exact title equality is tried first. Where a title comes from something
+     * stable - a document name, a terminal's running command, a PWA - it is the
+     * best signal available and makes those apps land exactly where they were.
+     *
+     * Whatever is left is paired by order instead of by title. A browser window's
+     * title is the page it is showing, so it differs on purpose every time you
+     * browse somewhere new; keying on it alone means a browser with several windows
+     * matches nothing at all and is left wherever it happened to land. Window order
+     * is stable in practice, because mutter and the apps themselves restore windows
+     * in a consistent sequence.
+     *
+     * `monitor_number` is only a preference in the second pass, never a condition:
+     * at restore time the windows are still on the monitor and workspace they were
+     * opened on, which is precisely what the saved session exists to correct.
+     *
+     * Each open window and each saved session is used at most once, so two windows
+     * can never be moved onto the same position.
+     */
+    _pairWindowsWithSessions(open_windows, saved_window_sessions) {
+        const pairs = [];
+        const remainingWindows = open_windows.slice();
+        const remainingSessions = saved_window_sessions.slice();
 
-        for (const saved_window_session of saved_window_sessions) {
-            const title = metaWindow.get_title();
-            const windows_count = saved_window_session.windows_count;
-            const open_window_workspace_index = metaWindow.get_workspace().index();
-            const desktop_number = saved_window_session.desktop_number;
+        const sameWindowClass = (saved, open_window) =>
+            saved.wm_class === open_window.get_wm_class();
 
-            if (windows_count === 1 || title === saved_window_session.window_title) {
-                if (open_window_workspace_index === desktop_number) {
-                    if (this._log.isDebug()) {
-                        const shellApp = this._windowTracker.get_window_app(metaWindow);
-                        this._log.debug(`The window '${shellApp?.get_name()} - ${title}' is already on workspace ${desktop_number}`);
-                    }
-                    saved_window_session.moved = true;
-                }
+        const pairUp = (open_window, saved_window_session) => {
+            pairs.push({ open_window, saved_window_session });
+            remainingWindows.splice(remainingWindows.indexOf(open_window), 1);
+            remainingSessions.splice(remainingSessions.indexOf(saved_window_session), 1);
+        };
 
-                return saved_window_session;
+        // Pass 1 - identical title, one to one. An empty title identifies nothing,
+        // so those windows are left for the ordering pass.
+        for (const open_window of open_windows.slice()) {
+            const title = open_window.get_title();
+            if (!title) continue;
+            const saved = remainingSessions.find(saved_window_session =>
+                saved_window_session.window_title === title &&
+                sameWindowClass(saved_window_session, open_window));
+            if (saved) {
+                pairUp(open_window, saved);
             }
         }
-        return null;
+
+        // Pass 2 - whatever is left, in order, preferring a saved session that was
+        // on the same monitor. Only sessions of the same window class are eligible:
+        // callers pass the whole session, not one app's slice, so pairing across
+        // classes would move a browser window onto, say, a terminal's saved spot.
+        for (const open_window of remainingWindows.slice()) {
+            const monitor = open_window.get_monitor();
+            const candidates = remainingSessions.filter(saved_window_session =>
+                sameWindowClass(saved_window_session, open_window));
+            if (!candidates.length) continue;
+            const saved =
+                candidates.find(s => s.monitor_number === monitor) || candidates[0];
+            pairUp(open_window, saved);
+        }
+
+        return pairs;
+    }
+
+    _getOneMatchedSavedWindow(metaWindow, saved_window_sessions) {
+        // No `!moved` filter here on purpose. Pairing is one to one across the whole
+        // set, so a session can never be handed to a second window; skipping the
+        // already-applied sessions instead lets an earlier window claim a session
+        // that belonged to a later one, and leaves the tail of the list unmatched.
+        const shellApp = this._windowTracker.get_window_app(metaWindow);
+        const open_windows = shellApp ? shellApp.get_windows() : [metaWindow];
+        const pair = this._pairWindowsWithSessions(open_windows, saved_window_sessions)
+            .find(pair => pair.open_window === metaWindow);
+        if (!pair) {
+            return null;
+        }
+        const saved_window_session = pair.saved_window_session;
+
+        const open_window_workspace_index = metaWindow.get_workspace().index();
+        const desktop_number = saved_window_session.desktop_number;
+        if (open_window_workspace_index === desktop_number) {
+            if (this._log.isDebug()) {
+                this._log.debug(`The window '${shellApp?.get_name()} - ${metaWindow.get_title()}' is already on workspace ${desktop_number}`);
+            }
+            saved_window_session.moved = true;
+        }
+
+        return saved_window_session;
     }
 
     /**
@@ -445,33 +510,21 @@ export const MoveSession = class {
         }
 
         let autoMoveInterestingWindows = [];
-        const open_windows = shellApp.get_windows();
-        saved_window_sessions.forEach(saved_window_session => {
-            open_windows.forEach(open_window => {
-                if (open_window.get_wm_class() != saved_window_session.wm_class) {
-                    return;
-                }
+        const pairs = this._pairWindowsWithSessions(shellApp.get_windows(), saved_window_sessions);
+        for (const { open_window, saved_window_session } of pairs) {
+            const open_window_workspace_index = open_window.get_workspace().index();
+            const desktop_number = saved_window_session.desktop_number;
 
-                const title = open_window.get_title();
-                const windows_count = saved_window_session.windows_count;
-                const open_window_workspace_index = open_window.get_workspace().index();
-                const desktop_number = saved_window_session.desktop_number;
-
-                if (windows_count === 1 || title === saved_window_session.window_title) {
-                    if (open_window_workspace_index === desktop_number) {
-                        this._log.debug(`The window '${title}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
-                        this._restoreWindowStates(open_window, saved_window_session, true);
-                    } else {
-                        autoMoveInterestingWindows.push({
-                            open_window: open_window,
-                            saved_window_session: saved_window_session
-                        });
-                    }
-                }
-
-            });
-
-        });
+            if (open_window_workspace_index === desktop_number) {
+                this._log.debug(`The window '${open_window.get_title()}' is already on workspace ${desktop_number} for ${shellApp.get_name()}`);
+                this._restoreWindowStates(open_window, saved_window_session, true);
+            } else {
+                autoMoveInterestingWindows.push({
+                    open_window: open_window,
+                    saved_window_session: saved_window_session
+                });
+            }
+        }
 
         return autoMoveInterestingWindows;
     }
